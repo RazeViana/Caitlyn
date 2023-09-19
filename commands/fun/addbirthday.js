@@ -1,7 +1,9 @@
 const { SlashCommandBuilder } = require('discord.js');
+const axios = require('axios');
 const CronJob = require('cron').CronJob;
+const format = require('date-fns/format');
 const Birthdays = require('../../models/birthdays');
-const { generalChatId } = require('../../config.json');
+const { generalChatId, giphyAPIKey } = require('../../config.json');
 
 module.exports = {
 	category: 'fun',
@@ -39,17 +41,50 @@ module.exports = {
 				.setRequired(true)),
 	async execute(interaction) {
 
+		// Figure out dates
 		const birthdayUser = interaction.options.getUser('user');
 		const birthdayDay = interaction.options.getInteger('day');
 		const birthdayMonth = interaction.options.getString('month');
 		const birthdayYear = interaction.options.getInteger('year');
-
-		const channel = interaction.client.channels.cache.get(generalChatId);
 		const dateOfBirthFormatted = new Date(birthdayYear, birthdayMonth, birthdayDay, 12, 0, 0);
+		const userAgeMs = Date.now() - dateOfBirthFormatted;
+		const userAgeDate = new Date(userAgeMs);
+		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970);
 
-		const job = new CronJob(`0 0 11 ${birthdayDay} ${birthdayMonth} *`,
-			function() {
-				channel.send(`HAPPY BIRTHDAY TO ${birthdayUser.username}!`);
+		const generalChannel = interaction.client.channels.cache.get(generalChatId);
+
+		const job = new CronJob('*/10 * * * * *',
+			async function() {
+				// Get random gif from giphy
+				const birthdayGiphyURL = `https://api.giphy.com/v1/gifs/random?api_key=${giphyAPIKey}&tag=birthday`;
+				const response = await axios.get(birthdayGiphyURL);
+				const birthdayGif = response.data.data.images.original.url;
+
+				const birthdayEmbed = {
+					title: '🎉 Birthday Reminder 🎉',
+					color: 16776960,
+					fields: [
+						{
+							name: '🍰 Name:',
+							value: birthdayUser.username,
+							inline: true,
+						},
+						{
+							name: '🎂 Date:',
+							value: format(dateOfBirthFormatted, 'MMM dd') + ', ' + userAgeYearsOld + ' years old!',
+							inline: true,
+						},
+					],
+					image: {
+						url: birthdayGif,
+					},
+					footer: {
+						text: 'Don\'t forget to send them my regards 🥳',
+						icon_url: 'https://i.imgur.com/n8FlP3v.png',
+					},
+				};
+
+				generalChannel.send({ embeds: [birthdayEmbed] });
 			});
 
 		try {
