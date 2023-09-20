@@ -7,6 +7,8 @@ const { generalChatId, giphyAPIKey } = require('../config.json');
 async function startCronJobs(client) {
 	const channel = client.channels.cache.get(generalChatId);
 	const allBirthdays = await Birthdays.findAll({ attributes: ['name', 'dob'] });
+	let jobsStarted = 0;
+	console.log('Starting Crono Jobs for Birthday Reminders.. ' + allBirthdays.length + ' to go!');
 
 	for (let i = 0; i < allBirthdays.length; i++) {
 		const birthday = allBirthdays[i];
@@ -53,12 +55,14 @@ async function startCronJobs(client) {
 
 		try {
 			job.start();
-			console.log(`Cron Job started for ${birthday.name} for every ${day} (day) on ${month} (month) of every year`);
+			jobsStarted = jobsStarted + 1;
+			// console.log(`Cron Job started for ${birthday.name} for every ${day} (day) on ${month} (month) of every year`);
 		}
 		catch (error) {
 			return console.log(`Something went wrong with creating cron job for ${birthday.name}.`);
 		}
 	}
+	console.log('Jobs started: ' + jobsStarted);
 }
 
 module.exports = startCronJobs;
