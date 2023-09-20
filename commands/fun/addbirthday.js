@@ -44,7 +44,7 @@ module.exports = {
 		// Figure out dates
 		const birthdayUser = interaction.options.getUser('user');
 		const birthdayDay = interaction.options.getInteger('day');
-		const birthdayMonth = interaction.options.getString('month');
+		const birthdayMonth = interaction.options.getString('month') - 1;
 		const birthdayYear = interaction.options.getInteger('year');
 		const dateOfBirthFormatted = new Date(birthdayYear, birthdayMonth, birthdayDay, 12, 0, 0);
 		const userAgeMs = Date.now() - dateOfBirthFormatted;
@@ -53,7 +53,7 @@ module.exports = {
 
 		const generalChannel = interaction.client.channels.cache.get(generalChatId);
 
-		const job = new CronJob('*/10 * * * * *',
+		const job = new CronJob(`0 0 11 ${birthdayDay} ${birthdayMonth} *`,
 			async function() {
 				// Get random gif from giphy
 				const birthdayGiphyURL = `https://api.giphy.com/v1/gifs/random?api_key=${giphyAPIKey}&tag=birthday`;

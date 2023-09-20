@@ -14,7 +14,7 @@ async function startCronJobs(client) {
 		const birthday = allBirthdays[i];
 		const dobToDateFormat = new Date(birthday.dob);
 		const day = format(dobToDateFormat, 'dd');
-		const month = format(dobToDateFormat, 'MM');
+		const month = format(dobToDateFormat, 'MM') - 1;
 		const userAgeMs = Date.now() - dobToDateFormat;
 		const userAgeDate = new Date(userAgeMs);
 		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970);
