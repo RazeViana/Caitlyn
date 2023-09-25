@@ -61,7 +61,7 @@ module.exports = {
 				const birthdayGif = response.data.data.images.original.url;
 
 				const birthdayEmbed = {
-					title: '🎉 Birthday Reminder 🎉',
+					title: `🎉 Birthday Reminder <#${generalChatId}>! 🎉`,
 					color: 16776960,
 					fields: [
 						{
@@ -94,10 +94,10 @@ module.exports = {
 			});
 
 			job.start();
-			return interaction.reply(`Added birthday for ${birthday.name}. It is ready and set for ${format(dateOfBirthFormatted, 'dd MMMM')}`);
+			return interaction.reply({ content:`Added birthday for ${birthday.name}. It is ready and set for ${format(dateOfBirthFormatted, 'dd MMMM')}`, ephemeral: true });
 		}
 		catch (error) {
-			return interaction.reply('Something went wrong with adding a birthday.');
+			return interaction.reply({ content:'Something went wrong with adding a birthday.', ephemeral: true });
 		}
 	},
 };
