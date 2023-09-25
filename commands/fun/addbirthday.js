@@ -53,7 +53,7 @@ module.exports = {
 
 		const generalChannel = interaction.client.channels.cache.get(generalChatId);
 
-		const job = new CronJob(`0 0 11 ${birthdayDay} ${birthdayMonth} *`,
+		const job = new CronJob(`0 0 4 ${birthdayDay} ${birthdayMonth} *`,
 			async function() {
 				// Get random gif from giphy
 				const birthdayGiphyURL = `https://api.giphy.com/v1/gifs/random?api_key=${giphyAPIKey}&tag=birthday`;
@@ -94,7 +94,7 @@ module.exports = {
 			});
 
 			job.start();
-			return interaction.reply(`Added birthday for ${birthday.name}`);
+			return interaction.reply(`Added birthday for ${birthday.name}. It is ready and set for ${format(dateOfBirthFormatted, 'dd MMMM')}`);
 		}
 		catch (error) {
 			return interaction.reply('Something went wrong with adding a birthday.');

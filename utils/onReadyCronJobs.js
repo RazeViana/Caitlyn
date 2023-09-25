@@ -19,7 +19,7 @@ async function startCronJobs(client) {
 		const userAgeDate = new Date(userAgeMs);
 		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970);
 
-		const job = new CronJob(`0 0 11 ${day} ${month} *`,
+		const job = new CronJob(`0 0 5 ${day} ${month} *`,
 			async function() {
 				// Get random gif from giphy
 				const birthdayGiphyURL = `https://api.giphy.com/v1/gifs/random?api_key=${giphyAPIKey}&tag=birthday`;
@@ -56,7 +56,6 @@ async function startCronJobs(client) {
 		try {
 			job.start();
 			jobsStarted = jobsStarted + 1;
-			// console.log(`Cron Job started for ${birthday.name} for every ${day} (day) on ${month} (month) of every year`);
 		}
 		catch (error) {
 			return console.log(`Something went wrong with creating cron job for ${birthday.name}.`);
