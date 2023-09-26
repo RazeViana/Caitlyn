@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const cronJobManager = require('../../utils/cronJobManager');
 const Birthdays = require('../../models/birthdays');
 
 module.exports = {
@@ -19,6 +20,7 @@ module.exports = {
 			const deleteResult = await Birthdays.destroy({ where: { userId: birthdayUser.id } });
 
 			if (deleteResult) {
+				cronJobManager.stopJob(birthdayUser.id);
 				return interaction.reply({ content: `User ${birthdayUser.username}'s birthday was removed`, ephemeral: true });
 			}
 			else {

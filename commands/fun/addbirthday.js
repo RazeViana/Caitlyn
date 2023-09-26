@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
 const CronJob = require('cron').CronJob;
+const cronJobManager = require('../../utils/cronJobManager');
 const format = require('date-fns/format');
 const Birthdays = require('../../models/birthdays');
 const { generalChatId, giphyAPIKey } = require('../../config.json');
@@ -56,7 +57,7 @@ module.exports = {
 		// First Check if birthday already exists for that user
 		const existingBirthday = await Birthdays.findOne({ where: { userId: birthdayUser.id } });
 		if (existingBirthday) {
-			return interaction.reply({ content: `Birthday already set for ${birthdayUser.username}`, ephemeral: true });
+			return interaction.reply({ content: `Birthday is already set for ${birthdayUser.username}`, ephemeral: true });
 		}
 
 		const job = new CronJob(`0 0 4 ${birthdayDay} ${birthdayMonth} *`,
@@ -93,6 +94,7 @@ module.exports = {
 				generalChannel.send({ embeds: [birthdayEmbed] });
 			});
 
+		cronJobManager.addJob(birthdayUser.id, job);
 		try {
 			const birthday = await Birthdays.create({
 				userId: birthdayUser.id,

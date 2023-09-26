@@ -1,4 +1,5 @@
 const CronJob = require('cron').CronJob;
+const cronJobManager = require('./cronJobManager');
 const format = require('date-fns/format');
 const axios = require('axios');
 const Birthdays = require('../models/birthdays');
@@ -6,7 +7,7 @@ const { generalChatId, giphyAPIKey } = require('../config.json');
 
 async function startCronJobs(client) {
 	const channel = client.channels.cache.get(generalChatId);
-	const allBirthdays = await Birthdays.findAll({ attributes: ['name', 'dob'] });
+	const allBirthdays = await Birthdays.findAll({ attributes: ['name', 'dob', 'userId'] });
 	let jobsStarted = 0;
 	console.log('Starting Crono Jobs for Birthday Reminders.. ' + allBirthdays.length + ' to go!');
 
@@ -52,6 +53,7 @@ async function startCronJobs(client) {
 				};
 				channel.send({ embeds: [birthdayEmbed] });
 			});
+		cronJobManager.addJob(birthday.userId, job);
 
 		try {
 			job.start();
