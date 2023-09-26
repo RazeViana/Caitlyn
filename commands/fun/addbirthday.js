@@ -66,7 +66,7 @@ module.exports = {
 					fields: [
 						{
 							name: '🍰 Name:',
-							value: birthdayUser.username,
+							value: `<@${birthdayUser.id}>`,
 							inline: true,
 						},
 						{
@@ -89,6 +89,7 @@ module.exports = {
 
 		try {
 			const birthday = await Birthdays.create({
+				userId: birthdayUser.id,
 				name: birthdayUser.username,
 				dob: dateOfBirthFormatted.toISOString(),
 			});

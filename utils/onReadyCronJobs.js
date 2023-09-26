@@ -33,7 +33,7 @@ async function startCronJobs(client) {
 					fields: [
 						{
 							name: '🍰 Name:',
-							value: birthday.name,
+							value: `<@${birthday.userId}>`,
 							inline: true,
 						},
 						{
