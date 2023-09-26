@@ -53,6 +53,12 @@ module.exports = {
 
 		const generalChannel = interaction.client.channels.cache.get(generalChatId);
 
+		// First Check if birthday already exists for that user
+		const existingBirthday = await Birthdays.findOne({ where: { userId: birthdayUser.id } });
+		if (existingBirthday) {
+			return interaction.reply({ content: `Birthday already set for ${birthdayUser.username}`, ephemeral: true });
+		}
+
 		const job = new CronJob(`0 0 4 ${birthdayDay} ${birthdayMonth} *`,
 			async function() {
 				// Get random gif from giphy
