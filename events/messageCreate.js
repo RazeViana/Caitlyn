@@ -15,7 +15,12 @@ module.exports = {
 				const vxTwitterAPI = await axios.get(message.content.replace(twitterBaseURL, vxtwitterAPIBaseURL));
 				// Checks if twitter post contains a video
 				if (vxTwitterAPI.data.mediaURLs.length === 1) {
-					if (vxTwitterAPI.data.mediaURLs.length === 1 && vxTwitterAPI.data.mediaURLs[0].includes('img')) {
+					if (vxTwitterAPI.data.mediaURLs[0].includes('video')) {
+						await message.delete();
+						message.channel.send(`${vxTwitterAPI.data.mediaURLs[0]}`);
+						message.channel.send(`${vxTwitterAPI.data.text.replace(/https?:\/\/\S+/g, '')} \n @${vxTwitterAPI.data.user_name}`);
+					}
+					else if (vxTwitterAPI.data.mediaURLs[0].includes('img')) {
 						const twitterImageEmbed = new EmbedBuilder()
 							.setAuthor({ name: `@${vxTwitterAPI.data.user_name}`, url: vxTwitterAPI.data.tweetURL })
 							.setTitle(vxTwitterAPI.data.user_screen_name)
@@ -28,11 +33,6 @@ module.exports = {
 
 						await message.delete();
 						message.channel.send({ embeds: [twitterImageEmbed] });
-					}
-					else {
-						await message.delete();
-						message.channel.send(`${vxTwitterAPI.data.mediaURLs[0]}`);
-						message.channel.send(`${vxTwitterAPI.data.text.replace(/https?:\/\/\S+/g, '')} \n @${vxTwitterAPI.data.user_name}`);
 					}
 				}
 				// 	await message.delete();
