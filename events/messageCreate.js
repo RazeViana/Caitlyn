@@ -17,7 +17,7 @@ module.exports = {
 				if (vxTwitterAPI.data.mediaURLs.length === 1) {
 					if (vxTwitterAPI.data.mediaURLs.length === 1 && vxTwitterAPI.data.mediaURLs[0].includes('img')) {
 						const twitterImageEmbed = new EmbedBuilder()
-							.setAuthor({ name: `@ ${vxTwitterAPI.data.user_name}`, url: vxTwitterAPI.data.tweetURL })
+							.setAuthor({ name: `@${vxTwitterAPI.data.user_name}`, url: vxTwitterAPI.data.tweetURL })
 							.setTitle(vxTwitterAPI.data.user_screen_name)
 							.setURL(vxTwitterAPI.data.tweetURL)
 							.setThumbnail('https://pbs.twimg.com/profile_images/1683899100922511378/5lY42eHs_400x400.jpg')
