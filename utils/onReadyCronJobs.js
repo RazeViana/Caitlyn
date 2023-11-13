@@ -18,7 +18,7 @@ async function startCronJobs(client) {
 		const month = format(dobToDateFormat, 'MM') - 1;
 		const userAgeMs = Date.now() - dobToDateFormat;
 		const userAgeDate = new Date(userAgeMs);
-		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970);
+		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970) + 1;
 
 		const job = new CronJob(`0 0 5 ${day} ${month} *`,
 			async function() {
@@ -39,7 +39,7 @@ async function startCronJobs(client) {
 						},
 						{
 							name: '🎂 Date:',
-							value: format(dobToDateFormat, 'MMM dd') + ', ' + userAgeYearsOld + ' years old!',
+							value: format(dobToDateFormat, 'MMM dd') + ', ' + (userAgeYearsOld + 1) + ' years old!',
 							inline: true,
 						},
 					],
