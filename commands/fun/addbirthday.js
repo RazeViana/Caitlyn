@@ -48,9 +48,11 @@ module.exports = {
 		const birthdayMonth = interaction.options.getString('month') - 1;
 		const birthdayYear = interaction.options.getInteger('year');
 		const dateOfBirthFormatted = new Date(birthdayYear, birthdayMonth, birthdayDay, 12, 0, 0);
-		const userAgeMs = Date.now() - dateOfBirthFormatted;
-		const userAgeDate = new Date(userAgeMs);
-		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970);
+		const nextBirthday = new Date(today.getFullYear(), month, day);
+		let userAgeYearsOld = nextBirthday.getFullYear() - dobToDateFormat.getFullYear();
+		if (today < nextBirthday) {
+			userAgeYearsOld--;
+		}
 
 		const generalChannel = interaction.client.channels.cache.get(generalChatId);
 

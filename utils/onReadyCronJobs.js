@@ -16,9 +16,12 @@ async function startCronJobs(client) {
 		const dobToDateFormat = new Date(birthday.dob);
 		const day = format(dobToDateFormat, 'dd');
 		const month = format(dobToDateFormat, 'MM') - 1;
-		const userAgeMs = Date.now() - dobToDateFormat;
-		const userAgeDate = new Date(userAgeMs);
-		const userAgeYearsOld = Math.abs(userAgeDate.getUTCFullYear() - 1970) + 1;
+		const today = new Date();
+		const nextBirthday = new Date(today.getFullYear(), month, day);
+		let userAgeYearsOld = nextBirthday.getFullYear() - dobToDateFormat.getFullYear();
+		if (today < nextBirthday) {
+			userAgeYearsOld--;
+		}
 
 		const job = new CronJob(`0 0 5 ${day} ${month} *`,
 			async function() {
@@ -39,7 +42,7 @@ async function startCronJobs(client) {
 						},
 						{
 							name: '🎂 Date:',
-							value: format(dobToDateFormat, 'MMM dd') + ', ' + (userAgeYearsOld + 1) + ' years old!',
+							value: format(dobToDateFormat, 'MMM dd') + ', ' + (userAgeYearsOld) + ' years old!',
 							inline: true,
 						},
 					],

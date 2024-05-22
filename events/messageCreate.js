@@ -7,7 +7,7 @@ module.exports = {
 		if (message.author.bot) return;
 
 		// Changes twitter.com links with the vx at the back
-		const twitterBaseURL = 'https://twitter.com';
+		const twitterBaseURL = 'https://x.com';
 		const vxtwitterAPIBaseURL = 'https://api.vxtwitter.com';
 
 		if (message.content.startsWith(twitterBaseURL)) {
@@ -18,7 +18,7 @@ module.exports = {
 					if (vxTwitterAPI.data.mediaURLs[0].includes('video')) {
 						await message.delete();
 						message.channel.send(`${vxTwitterAPI.data.mediaURLs[0]}`);
-						message.channel.send(`${vxTwitterAPI.data.text.replace(/https?:\/\/\S+/g, '')} \n @${vxTwitterAPI.data.user_name}`);
+						message.channel.send(`${vxTwitterAPI.data.text.replace(/https?:\/\/\S+/g, '')}`);
 					}
 					else if (vxTwitterAPI.data.mediaURLs[0].includes('img')) {
 						const twitterImageEmbed = new EmbedBuilder()
