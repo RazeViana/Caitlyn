@@ -80,7 +80,7 @@ module.exports = {
     // Create a new cron job for new birthday
     const job = new CronJob(
       // Run the job at 10:00am on the user's birthday
-      `0 10 ${birthdayDay} ${birthdayMonth} * `,
+      `0 10 ${birthdayDay} ${birthdayMonth - 1} * `,
       CreateBirthdayEmbed(birthdayUser, dateOfBirthFormatted, generalChannel)
     );
 

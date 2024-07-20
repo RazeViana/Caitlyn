@@ -27,7 +27,7 @@ async function startCronJobs(client) {
     // Create a new cron job for each birthday in the database
     const job = new CronJob(
       // Run the job at 10:00am on the user's birthday
-      `0 10 ${userDayOfBirth} ${userMonthOfBirth} *`,
+      `0 10 ${userDayOfBirth} ${userMonthOfBirth - 1} *`,
       CreateBirthdayEmbed(user, userDateOfBirth, channel)
     );
 
