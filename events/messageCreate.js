@@ -28,9 +28,15 @@ module.exports = {
 
             // Sends the video link from the api
             if (vxTwitterAPI.data.mediaURLs[0]) {
-              await message.channel.send(
-                `[${textContent ?? "."}](${vxTwitterAPI.data.mediaURLs[0]})`
-              );
+              if (textContent) {
+                await message.channel.send(
+                  `[${textContent}](${vxTwitterAPI.data.mediaURLs[0]})`
+                );
+              } else {
+                await message.channel.send(
+                  `[Here you go](${vxTwitterAPI.data.mediaURLs[0]})`
+                );
+              }
             }
           }
 
