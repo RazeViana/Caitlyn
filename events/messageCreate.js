@@ -20,10 +20,15 @@ module.exports = {
           if (vxTwitterAPI.data.mediaURLs[0].includes("video")) {
             // Deletes the original message
             await message.delete();
+
             // Sends the video link from the api
             if (vxTwitterAPI.data.mediaURLs[0]) {
-              await message.channel.send(vxTwitterAPI.data.mediaURLs[0]);
+              await message.channel.send(
+                `[video](${vxTwitterAPI.data.mediaURLs[0]})`
+              );
             }
+
+            // Sends the text content from the api
             const textContent = vxTwitterAPI.data.text
               .replace(/https?:\/\/\S+/g, "")
               .trim();
@@ -31,6 +36,7 @@ module.exports = {
               await message.channel.send(textContent);
             }
           }
+
           // Checks if twitter post contains an image
           else if (vxTwitterAPI.data.mediaURLs[0].includes("img")) {
             const twitterImageEmbed = new EmbedBuilder()
