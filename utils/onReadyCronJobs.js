@@ -31,7 +31,7 @@ async function startCronJobs(client) {
       CreateBirthdayEmbed(user, userDateOfBirth, channel)
     );
 
-    console.log(`Cron Job created for ${user.name}.`);
+    console.log(`Cron Job created for ${user.name} for ${userDateOfBirth}`);
 
     cronJobManager.addJob(user.userId, job);
 
