@@ -21,19 +21,16 @@ module.exports = {
             // Deletes the original message
             await message.delete();
 
-            // Sends the video link from the api
-            if (vxTwitterAPI.data.mediaURLs[0]) {
-              await message.channel.send(
-                `[video](${vxTwitterAPI.data.mediaURLs[0]})`
-              );
-            }
-
-            // Sends the text content from the api
+            // Find text content of the tweet
             const textContent = vxTwitterAPI.data.text
               .replace(/https?:\/\/\S+/g, "")
               .trim();
-            if (textContent) {
-              await message.channel.send(textContent);
+
+            // Sends the video link from the api
+            if (vxTwitterAPI.data.mediaURLs[0]) {
+              await message.channel.send(
+                `[${textContent ?? "."}](${vxTwitterAPI.data.mediaURLs[0]})`
+              );
             }
           }
 
