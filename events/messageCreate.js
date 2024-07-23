@@ -26,11 +26,13 @@ module.exports = {
               .replace(/https?:\/\/\S+/g, "")
               .trim();
 
+            const textContentTrim = textContent.replace(/\n/g, " ").trim();
+
             // Sends the video link from the api
             if (vxTwitterAPI.data.mediaURLs[0]) {
-              if (textContent) {
+              if (textContentTrim) {
                 await message.channel.send(
-                  `[${textContent}](${vxTwitterAPI.data.mediaURLs[0]})`
+                  `[${textContentTrim}](${vxTwitterAPI.data.mediaURLs[0]})`
                 );
               } else {
                 await message.channel.send(
