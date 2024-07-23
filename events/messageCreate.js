@@ -26,7 +26,11 @@ module.exports = {
               .replace(/https?:\/\/\S+/g, "")
               .trim();
 
-            const textContentTrim = textContent.replace(/\n/g, " ").trim();
+            // Removes emojis from the text content
+            const textContentTrim = textContent.replace(
+              /([\u2700-\u27BF]|[\uE000-\uF8FF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uFE00-\uFE0F]|\u200D|[\u2600-\u26FF]|\uD83C[\uDDE6-\uDDFF]|\uD83C[\uDFF0-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83D[\uDE80-\uDEFF]|\uD83E[\uDD00-\uDDFF])/g,
+              ""
+            );
 
             // Sends the video link from the api
             if (vxTwitterAPI.data.mediaURLs[0]) {
