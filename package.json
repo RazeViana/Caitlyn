@@ -14,7 +14,6 @@
 		"discord",
 		"bot"
 	],
-	"type": "module",
 	"author": "Raze Viana",
 	"license": "ISC",
 	"bugs": {
