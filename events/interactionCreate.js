@@ -27,8 +27,9 @@ module.exports = {
 			return;
 		}
 
-		// Get the cooldowns collection from the client
-		const { cooldowns } = interaction.client;
+		// Create the cooldowns collection for the client
+		interaction.client.cooldowns = new Collection();
+		const cooldowns = interaction.client.cooldowns;
 
 		// Check if the command is in the cooldowns collection
 		if (!cooldowns.has(command.data.name)) {

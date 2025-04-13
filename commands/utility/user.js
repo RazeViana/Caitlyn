@@ -1,3 +1,13 @@
+/**
+ * @file user.js
+ * @description This module defines a Discord slash command that provides information about the user who invoked it.
+ * The command displays the username of the user and the date they joined the server.
+ *
+ * The command is implemented as a Slash Command with a cooldown period to prevent spamming.
+ *
+ * @module user_command
+ */
+
 const { SlashCommandBuilder } = require("discord.js");
 
 module.exports = {
