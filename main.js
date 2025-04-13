@@ -3,9 +3,13 @@ const { commandHandler } = require("./handlers/commandHandler.js");
 const { eventHandler } = require("./handlers/eventHandler.js");
 const { createClient } = require("./core/createClient.js");
 const { loginClient } = require("./core/loginClient.js");
+const { createPGPool } = require("./core/createPGPool.js");
 
 // Create a new client instance
 const client = createClient([GatewayIntentBits.Guilds]);
+
+// Create a PostgreSQL connection pool
+createPGPool();
 
 // Load the command & event handler
 commandHandler(client);
