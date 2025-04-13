@@ -73,6 +73,27 @@ module.exports = {
 			.toISOString()
 			.split("T")[0];
 
+		// Check if the birthday is valid
+		if (year < 1900 || year > new Date().getFullYear() + 1) {
+			return interaction.reply({
+				content: "Please provide a valid year.",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+
+		if (
+			isNaN(birthday.getTime()) ||
+			birthday.getDate() !== day ||
+			birthday.getMonth() !== month ||
+			birthday.getFullYear() !== year
+		) {
+			// If the birthday is invalid, return an error message
+			return interaction.reply({
+				content: "Please provide a valid date.",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
+
 		try {
 			// Check if the user already has a birthday set
 			const res = await pool.query(
