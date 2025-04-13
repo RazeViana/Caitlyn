@@ -1,3 +1,15 @@
+/**
+ * @file showbirthdays.js
+ * @description This module defines a Discord slash command for displaying all saved birthdays grouped by month.
+ * It fetches birthday data from a PostgreSQL database, organizes it by month, and displays it in an embed message.
+ * The command highlights birthdays happening today and calculates the number of days remaining for upcoming birthdays.
+ *
+ * Additionally, it fetches a random birthday-themed GIF from the Giphy API to enhance the visual appeal of the embed.
+ * If no birthdays are found, it informs the user accordingly.
+ *
+ * @module showbirthdays
+ */
+
 const {
 	SlashCommandBuilder,
 	EmbedBuilder,
@@ -14,6 +26,7 @@ const {
 require("dotenv").config();
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
+const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
 
 const monthNames = [
 	"January",
@@ -46,9 +59,7 @@ module.exports = {
 
 		try {
 			// Fetch random gif from Giphy API
-			const giphyResponse = await fetch(
-				`https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`
-			);
+			const giphyResponse = await fetch(GIPHY_ENDPOINT);
 
 			const giphyData = await giphyResponse.json();
 

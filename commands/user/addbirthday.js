@@ -69,7 +69,8 @@ module.exports = {
 		const day = interaction.options.getInteger("day");
 		const month = interaction.options.getString("month");
 		const year = interaction.options.getInteger("year");
-		const birthday = new Date(`${year}-${month}-${day}`)
+		const birthdayDate = new Date(`${year}-${month}-${day}`);
+		const birthday = new Date(`${year}-${month}-${day + 1}`)
 			.toISOString()
 			.split("T")[0];
 
@@ -82,10 +83,10 @@ module.exports = {
 		}
 
 		if (
-			isNaN(birthday.getTime()) ||
-			birthday.getDate() !== day ||
-			birthday.getMonth() !== month ||
-			birthday.getFullYear() !== year
+			isNaN(birthdayDate.getTime()) ||
+			birthdayDate.getDate() !== day ||
+			birthdayDate.getMonth() + 1 !== parseInt(month) ||
+			birthdayDate.getFullYear() !== year
 		) {
 			// If the birthday is invalid, return an error message
 			return interaction.reply({
