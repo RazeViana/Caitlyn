@@ -11,10 +11,18 @@ Features to add:
     ☐ Birthday reminders
     ✔ Show birthdays @done(25-04-13 23:25)
     ✔ CRUD commands for birthdays @done(25-04-13 23:25)
-☐ Personality to the bot
+    ✔ Birthday validation @done(25-04-13 23:56)
+☐ Embeds
+    ☐ Convert Twitter links to embeds
+    ☐ Convert Instagram links to embeds
+    ☐ Convert Reddit links to embeds
+☐ Add personality to the bot
+    ☐ Commissioned avatar
+    ☐ Commissioned banner
+    ☐ Connect LLM to the bot
 ☐ Activity tracker
     ☐ User join counter
-    ☐ User leave counter
     ☐ User message counter
+    ☐ User leave counter
     ☐ User in channel tracker counter
 

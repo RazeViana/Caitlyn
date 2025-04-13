@@ -47,6 +47,10 @@ function commandHandler(client) {
 			}
 		}
 	}
+	// Log the loaded commands
+	console.log(
+		`[INFO] Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`
+	);
 }
 
 module.exports = { commandHandler };

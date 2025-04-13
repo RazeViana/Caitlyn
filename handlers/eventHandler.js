@@ -33,6 +33,10 @@ function eventHandler(client) {
 			client.on(event.name, (...args) => event.execute(...args));
 		}
 	}
+	// Log the loaded events
+	console.log(
+		`[INFO] Event Handler loaded ${eventFiles.length} events from the events folder.`
+	);
 }
 
 module.exports = { eventHandler };

@@ -7,6 +7,7 @@ const { createPGPool } = require("./core/createPGPool.js");
 
 // Create a new client instance
 const client = createClient([GatewayIntentBits.Guilds]);
+console.log("[INFO] Created discord client instance");
 
 // Create a PostgreSQL connection pool
 createPGPool();

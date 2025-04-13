@@ -19,11 +19,11 @@ async function createPGPool() {
 		// Check if the connection is successful by executing a simple query
 		const res = await pool.query("SELECT NOW()");
 		if (res.rows.length) {
-			console.log("✅ Connected to Caitlyn~DB @", res.rows[0].now);
+			console.log("[INFO] Connected to Caitlyn~DB");
 		}
 	} catch (err) {
 		// If the connection fails, log the error and exit the process
-		console.error("❌ PostgreSQL connection failed:", err.stack);
+		console.error("[Error] PostgreSQL connection failed:", err.stack);
 		process.exit(1);
 	}
 }
