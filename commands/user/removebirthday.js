@@ -9,7 +9,11 @@
  * @module removeBirthday
  */
 
-const { SlashCommandBuilder } = require("discord.js");
+const {
+	SlashCommandBuilder,
+	MessageFlags,
+	userMention,
+} = require("discord.js");
 const { pool } = require("../../core/createPGPool.js");
 
 module.exports = {
@@ -25,8 +29,8 @@ module.exports = {
 				.setRequired(true)
 		),
 	async execute(interaction) {
-		const displayName = interaction.options.user.displayName;
-		const userId = interaction.options.user.id;
+		const displayName = interaction.options.getUser("user").username;
+		const userId = interaction.options.getUser("user").id;
 
 		try {
 			// Check if the user has a birthday set
@@ -42,7 +46,15 @@ module.exports = {
 
 				// If the birthday was successfully deleted, return a message
 				return interaction.reply({
-					content: `Birthday reminder for ${displayName} has been deleted.`,
+					content: `Birthday reminder for ${userMention(
+						userId
+					)} has been deleted.`,
+					flags: MessageFlags.Ephemeral,
+				});
+			} else {
+				// If the user does not have a birthday set, return a message
+				return interaction.reply({
+					content: `${userMention(userId)} does not have a birthday set.`,
 					flags: MessageFlags.Ephemeral,
 				});
 			}

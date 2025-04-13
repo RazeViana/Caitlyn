@@ -9,7 +9,11 @@
  * @module addBirthday
  */
 
-const { SlashCommandBuilder } = require("discord.js");
+const {
+	SlashCommandBuilder,
+	MessageFlags,
+	userMention,
+} = require("discord.js");
 const { pool } = require("../../core/createPGPool.js");
 
 module.exports = {
@@ -57,8 +61,17 @@ module.exports = {
 				.setRequired(true)
 		),
 	async execute(interaction) {
-		const displayName = interaction.options.user.displayName;
-		const userId = interaction.options.user.id;
+		// Get the user for whom the birthday is being set
+		const displayName = interaction.options.getUser("user").username;
+		const userId = interaction.options.getUser("user").id;
+
+		// Get the birthday details from the interaction options
+		const day = interaction.options.getInteger("day");
+		const month = interaction.options.getString("month");
+		const year = interaction.options.getInteger("year");
+		const birthday = new Date(`${year}-${month}-${day}`)
+			.toISOString()
+			.split("T")[0];
 
 		try {
 			// Check if the user already has a birthday set
@@ -66,10 +79,16 @@ module.exports = {
 				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`
 			);
 
-			// If the user already has a birthday set, return a message
+			// If the user already has a birthday set, update the birthday
 			if (res.rows[0]) {
+				await pool.query(
+					`UPDATE discord.birthdays SET dob = $1, name = $2 WHERE discord_id = $3`,
+					[birthday, displayName, userId]
+				);
+
+				// If the birthday was updated successfully, return a message
 				return interaction.reply({
-					content: `Birthday reminder is already set for ${displayName}`,
+					content: `Birthday updated for ${userMention(userId)}!`,
 					flags: MessageFlags.Ephemeral,
 				});
 			}
@@ -78,14 +97,6 @@ module.exports = {
 			console.error("Error checking existing birthday:", error);
 			return null;
 		}
-
-		// Set the birthday reminder in the database
-		const day = interaction.options.getInteger("day");
-		const month = interaction.options.getString("month");
-		const year = interaction.options.getInteger("year");
-		const birthday = new Date(`${year}-${month}-${day}`)
-			.toISOString()
-			.split("T")[0];
 
 		try {
 			// Insert the birthday into the database
