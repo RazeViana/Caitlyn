@@ -14,6 +14,19 @@ const { Events, Collection } = require("discord.js");
 module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction) {
+		// Check if the interaction is an autocomplete interaction
+		if (interaction.isAutocomplete()) {
+			const command = interaction.client.commands.get(interaction.commandName);
+			if (!command || typeof command.autocomplete !== "function") return;
+			try {
+				await command.autocomplete(interaction);
+			} catch (error) {
+				console.error(`Error in autocomplete for ${interaction.commandName}`);
+				console.error(error);
+			}
+			return;
+		}
+
 		// Check if the interaction is a command
 		if (!interaction.isChatInputCommand()) return;
 

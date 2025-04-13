@@ -10,12 +10,13 @@ module.exports = {
 				.setName("command")
 				.setDescription("The command to reload.")
 				.setRequired(true)
+				.setAutocomplete(true)
 		),
 	async execute(interaction) {
 		// Get the command name to be reloaded
 		const commandName = interaction.options
 			.getString("command", true)
-			.toLowerCase();
+			.tolowerCase();
 		// Get the command from the client using the command name
 		const command = interaction.client.commands.get(commandName);
 
@@ -23,7 +24,7 @@ module.exports = {
 		if (!command) {
 			return interaction.reply({
 				content: `There is no command with name \`/${commandName}\``,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
@@ -36,7 +37,7 @@ module.exports = {
 			console.error(error);
 			await interaction.reply({
 				content: "Command missing category, sort it out mate",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
@@ -54,8 +55,23 @@ module.exports = {
 			console.error(error);
 			await interaction.reply({
 				content: `There was an error while reloading a command \`/${command.data.name}\`:\n\`${error.message}\``,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
+	},
+
+	autocomplete: async (interaction) => {
+		const focused = interaction.options.getFocused();
+		const choices = [...interaction.client.commands.keys()];
+
+		const filtered = choices.filter((cmd) => cmd.startsWith(focused));
+		await interaction.respond(
+			filtered
+				.map((cmd) => ({
+					name: cmd,
+					value: cmd,
+				}))
+				.slice(0, 25) // Discord only allows 25 choices max
+		);
 	},
 };
