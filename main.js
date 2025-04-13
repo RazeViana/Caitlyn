@@ -7,15 +7,9 @@ const { loginClient } = require("./core/loginClient.js");
 // Create a new client instance
 const client = createClient([GatewayIntentBits.Guilds]);
 
-// Load the command handler
+// Load the command & event handler
 commandHandler(client);
-// Load the event handler
 eventHandler(client);
 
 // Log in the client
 loginClient(client);
-
-// once the client is ready, run this code (this is an example event)
-client.once("ready", () => {
-	console.log("Ready!");
-});

@@ -5,6 +5,7 @@
 	"main": "main.js",
 	"scripts": {
 		"start": "node main.js",
+		"deploy": "node core/deployCommands.js && echo \"Commands deployed\"",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"repository": {
