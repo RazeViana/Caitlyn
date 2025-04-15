@@ -7,7 +7,12 @@ const { createPGPool } = require("./core/createPGPool.js");
 const { startBirthdayScheduledEvent } = require("./handlers/cronJobHandler.js");
 
 // Create a new client instance
-const client = createClient([GatewayIntentBits.Guilds]);
+const client = createClient([
+	GatewayIntentBits.Guilds,
+	GatewayIntentBits.GuildMessages,
+	GatewayIntentBits.MessageContent,
+	GatewayIntentBits.GuildMembers,
+]);
 console.log("[INFO] Created discord client instance");
 
 // Create a PostgreSQL connection pool

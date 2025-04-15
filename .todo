@@ -5,13 +5,6 @@
 'Alt+S' // Triggers `Todo: Toggle Start`
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
-
-Features to add:
-✔ Birthday tracker @done(25-04-14 01:11)
-    ✔ Birthday reminders @done(25-04-14 01:11)
-    ✔ Show birthdays @done(25-04-13 23:25)
-    ✔ CRUD commands for birthdays @done(25-04-13 23:25)
-    ✔ Birthday validation @done(25-04-13 23:56)
 ☐ Embeds
     ☐ Convert Twitter links to embeds
     ☐ Convert Instagram links to embeds
@@ -26,3 +19,9 @@ Features to add:
     ☐ User leave counter
     ☐ User in channel tracker counter
 
+Archive:
+✔ Birthday tracker @done(25-04-14 01:11)
+    ✔ Birthday reminders @done(25-04-14 01:11)
+    ✔ Show birthdays @done(25-04-13 23:25)
+    ✔ CRUD commands for birthdays @done(25-04-13 23:25)
+    ✔ Birthday validation @done(25-04-13 23:56)

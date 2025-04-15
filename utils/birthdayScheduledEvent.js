@@ -19,7 +19,7 @@ require("dotenv").config();
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
 
-module.exports = async function birthdayScheduledEvent(client) {
+async function birthdayScheduledEvent(client) {
 	const cakeEmojis = ["🎂", "🍰", "🧁", "🎉", "🎊", "🥳", "🎈"];
 	const randomEmoji = () =>
 		cakeEmojis[Math.floor(Math.random() * cakeEmojis.length)];
@@ -62,4 +62,6 @@ module.exports = async function birthdayScheduledEvent(client) {
 			`\nSend them my regards 🥳`,
 		].join("\n"),
 	});
-};
+}
+
+module.exports = birthdayScheduledEvent;
