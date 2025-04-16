@@ -1,5 +1,5 @@
 /**
- * @file birthdayScheduledEvent.js
+ * @file birthdayMessageEmbed.js
  * @description This module provides a scheduled event handler for celebrating user birthdays in a Discord server.
  * It fetches user birthdays from a PostgreSQL database, checks if any birthdays match the current date, and sends
  * a celebratory message to a specified text channel in the Discord server.
@@ -7,7 +7,7 @@
  * The birthday message includes random celebratory emojis and mentions the users whose birthdays are being celebrated.
  * The module ensures that the target channel is a valid text channel before sending the message.
  *
- * @module birthdayScheduledEvent
+ * @module birthdayMessageEmbed
  */
 
 const { TextChannel, userMention } = require("discord.js");
@@ -19,7 +19,7 @@ require("dotenv").config();
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
 
-async function birthdayScheduledEvent(client) {
+async function birthdayMessageEmbed(client) {
 	const cakeEmojis = ["🎂", "🍰", "🧁", "🎉", "🎊", "🥳", "🎈"];
 	const randomEmoji = () =>
 		cakeEmojis[Math.floor(Math.random() * cakeEmojis.length)];
@@ -64,4 +64,4 @@ async function birthdayScheduledEvent(client) {
 	});
 }
 
-module.exports = birthdayScheduledEvent;
+module.exports = birthdayMessageEmbed;

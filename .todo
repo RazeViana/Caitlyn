@@ -5,6 +5,8 @@
 'Alt+S' // Triggers `Todo: Toggle Start`
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
+☐ Empty states
+    ☐ Any DB fetch needs empty state check
 ☐ Embeds
     ☐ Convert Twitter links to embeds
     ☐ Convert Instagram links to embeds
