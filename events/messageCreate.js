@@ -1,14 +1,19 @@
+/**
+ * @file messageCreate.js
+ * @description This module handles the `messageCreate` event for a Discord.js bot.
+ * It is triggered whenever a new message is sent in a text channel the bot has access to.
+ *
+ * The event listener checks if the message is from a bot or contains no content, and ignores it.
+ *
+ * @module messageCreate
+ */
 const { Events } = require("discord.js");
-const { twitterEmbed } = require("../utils/twitterEmbed.js");
+const { messageHandler } = require("../handlers/messageHandler.js");
 
-//TODO Figure out why TF THIS IS NOT WORKING
 module.exports = {
 	name: Events.MessageCreate,
 	async execute(message) {
-		console.log("Message event triggered");
-		// Check if the message is from a bot or if it doesn't contain any content
-		if (message.author.bot || !message.content) return;
-		console.log("Message received:", message.content);
-		twitterEmbed(message);
+		// Message handler for processing incoming messages
+		messageHandler(message);
 	},
 };

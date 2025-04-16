@@ -64,4 +64,4 @@ async function birthdayMessageEmbed(client) {
 	});
 }
 
-module.exports = birthdayMessageEmbed;
+module.exports = { birthdayMessageEmbed };

@@ -5,10 +5,12 @@
  * @module cronJobHandler
  */
 
-const birthdayScheduledEvent = require("../jobs/birthdayScheduledEvent.js");
+const {
+	startBirthdayScheduledEvent,
+} = require("../jobs/birthdayScheduledEvent.js");
 
 function startCronJobs(client) {
-	birthdayScheduledEvent(client);
+	startBirthdayScheduledEvent(client);
 }
 module.exports = {
 	startCronJobs,

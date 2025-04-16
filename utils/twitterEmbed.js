@@ -1,4 +1,15 @@
-const fetch = require("node-fetch");
+/**
+ * @file twitterEmbed.js
+ * @description This module provides a utility function to handle embedding Twitter/X content
+ * in a Discord channel. It fetches media (e.g., videos) from tweets using the VXTwitter API
+ * and sends them to the channel, cleaning up the original message.
+ *
+ * The function supports multiple Twitter domains and ensures that only video content
+ * is processed and shared. It also handles errors gracefully, notifying users if the
+ * fetch operation fails.
+ *
+ * @module twitterEmbed
+ */
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
@@ -15,19 +26,26 @@ async function twitterEmbed(message) {
 	const vxUrl = message.content.replace(matchedDomain, VX_TWITTER_BASE);
 
 	try {
+		// Fetch the data from the VXTwitter API
 		const res = await fetch(vxUrl);
+		// Check if the response is ok
 		if (!res.ok) throw new Error(`API returned ${res.status}`);
 
-		const { data } = await res.json();
+		// Parse the response
+		const data = await res.json();
+		// Check if the data contains media URLs
 		const mediaUrls = data?.mediaURLs || [];
 
-		if (mediaUrls.length === 0) return; // No media found
+		// Check if there are any media URLs
+		if (mediaUrls.length === 0) return;
 
+		// Filter the media URLs to get only video links
 		const videoLinks = mediaUrls.filter((url) => url.includes("video"));
 
-		if (videoLinks.length === 0) return; // No videos to send
+		// Check if there are any video links
+		if (videoLinks.length === 0) return;
 
-		// Optional: delete the original tweet message
+		// Delete the original discord message
 		await message.delete().catch(console.warn);
 
 		// Clean tweet text (no links/emojis)
@@ -39,20 +57,21 @@ async function twitterEmbed(message) {
 			)
 			.trim();
 
+		// Format the description
 		const description = cleanText
-			? `🗣️ ${message.author}: _"${cleanText}"_`
+			? `"_${cleanText}_"`
 			: `🎥 Twitter video from ${message.author}`;
 
 		// Send videos one by one (to keep formatting clean)
 		await message.channel.send(description);
 		for (const videoUrl of videoLinks) {
-			await message.channel.send(videoUrl);
+			await message.channel.send(`[.](${videoUrl})`);
 		}
 	} catch (error) {
-		console.error("❌ Error fetching from VXTwitter:", error);
-		// Optional: notify the channel
-		// await message.channel.send("Couldn’t fetch the video from Twitter/X.");
+		console.error("[Error] fetching from VXTwitter:", error);
+		// Notify the user if the fetch fails
+		await message.channel.send("Couldn’t fetch the video from Twitter/X.");
 	}
 }
 
-module.exports = twitterEmbed;
+module.exports = { twitterEmbed };

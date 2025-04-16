@@ -12,10 +12,10 @@
 
 const { Client } = require("discord.js");
 
-function createClient([intents]) {
+function createClient(intents) {
 	// Create a new client instance
 	const client = new Client({
-		intents: [intents],
+		intents: intents,
 	});
 
 	// Check if the client is defined
@@ -23,6 +23,7 @@ function createClient([intents]) {
 		throw new Error("Client is not defined");
 	}
 
+	console.log("[INFO] Created discord client instance");
 	return client;
 }
 

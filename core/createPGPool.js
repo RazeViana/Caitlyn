@@ -23,7 +23,7 @@ async function createPGPool() {
 		}
 	} catch (err) {
 		// If the connection fails, log the error and exit the process
-		console.error("[Error] PostgreSQL connection failed:", err.stack);
+		console.error("[Error] PostgreSQL connection failed: \n", err.stack);
 	}
 }
 
