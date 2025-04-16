@@ -6,12 +6,14 @@
  */
 
 const cron = require("node-cron");
-const { birthdayMessageEmbed } = require("../utils/birthdayMessageEmbed.js");
+const {
+	birthdayReminderMessage,
+} = require("../messages/birthdayReminderMessage.js");
 
 // Start the cron job to run every day at 9 AM
 function startBirthdayScheduledEvent(client) {
 	cron.schedule("0 9 * * *", () => {
-		birthdayMessageEmbed(client);
+		birthdayReminderMessage(client);
 	});
 
 	// Log the scheduled event

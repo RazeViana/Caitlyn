@@ -10,14 +10,14 @@
  * @module messageHandler
  */
 
-const { twitterEmbed } = require("../utils/twitterEmbed.js");
+const { twitterVideoMessage } = require("../messages/twitterVideoMessage.js");
 
 function messageHandler(message) {
 	// Check if the message is from a bot or if it doesn't contain any content
 	if (message.author.bot || !message.content) return;
 
 	// Call the twitterEmbed function to process the message
-	twitterEmbed(message);
+	twitterVideoMessage(message);
 }
 
 module.exports = { messageHandler };

@@ -1,5 +1,5 @@
 /**
- * @file twitterEmbed.js
+ * @file twitterVideoMessage.js
  * @description This module provides a utility function to handle embedding Twitter/X content
  * in a Discord channel. It fetches media (e.g., videos) from tweets using the VXTwitter API
  * and sends them to the channel, cleaning up the original message.
@@ -8,13 +8,13 @@
  * is processed and shared. It also handles errors gracefully, notifying users if the
  * fetch operation fails.
  *
- * @module twitterEmbed
+ * @module twitterVideoMessage
  */
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
 
-async function twitterEmbed(message) {
+async function twitterVideoMessage(message) {
 	// Find the first matching Twitter/X domain
 	const matchedDomain = TWITTER_DOMAINS.find((domain) =>
 		message.content.startsWith(domain)
@@ -74,4 +74,4 @@ async function twitterEmbed(message) {
 	}
 }
 
-module.exports = { twitterEmbed };
+module.exports = { twitterVideoMessage };
