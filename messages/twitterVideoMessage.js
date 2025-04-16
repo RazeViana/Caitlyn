@@ -11,6 +11,8 @@
  * @module twitterVideoMessage
  */
 
+const { EmbedBuilder } = require("discord.js");
+
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
 
@@ -49,21 +51,35 @@ async function twitterVideoMessage(message) {
 		await message.delete().catch(console.warn);
 
 		// Clean tweet text (no links/emojis)
-		const cleanText = data.text
-			?.replace(/https?:\/\/\S+/g, "")
-			.replace(
-				/([\u2700-\u27BF]|[\uE000-\uF8FF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|\uFE0F|\u200D|[\u2600-\u26FF]|\uD83C[\uDDE6-\uDDFF]|\uD83C[\uDFF0-\uDFFF]|\uD83D[\uDC00-\uDEFF]|\uD83E[\uDD00-\uDDFF])/g,
-				""
-			)
-			.trim();
+		// const cleanText = data.text
+		// 	?.replace(/https?:\/\/\S+/g, "")
+		// 	.replace(
+		// 		/([\u2700-\u27BF]|[\uE000-\uF8FF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|\uFE0F|\u200D|[\u2600-\u26FF]|\uD83C[\uDDE6-\uDDFF]|\uD83C[\uDFF0-\uDFFF]|\uD83D[\uDC00-\uDEFF]|\uD83E[\uDD00-\uDDFF])/g,
+		// 		""
+		// 	)
+		// 	.trim();
 
-		// Format the description
-		const description = cleanText
-			? `"_${cleanText}_"`
-			: `🎥 Twitter video from ${message.author}`;
+		const embed = new EmbedBuilder()
+			.setAuthor({
+				name: `${data.user_name} (@${data.user_screen_name})`,
+				iconURL: data.user_profile_image_url,
+				url: data.tweetURL,
+			})
+			.setDescription(data.text || "\u200b")
+			.setURL(data.tweetURL)
+			.setColor("#1DA1F2")
+			.setFooter({
+				text: "Twitter",
+				iconURL: "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+			})
+			.setTimestamp(new Date(data.date))
+			// Show a preview image if we have one
+			.setImage(data.media_extended?.[0]?.preview_image_url ?? null);
+
+		// Send the embed to the channel
+		await message.channel.send({ embeds: [embed] });
 
 		// Send videos one by one (to keep formatting clean)
-		await message.channel.send(description);
 		for (const videoUrl of videoLinks) {
 			await message.channel.send(`[.](${videoUrl})`);
 		}
