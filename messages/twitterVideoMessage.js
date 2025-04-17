@@ -9,6 +9,8 @@
  * fetch operation fails.
  *
  * @module twitterVideoMessage
+ *
+ * @deprecated This module is deprecated.
  */
 
 const { EmbedBuilder } = require("discord.js");

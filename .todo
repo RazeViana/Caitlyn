@@ -5,11 +5,6 @@
 'Alt+S' // Triggers `Todo: Toggle Start`
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
-☐ Embeds (Ezembed)
-    ✔ Convert Twitter links to embeds @done(25-04-17 00:58)
-    ☐ Convert Instagram links to embeds
-    ☐ Convert Reddit links to embeds
-    ☐ Convert TikTok links to embeds 
 ☐ Add personality to the bot
     ☐ Commissioned avatar
     ☐ Commissioned banner
@@ -21,6 +16,11 @@
     ☐ User in channel tracker counter
 
 Archive:
+✔ Embeds (Ezembed) @done(25-04-17 11:03)
+    ✔ Convert Twitter links to embeds @done(25-04-17 00:58)
+    ✔ Convert Instagram links to embeds @done(25-04-17 11:02)
+    ✔ Convert Reddit links to embeds @done(25-04-17 11:02)
+    ✔ Convert TikTok links to embeds @done(25-04-17 11:02)
 ✔ Birthday tracker @done(25-04-14 01:11)
     ✔ Birthday reminders @done(25-04-14 01:11)
     ✔ Show birthdays @done(25-04-13 23:25)
