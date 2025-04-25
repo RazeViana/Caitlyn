@@ -5,6 +5,7 @@ const { createClient } = require("./core/createClient.js");
 const { loginClient } = require("./core/loginClient.js");
 const { createPGPool } = require("./core/createPGPool.js");
 const { startCronJobs } = require("./handlers/cronJobHandler.js");
+const { createCollection } = require("./core/memory");
 
 // Create a new client instance
 const client = createClient([
@@ -16,6 +17,9 @@ const client = createClient([
 
 // Create a PostgreSQL connection pool
 createPGPool();
+
+// Create the memory collection
+createCollection();
 
 // Load the command & event handler
 commandHandler(client);

@@ -11,10 +11,21 @@
  */
 
 const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
+const { addMemory } = require("../core/memory.js");
 
-function messageHandler(message) {
+async function messageHandler(message) {
 	// Check if the message is from a bot or if it doesn't contain any content
 	if (message.author.bot || !message.content) return;
+
+	await addMemory(
+		`${message.author.username} said: "${message.content}"`,
+		`msg-${message.id}`,
+		{
+			author: message.author.username,
+			timestamp: new Date().toISOString(),
+			channel: message.channel.name,
+		}
+	);
 
 	// Social media message handling for embedding
 	socialMediaMessage(message);
