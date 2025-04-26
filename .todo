@@ -6,9 +6,14 @@
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
 ☐ Add personality to the bot
-    ☐ Commissioned avatar
+    ✔ Commissioned avatar @done(25-04-26 01:05)
     ☐ Commissioned banner
     ☐ Connect LLM to the bot
+☐ Caitlyn bot functionality
+    ☐ Handles urls
+    ☐ Handles images
+    ☐ Remembers previous conversations from users
+    ☐ Remembers itself and its own responses
 ☐ Activity tracker
     ☐ User join counter
     ☐ User message counter

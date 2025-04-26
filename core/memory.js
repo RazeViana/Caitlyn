@@ -48,7 +48,12 @@ async function getEmbedding(text) {
 	// Check if the response is JSON
 	const json = await res.json();
 
-	return json;
+	// supports both {embedding:[...]} and {data:[{embedding:[...]}]}
+	const vector =
+		json.embedding || (Array.isArray(json.data) && json.data[0]?.embedding);
+
+	if (!vector) throw new Error("[ERROR] Embedding missing in response");
+	return vector;
 }
 
 // Create the memory collection if needed
