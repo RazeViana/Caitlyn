@@ -33,7 +33,7 @@ async function caitlynAI(message) {
 
 	if (reply.trim() !== "NOTHING") {
 		addMessage(key, "assistant", reply);
-		message.reply(reply);
+		message.channel.send(reply);
 	}
 }
 
