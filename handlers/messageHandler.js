@@ -11,11 +11,14 @@
  */
 
 const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
+const { caitlynAI } = require("../messages/caitlynAI.js");
 
 function messageHandler(message) {
 	// Check if the message is from a bot or if it doesn't contain any content
 	if (message.author.bot || !message.content) return;
 
+	// LLM message handling
+	caitlynAI(message);
 	// Social media message handling for embedding
 	socialMediaMessage(message);
 }
