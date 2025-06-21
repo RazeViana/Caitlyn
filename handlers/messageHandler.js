@@ -13,12 +13,19 @@
 const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
 const { caitlynAI } = require("../messages/caitlynAI.js");
 
+require("dotenv").config();
+
+const LLM_ENABLED = process.env.LLM_ENABLED;
+
 function messageHandler(message) {
 	// Check if the message is from a bot or if it doesn't contain any content
 	if (message.author.bot || !message.content) return;
 
 	// LLM message handling
-	caitlynAI(message);
+	if (LLM_ENABLED === "true") {
+		caitlynAI(message);
+	}
+
 	// Social media message handling for embedding
 	socialMediaMessage(message);
 }
