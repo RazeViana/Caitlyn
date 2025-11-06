@@ -23,7 +23,6 @@ const {
 	getMonth,
 	differenceInCalendarDays,
 } = require("date-fns");
-require("dotenv").config();
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;

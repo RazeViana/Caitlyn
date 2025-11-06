@@ -25,3 +25,6 @@ build/
 
 # Test files
 dbtest.js
+
+# Claude
+CLAUDE.md

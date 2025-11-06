@@ -9,8 +9,6 @@
 const { getConversation, addMessage } = require("../core/conversationStore");
 const { chat } = require("../core/ollama.js");
 
-require("dotenv").config();
-
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;
 
 async function caitlynAI(message) {

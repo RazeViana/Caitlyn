@@ -9,8 +9,6 @@
 
 const conversationMap = new Map();
 
-require("dotenv").config();
-
 CONVERSATION_MEMORY_SIZE = process.env.CONVERSATION_MEMORY_SIZE;
 
 function getConversation(key) {

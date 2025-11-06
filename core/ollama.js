@@ -6,8 +6,6 @@
  * @module ollama
  */
 
-require("dotenv").config();
-
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const OLLAMA_CHAT_ENDPOINT = process.env.OLLAMA_CHAT_ENDPOINT;
 

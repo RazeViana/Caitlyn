@@ -13,8 +13,6 @@
 const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
 const { caitlynAI } = require("../messages/caitlynAI.js");
 
-require("dotenv").config();
-
 const LLM_ENABLED = process.env.LLM_ENABLED;
 
 function messageHandler(message) {

@@ -8,8 +8,6 @@
  * @module loginClient
  */
 
-require("dotenv").config();
-
 const TOKEN = process.env.TOKEN;
 
 // Check if the TOKEN is set

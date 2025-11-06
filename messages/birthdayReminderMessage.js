@@ -14,8 +14,6 @@ const { TextChannel, userMention } = require("discord.js");
 const { pool } = require("../core/createPGPool");
 const { format } = require("date-fns");
 
-require("dotenv").config();
-
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
 
