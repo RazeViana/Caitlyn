@@ -1,38 +1,51 @@
 /**
  * @file caitlynAI.js
- * @description This module provides the main AI handler for Caitlyn, managing conversation state and interaction with the chat model.
- * It retrieves and updates conversation history, formats user messages, injects a system prompt when needed, and sends/receives messages via the chat API.
+ * @description This module provides the main AI handler for Caitlyn.
+ * Formats user messages and sends them to Open WebUI, which handles conversation history,
+ * memory, and web search. System prompt is configured in Open WebUI model settings.
  *
  * @module caitlynAI
  */
 
-import { getConversation, addMessage } from "../core/conversationStore.js";
 import { chat } from "../core/ollama.js";
+import logger from "../core/logger.js";
 
-const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;
+const LLM_ENABLED = process.env.LLM_ENABLED;
 
 async function caitlynAI(message) {
-	const key = message.channel.id;
-	const messages = getConversation(key);
-	const userMessageFormat = message.author.username + ": " + message.content;
+  const userMessageFormat = `Sender:${message.author.username} message: ${message.content}`;
+  const caitlynReference = message.content.toLowerCase().includes("caitlyn");
 
-	// check if the messages array is empty otherwise add the system prompt
-	if (messages.length === 0) {
-		messages.push({ role: "system", content: SYSTEM_PROMPT });
-	}
+  if (LLM_ENABLED === "true" && caitlynReference) {
+    try {
+      // Use Discord channel ID as chat_id for persistence in Open WebUI
+      const chatId = `discord-${message.channel.id}`;
 
-	// Add the user message to the conversation
-	messages.push({
-		role: "user",
-		content: userMessageFormat,
-	});
+      // Send single message - Open WebUI handles conversation history via chat_id
+      const messages = [
+        {
+          role: "user",
+          content: userMessageFormat,
+        },
+      ];
 
-	const reply = await chat(messages);
+      const reply = await chat(messages, chatId);
 
-	if (reply.trim() !== "NOTHING") {
-		addMessage(key, "assistant", reply);
-		message.channel.send(reply);
-	}
+      if (reply) {
+        message.channel.send(reply);
+      }
+    } catch (error) {
+      logger.error("Error processing AI message:", error);
+      // Send error message to user
+      await message.channel.send(
+        "Sorry, I encountered an error processing your message. Please try again.",
+      );
+    }
+  } else if (LLM_ENABLED === "true") {
+    logger.info("LLM is enabled but Caitlyn not mentioned");
+  } else {
+    logger.info("LLM is disabled");
+  }
 }
 
 export { caitlynAI };

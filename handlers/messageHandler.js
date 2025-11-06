@@ -13,19 +13,15 @@
 import { socialMediaMessage } from "../messages/socialMediaMessage.js";
 import { caitlynAI } from "../messages/caitlynAI.js";
 
-const LLM_ENABLED = process.env.LLM_ENABLED;
-
 function messageHandler(message) {
-	// Check if the message is from a bot or if it doesn't contain any content
-	if (message.author.bot || !message.content) return;
+  // Check if the message is from a bot or if it doesn't contain any content
+  if (message.author.bot || !message.content) return;
 
-	// LLM message handling
-	if (LLM_ENABLED === "true") {
-		caitlynAI(message);
-	}
+  // Social media message handling for embedding
+  socialMediaMessage(message);
 
-	// Social media message handling for embedding
-	socialMediaMessage(message);
+  // LLM message handling
+  caitlynAI(message);
 }
 
 export { messageHandler };
