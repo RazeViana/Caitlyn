@@ -23,6 +23,7 @@ import {
 	getMonth,
 	differenceInCalendarDays,
 } from "date-fns";
+import logger from "../../core/logger.js";
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
@@ -62,7 +63,7 @@ export async function execute(interaction) {
 			const giphyData = await giphyResponse.json();
 
 			if (!giphyResponse.ok) {
-				console.error(
+				logger.error(
 					"Failed to fetch GIF from Giphy API:",
 					giphyResponse.statusText
 				);
@@ -70,7 +71,7 @@ export async function execute(interaction) {
 
 			randomGIF = giphyData.data?.images?.original?.url;
 		} catch (error) {
-			console.error("Error fetching GIF:", error);
+			logger.error("Error fetching GIF:", error);
 		}
 
 		try {
@@ -161,7 +162,7 @@ export async function execute(interaction) {
 			// Send the embed
 			await interaction.editReply({ embeds: [embed] });
 		} catch (error) {
-			console.error("❌ Error fetching birthdays:", error);
+			logger.error("❌ Error fetching birthdays:", error);
 			await interaction.editReply("An error occurred fetching birthdays.");
 		}
 }

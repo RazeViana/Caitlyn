@@ -8,6 +8,8 @@
  * @module loginClient
  */
 
+import logger from "./logger.js";
+
 const TOKEN = process.env.TOKEN;
 
 // Check if the TOKEN is set
@@ -22,7 +24,7 @@ function loginClient(client) {
 	}
 	// Try to log in the client and catch any errors
 	client.login(process.env.TOKEN).catch((error) => {
-		console.error("Error logging in:", error);
+		logger.error("Error logging in:", error);
 	});
 }
 

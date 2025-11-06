@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import logger from "../../core/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +53,7 @@ export async function execute(interaction) {
 			`Command \`/${newCommand.data.name}\` was reloaded!`
 		);
 	} catch (error) {
-		console.error(error);
+		logger.error("Error reloading command:", error);
 		await interaction.reply({
 			content: `There was an error while reloading a command \`/${command.data.name}\`:\n\`${error.message}\``,
 			flags: MessageFlags.Ephemeral,

@@ -15,6 +15,7 @@ import {
 	userMention,
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
+import logger from "../../core/logger.js";
 
 export const cooldown = 5;
 export const category = "user";
@@ -59,6 +60,6 @@ export async function execute(interaction) {
 			}
 		} catch (error) {
 			// If there was an error checking the database, log it and return a message
-			console.error("Error checking existing birthday:", error);
+			logger.error("Error checking existing birthday:", error);
 		}
 }

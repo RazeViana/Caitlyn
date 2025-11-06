@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Collection } from "discord.js";
+import logger from "../core/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,15 +47,15 @@ async function commandHandler(client) {
 			if ("data" in command && "execute" in command) {
 				client.commands.set(command.data.name, command);
 			} else {
-				console.log(
-					`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+				logger.warn(
+					`The command at ${filePath} is missing a required "data" or "execute" property.`
 				);
 			}
 		}
 	}
 	// Log the loaded commands
-	console.log(
-		`[INFO] Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`
+	logger.info(
+		`Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`
 	);
 }
 

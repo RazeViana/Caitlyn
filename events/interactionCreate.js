@@ -10,6 +10,7 @@
  */
 
 import { Events, Collection } from "discord.js";
+import logger from "../core/logger.js";
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction) {
@@ -20,8 +21,7 @@ export async function execute(interaction) {
 			try {
 				await command.autocomplete(interaction);
 			} catch (error) {
-				console.error(`Error in autocomplete for ${interaction.commandName}`);
-				console.error(error);
+				logger.error(`Error in autocomplete for ${interaction.commandName}:`, error);
 			}
 			return;
 		}
@@ -33,9 +33,7 @@ export async function execute(interaction) {
 		const command = interaction.client.commands.get(interaction.commandName);
 		// Check if the command exists
 		if (!command) {
-			console.error(
-				`No command matching ${interaction.commandName} was found.`
-			);
+			logger.error(`No command matching ${interaction.commandName} was found.`);
 			return;
 		}
 
@@ -79,7 +77,6 @@ export async function execute(interaction) {
 		try {
 			await command.execute(interaction);
 		} catch (error) {
-			console.error(`Error executing ${interaction.commandName}`);
-			console.error(error);
+			logger.error(`Error executing ${interaction.commandName}:`, error);
 		}
 }

@@ -14,6 +14,7 @@
  */
 
 import { EmbedBuilder } from "discord.js";
+import logger from "../core/logger.js";
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
@@ -50,7 +51,9 @@ async function twitterVideoMessage(message) {
 		if (videoLinks.length === 0) return;
 
 		// Delete the original discord message
-		await message.delete().catch(console.warn);
+		await message.delete().catch(() => {
+			// Silently fail - message might have been deleted already
+		});
 
 		// Clean tweet text (no links/emojis)
 		// const cleanText = data.text
@@ -86,7 +89,7 @@ async function twitterVideoMessage(message) {
 			await message.channel.send(`[.](${videoUrl})`);
 		}
 	} catch (error) {
-		console.error("[Error] fetching from VXTwitter:", error);
+		logger.error("Error fetching from VXTwitter:", error);
 		// Notify the user if the fetch fails
 		await message.channel.send("Couldn't fetch the video from Twitter/X.");
 	}

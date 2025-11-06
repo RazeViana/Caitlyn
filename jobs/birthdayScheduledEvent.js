@@ -7,6 +7,7 @@
 
 import cron from "node-cron";
 import { birthdayReminderMessage } from "../messages/birthdayReminderMessage.js";
+import logger from "../core/logger.js";
 
 // Start the cron job to run every day at 9 AM
 function startBirthdayScheduledEvent(client) {
@@ -15,8 +16,8 @@ function startBirthdayScheduledEvent(client) {
 	});
 
 	// Log the scheduled event
-	console.log(
-		"[INFO] Birthday scheduled event started, running every day at 9 AM."
+	logger.info(
+		"Birthday scheduled event started, running every day at 9 AM."
 	);
 }
 

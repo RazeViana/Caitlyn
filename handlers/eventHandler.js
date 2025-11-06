@@ -12,6 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import logger from "../core/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,8 +40,8 @@ async function eventHandler(client) {
 		}
 	}
 	// Log the loaded events
-	console.log(
-		`[INFO] Event Handler loaded ${eventFiles.length} events from the events folder.`
+	logger.info(
+		`Event Handler loaded ${eventFiles.length} events from the events folder.`
 	);
 }
 

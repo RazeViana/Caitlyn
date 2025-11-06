@@ -9,6 +9,8 @@
  */
 
 import pg from "pg";
+import logger from "./logger.js";
+
 const { Pool } = pg;
 
 // Create a new PostgreSQL connection pool
@@ -19,11 +21,11 @@ async function createPGPool() {
 		// Check if the connection is successful by executing a simple query
 		const res = await pool.query("SELECT NOW()");
 		if (res.rows.length) {
-			console.log("[INFO] Connected to PostgreSQL Caitlyn~DB");
+			logger.success("Connected to PostgreSQL Caitlyn~DB");
 		}
 	} catch (err) {
 		// If the connection fails, log the error and exit the process
-		console.error("[Error] PostgreSQL connection failed: \n", err.stack);
+		logger.error("PostgreSQL connection failed:", err);
 	}
 }
 

@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import "dotenv/config";
+import logger from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,8 +44,8 @@ for (const folder of commandFolders) {
 		if ("data" in command && "execute" in command) {
 			commands.push(command.data.toJSON());
 		} else {
-			console.log(
-				`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+			logger.warn(
+				`The command at ${filePath} is missing a required "data" or "execute" property.`
 			);
 		}
 	}
@@ -56,7 +57,7 @@ const rest = new REST().setToken(TOKEN);
 // and deploy your commands!
 (async () => {
 	try {
-		console.log(
+		logger.info(
 			`Started refreshing ${commands.length} application (/) commands.`
 		);
 		// This clears the commands from the guild
@@ -78,11 +79,11 @@ const rest = new REST().setToken(TOKEN);
 			}
 		);
 
-		console.log(
+		logger.success(
 			`Successfully reloaded ${data.length} application (/) commands.`
 		);
 	} catch (error) {
 		// And of course, make sure you catch and log any errors!
-		console.error(error);
+		logger.error("Error deploying commands:", error);
 	}
 })();

@@ -50,7 +50,7 @@ async function socialMediaMessage(message) {
 		await message.delete();
 		await message.channel.send(`[${domain}](${ezUrl})`);
 	} catch (err) {
-		console.error("Could not replace URL:", err);
+		// Silently fail - message might have been deleted or permissions issue
 	}
 }
 

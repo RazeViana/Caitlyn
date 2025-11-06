@@ -11,6 +11,7 @@
  */
 
 import { Client } from "discord.js";
+import logger from "./logger.js";
 
 function createClient(intents) {
 	// Create a new client instance
@@ -23,7 +24,7 @@ function createClient(intents) {
 		throw new Error("Client is not defined");
 	}
 
-	console.log("[INFO] Created discord client instance");
+	logger.success("Created Discord client instance");
 	return client;
 }
 
