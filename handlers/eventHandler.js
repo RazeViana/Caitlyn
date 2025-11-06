@@ -9,10 +9,14 @@
  * @module eventHandler
  */
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-function eventHandler(client) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function eventHandler(client) {
 	// Get the events folder path
 	const eventsPath = path.join(__dirname, "../events");
 	// Get the files in the events folder and filter them to only include .js files
@@ -25,7 +29,8 @@ function eventHandler(client) {
 		// Get the current event file path
 		const filePath = path.join(eventsPath, file);
 		// Import the event file
-		const event = require(filePath);
+		const fileUrl = new URL(`file://${filePath}`);
+		const event = await import(fileUrl.href);
 		// Check if the event has a name and an execute function
 		if (event.once) {
 			client.once(event.name, (...args) => event.execute(...args));
@@ -39,4 +44,4 @@ function eventHandler(client) {
 	);
 }
 
-module.exports = { eventHandler };
+export { eventHandler };

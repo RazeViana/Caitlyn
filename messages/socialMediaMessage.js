@@ -54,4 +54,4 @@ async function socialMediaMessage(message) {
 	}
 }
 
-module.exports = { socialMediaMessage };
+export { socialMediaMessage };

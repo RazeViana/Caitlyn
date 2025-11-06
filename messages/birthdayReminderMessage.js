@@ -10,9 +10,9 @@
  * @module birthdayReminderMessage
  */
 
-const { TextChannel, userMention } = require("discord.js");
-const { pool } = require("../core/createPGPool");
-const { format } = require("date-fns");
+import { TextChannel, userMention } from "discord.js";
+import { pool } from "../core/createPGPool.js";
+import { format } from "date-fns";
 
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
@@ -62,4 +62,4 @@ async function birthdayReminderMessage(client) {
 	});
 }
 
-module.exports = { birthdayReminderMessage };
+export { birthdayReminderMessage };

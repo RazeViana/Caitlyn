@@ -6,8 +6,8 @@
  * @module caitlynAI
  */
 
-const { getConversation, addMessage } = require("../core/conversationStore");
-const { chat } = require("../core/ollama.js");
+import { getConversation, addMessage } from "../core/conversationStore.js";
+import { chat } from "../core/ollama.js";
 
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;
 
@@ -35,4 +35,4 @@ async function caitlynAI(message) {
 	}
 }
 
-module.exports = { caitlynAI };
+export { caitlynAI };

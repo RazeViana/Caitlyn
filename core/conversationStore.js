@@ -9,7 +9,7 @@
 
 const conversationMap = new Map();
 
-CONVERSATION_MEMORY_SIZE = process.env.CONVERSATION_MEMORY_SIZE;
+const CONVERSATION_MEMORY_SIZE = process.env.CONVERSATION_MEMORY_SIZE;
 
 function getConversation(key) {
 	if (!conversationMap.has(key)) {
@@ -31,4 +31,4 @@ function resetConversation(key) {
 	conversationMap.delete(key);
 }
 
-module.exports = { getConversation, addMessage, resetConversation };
+export { getConversation, addMessage, resetConversation };

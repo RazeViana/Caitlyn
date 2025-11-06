@@ -7,13 +7,11 @@
  *
  * @module messageCreate
  */
-const { Events } = require("discord.js");
-const { messageHandler } = require("../handlers/messageHandler.js");
+import { Events } from "discord.js";
+import { messageHandler } from "../handlers/messageHandler.js";
 
-module.exports = {
-	name: Events.MessageCreate,
-	async execute(message) {
-		// Message handler for processing incoming messages
-		messageHandler(message);
-	},
-};
+export const name = Events.MessageCreate;
+export async function execute(message) {
+	// Message handler for processing incoming messages
+	messageHandler(message);
+}

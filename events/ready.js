@@ -9,12 +9,10 @@
  * @module ready
  */
 
-const { Events } = require("discord.js");
+import { Events } from "discord.js";
 
-module.exports = {
-	name: Events.ClientReady,
-	once: true,
-	execute(client) {
-		console.log(`[INFO] ${client.user.username} is online`);
-	},
-};
+export const name = Events.ClientReady;
+export const once = true;
+export function execute(client) {
+	console.log(`[INFO] ${client.user.username} is online`);
+}

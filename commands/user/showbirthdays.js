@@ -10,19 +10,19 @@
  * @module showbirthdays
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	EmbedBuilder,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
-const {
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
+import {
 	format,
 	isSameDay,
 	parseISO,
 	getMonth,
 	differenceInCalendarDays,
-} = require("date-fns");
+} from "date-fns";
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
@@ -42,13 +42,12 @@ const monthNames = [
 	"December",
 ];
 
-module.exports = {
-	category: "user",
-	data: new SlashCommandBuilder()
-		.setName("showbirthdays")
-		.setDescription("🎉 View all saved birthdays grouped by month!"),
+export const category = "user";
+export const data = new SlashCommandBuilder()
+	.setName("showbirthdays")
+	.setDescription("🎉 View all saved birthdays grouped by month!");
 
-	async execute(interaction) {
+export async function execute(interaction) {
 		// Defer the reply to give the bot time to process
 		await interaction.deferReply();
 
@@ -165,5 +164,4 @@ module.exports = {
 			console.error("❌ Error fetching birthdays:", error);
 			await interaction.editReply("An error occurred fetching birthdays.");
 		}
-	},
-};
+}

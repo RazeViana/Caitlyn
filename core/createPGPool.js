@@ -8,7 +8,8 @@
  * @module createPGPool
  */
 
-const { Pool } = require("pg");
+import pg from "pg";
+const { Pool } = pg;
 
 // Create a new PostgreSQL connection pool
 const pool = new Pool();
@@ -27,7 +28,4 @@ async function createPGPool() {
 }
 
 // Export the pool instance for use in other modules
-module.exports = {
-	createPGPool,
-	pool,
-};
+export { createPGPool, pool };

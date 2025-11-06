@@ -5,10 +5,8 @@
  * @module birthdayScheduledEvent
  */
 
-const cron = require("node-cron");
-const {
-	birthdayReminderMessage,
-} = require("../messages/birthdayReminderMessage.js");
+import cron from "node-cron";
+import { birthdayReminderMessage } from "../messages/birthdayReminderMessage.js";
 
 // Start the cron job to run every day at 9 AM
 function startBirthdayScheduledEvent(client) {
@@ -22,4 +20,4 @@ function startBirthdayScheduledEvent(client) {
 	);
 }
 
-module.exports = { startBirthdayScheduledEvent };
+export { startBirthdayScheduledEvent };

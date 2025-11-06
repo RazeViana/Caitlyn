@@ -9,11 +9,10 @@
  * @module interactionCreate
  */
 
-const { Events, Collection } = require("discord.js");
+import { Events, Collection } from "discord.js";
 
-module.exports = {
-	name: Events.InteractionCreate,
-	async execute(interaction) {
+export const name = Events.InteractionCreate;
+export async function execute(interaction) {
 		// Check if the interaction is an autocomplete interaction
 		if (interaction.isAutocomplete()) {
 			const command = interaction.client.commands.get(interaction.commandName);
@@ -83,5 +82,4 @@ module.exports = {
 			console.error(`Error executing ${interaction.commandName}`);
 			console.error(error);
 		}
-	},
-};
+}

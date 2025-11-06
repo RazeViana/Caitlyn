@@ -31,4 +31,4 @@ async function chat(messages) {
 	return reply;
 }
 
-module.exports = { chat };
+export { chat };

@@ -26,4 +26,4 @@ function loginClient(client) {
 	});
 }
 
-module.exports = { loginClient };
+export { loginClient };

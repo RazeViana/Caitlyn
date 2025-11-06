@@ -1,12 +1,12 @@
-require("dotenv").config();
+import "dotenv/config";
 
-const { GatewayIntentBits } = require("discord.js");
-const { commandHandler } = require("./handlers/commandHandler.js");
-const { eventHandler } = require("./handlers/eventHandler.js");
-const { createClient } = require("./core/createClient.js");
-const { loginClient } = require("./core/loginClient.js");
-const { createPGPool } = require("./core/createPGPool.js");
-const { startCronJobs } = require("./handlers/cronJobHandler.js");
+import { GatewayIntentBits } from "discord.js";
+import { commandHandler } from "./handlers/commandHandler.js";
+import { eventHandler } from "./handlers/eventHandler.js";
+import { createClient } from "./core/createClient.js";
+import { loginClient } from "./core/loginClient.js";
+import { createPGPool } from "./core/createPGPool.js";
+import { startCronJobs } from "./handlers/cronJobHandler.js";
 
 // Create a new client instance
 const client = createClient([
@@ -17,11 +17,11 @@ const client = createClient([
 ]);
 
 // Create a PostgreSQL connection pool
-createPGPool();
+await createPGPool();
 
 // Load the command & event handler
-commandHandler(client);
-eventHandler(client);
+await commandHandler(client);
+await eventHandler(client);
 
 // Start the cron job handler scheduled event
 startCronJobs(client);

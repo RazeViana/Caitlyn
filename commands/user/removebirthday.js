@@ -9,26 +9,25 @@
  * @module removeBirthday
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	MessageFlags,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
 
-module.exports = {
-	cooldown: 5,
-	category: "user",
-	data: new SlashCommandBuilder()
-		.setName("removebirthday")
-		.setDescription("Removes a birthday")
-		.addUserOption((option) =>
-			option
-				.setName("user")
-				.setDescription("The birthday reminder of the user you want to remove")
-				.setRequired(true)
-		),
-	async execute(interaction) {
+export const cooldown = 5;
+export const category = "user";
+export const data = new SlashCommandBuilder()
+	.setName("removebirthday")
+	.setDescription("Removes a birthday")
+	.addUserOption((option) =>
+		option
+			.setName("user")
+			.setDescription("The birthday reminder of the user you want to remove")
+			.setRequired(true)
+	);
+export async function execute(interaction) {
 		const displayName = interaction.options.getUser("user").username;
 		const userId = interaction.options.getUser("user").id;
 
@@ -62,5 +61,4 @@ module.exports = {
 			// If there was an error checking the database, log it and return a message
 			console.error("Error checking existing birthday:", error);
 		}
-	},
-};
+}

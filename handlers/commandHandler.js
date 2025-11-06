@@ -9,11 +9,15 @@
  * @module command_handler
  */
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { Collection } = require("discord.js");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { Collection } from "discord.js";
 
-function commandHandler(client) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function commandHandler(client) {
 	if (!client) throw new Error("Client is not defined");
 
 	client.commands = new Collection();
@@ -35,7 +39,8 @@ function commandHandler(client) {
 			// Reads the current command file path
 			const filePath = path.join(commandsPath, file);
 			// Imports the command file
-			const command = require(filePath);
+			const fileUrl = new URL(`file://${filePath}`);
+			const command = await import(fileUrl.href);
 
 			// Set a new item in the Collection with the key as the command name and the value as the exported module
 			if ("data" in command && "execute" in command) {
@@ -53,4 +58,4 @@ function commandHandler(client) {
 	);
 }
 
-module.exports = { commandHandler };
+export { commandHandler };

@@ -2,6 +2,7 @@
 	"name": "caitlyn",
 	"version": "2.0.0",
 	"description": "A Discord bot that has a little personality to it. It is a work in progress*",
+	"type": "module",
 	"main": "main.js",
 	"scripts": {
 		"start": "node main.js",

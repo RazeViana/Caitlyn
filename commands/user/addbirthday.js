@@ -9,17 +9,16 @@
  * @module addBirthday
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	MessageFlags,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
 
-module.exports = {
-	cooldown: 5,
-	category: "user",
-	data: new SlashCommandBuilder()
+export const cooldown = 5;
+export const category = "user";
+export const data = new SlashCommandBuilder()
 		.setName("addbirthday")
 		.setDescription("Sets a birthday reminder for the specified user")
 		.addUserOption((option) =>
@@ -59,8 +58,8 @@ module.exports = {
 				.setName("year")
 				.setDescription("The year of the birthday e.g. 1997")
 				.setRequired(true)
-		),
-	async execute(interaction) {
+		);
+export async function execute(interaction) {
 		// Get the user for whom the birthday is being set
 		const displayName = interaction.options.getUser("user").username;
 		const userId = interaction.options.getUser("user").id;
@@ -134,5 +133,4 @@ module.exports = {
 				flags: MessageFlags.Ephemeral,
 			});
 		}
-	},
-};
+}

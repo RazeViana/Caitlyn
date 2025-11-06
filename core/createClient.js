@@ -10,7 +10,7 @@
  * @module createClient
  */
 
-const { Client } = require("discord.js");
+import { Client } from "discord.js";
 
 function createClient(intents) {
 	// Create a new client instance
@@ -27,4 +27,4 @@ function createClient(intents) {
 	return client;
 }
 
-module.exports = { createClient };
+export { createClient };

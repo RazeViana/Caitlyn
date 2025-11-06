@@ -13,7 +13,7 @@
  * @deprecated This module is deprecated.
  */
 
-const { EmbedBuilder } = require("discord.js");
+import { EmbedBuilder } from "discord.js";
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
@@ -88,8 +88,8 @@ async function twitterVideoMessage(message) {
 	} catch (error) {
 		console.error("[Error] fetching from VXTwitter:", error);
 		// Notify the user if the fetch fails
-		await message.channel.send("Couldn’t fetch the video from Twitter/X.");
+		await message.channel.send("Couldn't fetch the video from Twitter/X.");
 	}
 }
 
-module.exports = { twitterVideoMessage };
+export { twitterVideoMessage };
