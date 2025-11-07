@@ -1,38 +1,90 @@
 /**
  * @file caitlynAI.js
  * @description This module provides the main AI handler for Caitlyn.
- * Formats user messages and sends them to Open WebUI, which handles conversation history,
- * memory, and web search. System prompt is configured in Open WebUI model settings.
+ * Uses vector-based semantic memory stored in PostgreSQL with pgvector.
+ * Retrieves relevant conversation context and sends to Open WebUI for processing.
+ * System prompt is configured in Open WebUI model settings.
  *
  * @module caitlynAI
  */
 
 import { chat } from "../core/ollama.js";
+import { getConversationContext, storeMessage } from "../core/messageStore.js";
 import logger from "../core/logger.js";
 
 const LLM_ENABLED = process.env.LLM_ENABLED;
+const CONTEXT_RECENT_COUNT = parseInt(process.env.CONTEXT_RECENT_COUNT);
+const CONTEXT_SIMILAR_COUNT = parseInt(process.env.CONTEXT_SIMILAR_COUNT);
 
 async function caitlynAI(message) {
-  const userMessageFormat = `Sender:${message.author.username} message: ${message.content}`;
-  const caitlynReference = message.content.toLowerCase().includes("caitlyn");
+  const userMessageFormat = `${message.author.username}: ${message.content}`;
+  // const caitlynReference = message.content.toLowerCase().includes("caitlyn");
 
-  if (LLM_ENABLED === "true" && caitlynReference) {
+  if (LLM_ENABLED === "true") {
     try {
-      // Use Discord channel ID as chat_id for persistence in Open WebUI
-      const chatId = `discord-${message.channel.id}`;
+      const channelId = message.channel.id;
 
-      // Send single message - Open WebUI handles conversation history via chat_id
-      const messages = [
-        {
-          role: "user",
-          content: userMessageFormat,
-        },
-      ];
+      // Get conversation context from vector database
+      logger.debug(`Retrieving conversation context`);
+      const contextMessages = await getConversationContext({
+        channelId,
+        currentMessage: message.content,
+        recentCount: CONTEXT_RECENT_COUNT,
+        similarCount: CONTEXT_SIMILAR_COUNT,
+      });
 
+      // Build messages array with context
+      const messages = [];
+
+      // Add context messages
+      for (const ctx of contextMessages) {
+        messages.push({
+          role: ctx.role,
+          content: `${ctx.username}: ${ctx.content}`,
+        });
+      }
+
+      // Add current user message
+      messages.push({
+        role: "user",
+        content: userMessageFormat,
+      });
+
+      logger.debug(
+        `Sending ${messages.length} messages to Open WebUI (including ${contextMessages.length} context messages)`,
+      );
+
+      // Send to Open WebUI with channel ID for any additional persistence
+      const chatId = `discord-${channelId}`;
       const reply = await chat(messages, chatId);
 
       if (reply) {
-        message.channel.send(reply);
+        // Send reply to Discord
+        await message.channel.send(reply);
+
+        // Store user message in vector database
+        await storeMessage({
+          channelId,
+          messageId: message.id,
+          userId: message.author.id,
+          username: message.author.username,
+          role: "user",
+          content: message.content,
+        });
+
+        // Store assistant response in vector database
+        await storeMessage({
+          channelId,
+          messageId: `${message.id}-reply`,
+          userId: message.client.user.id,
+          username: "Caitlyn",
+          role: "assistant",
+          content: reply,
+        });
+
+        logger.debug(
+          `Stored conversation in vector database for channel ${channelId}`,
+        );
       }
     } catch (error) {
       logger.error("Error processing AI message:", error);
@@ -41,10 +93,6 @@ async function caitlynAI(message) {
         "Sorry, I encountered an error processing your message. Please try again.",
       );
     }
-  } else if (LLM_ENABLED === "true") {
-    logger.info("LLM is enabled but Caitlyn not mentioned");
-  } else {
-    logger.info("LLM is disabled");
   }
 }
 

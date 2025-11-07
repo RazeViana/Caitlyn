@@ -11,8 +11,6 @@ import logger from "./logger.js";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const WEBUI_CHAT_ENDPOINT = process.env.WEBUI_CHAT_ENDPOINT;
 const WEBUI_API_KEY = process.env.WEBUI_API_KEY;
-const WEBUI_ENABLE_WEB_SEARCH = process.env.WEBUI_ENABLE_WEB_SEARCH === "true";
-const WEBUI_ENABLE_MEMORY = process.env.WEBUI_ENABLE_MEMORY === "true";
 
 /**
  * Send chat messages to Open WebUI API
@@ -36,10 +34,6 @@ async function chat(messages, chatId = null) {
     model: OLLAMA_MODEL,
     messages: messages,
     stream: false,
-    features: {
-      web_search: WEBUI_ENABLE_WEB_SEARCH,
-      memory: WEBUI_ENABLE_MEMORY,
-    },
   };
 
   // Add chat_id for persistence if provided
@@ -47,15 +41,7 @@ async function chat(messages, chatId = null) {
     requestBody.chat_id = chatId;
   }
 
-  logger.debug(
-    `Sending request to Open WebUI ${messages[0].content} (${messages[0].content.length} messages)`,
-  );
-  if (WEBUI_ENABLE_WEB_SEARCH) {
-    logger.debug("Web search enabled for this request");
-  }
-  if (WEBUI_ENABLE_MEMORY) {
-    logger.debug("Memory enabled for this request");
-  }
+  logger.debug(`Sending request to Open WebUI ${messages[0].content}`);
 
   try {
     const response = await fetch(WEBUI_CHAT_ENDPOINT, {
@@ -83,10 +69,8 @@ async function chat(messages, chatId = null) {
       throw new Error("Invalid response format from Open WebUI API");
     }
 
-    const reply = data.choices[0].message.content;
-    logger.debug(
-      `Received response from Open WebUI ${reply} (${reply.length} characters)`,
-    );
+    const reply = data.choices[0].message.content.replace(/^caitlyn:\s*/i, "");
+    logger.debug(`Received response from Open WebUI ${reply}`);
 
     return reply;
   } catch (error) {
