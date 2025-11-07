@@ -17,16 +17,16 @@ const { Pool } = pg;
 const pool = new Pool();
 
 async function createPGPool() {
-	try {
-		// Check if the connection is successful by executing a simple query
-		const res = await pool.query("SELECT NOW()");
-		if (res.rows.length) {
-			logger.success("Connected to PostgreSQL Caitlyn~DB");
-		}
-	} catch (err) {
-		// If the connection fails, log the error and exit the process
-		logger.error("PostgreSQL connection failed:", err);
-	}
+  try {
+    // Check if the connection is successful by executing a simple query
+    const res = await pool.query("SELECT NOW()");
+    if (res.rows.length) {
+      logger.success("Connected to PostgreSQL");
+    }
+  } catch (err) {
+    // If the connection fails, log the error and exit the process
+    logger.error("PostgreSQL connection failed:", err);
+  }
 }
 
 // Export the pool instance for use in other modules

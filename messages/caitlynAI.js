@@ -10,17 +10,16 @@
 
 import { chat } from "../core/ollama.js";
 import { getConversationContext, storeMessage } from "../core/messageStore.js";
+import { isAIEnabled } from "../core/aiState.js";
 import logger from "../core/logger.js";
 
-const LLM_ENABLED = process.env.LLM_ENABLED;
 const CONTEXT_RECENT_COUNT = parseInt(process.env.CONTEXT_RECENT_COUNT);
 const CONTEXT_SIMILAR_COUNT = parseInt(process.env.CONTEXT_SIMILAR_COUNT);
 
 async function caitlynAI(message) {
   const userMessageFormat = `${message.author.username}: ${message.content}`;
-  // const caitlynReference = message.content.toLowerCase().includes("caitlyn");
 
-  if (LLM_ENABLED === "true") {
+  if (isAIEnabled()) {
     try {
       const channelId = message.channel.id;
 
@@ -88,6 +87,7 @@ async function caitlynAI(message) {
       }
     } catch (error) {
       logger.error("Error processing AI message:", error);
+
       // Send error message to user
       await message.channel.send(
         "Sorry, I encountered an error processing your message. Please try again.",
