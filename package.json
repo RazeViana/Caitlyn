@@ -1,38 +1,38 @@
 {
-	"name": "caitlyn",
-	"version": "2.0.0",
-	"description": "A Discord bot that has a little personality to it. It is a work in progress*",
-	"type": "module",
-	"main": "main.js",
-	"scripts": {
-		"start": "node main.js",
-		"deploy": "node core/deployCommands.js && echo \"Commands deployed\"",
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/RazeViana/Caitlyn.git"
-	},
-	"keywords": [
-		"discord",
-		"bot"
-	],
-	"author": "Raze Viana",
-	"license": "ISC",
-	"bugs": {
-		"url": "https://github.com/RazeViana/Caitlyn/issues"
-	},
-	"homepage": "https://github.com/RazeViana/Caitlyn#readme",
-	"dependencies": {
-		"date-fns": "^4.1.0",
-		"discord.js": "^14.18.0",
-		"dotenv": "^16.5.0",
-		"node-cron": "^3.0.3",
-		"node-fetch": "^3.3.2",
-		"pg": "^8.14.1"
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.24.0",
-		"eslint": "^9.24.0"
-	}
+  "name": "caitlyn",
+  "version": "2.1.0",
+  "description": "A Discord bot that has a little personality to it. It is a work in progress*",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "deploy": "node core/deployCommands.js && echo \"Commands deployed\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RazeViana/Caitlyn.git"
+  },
+  "keywords": [
+    "discord",
+    "bot"
+  ],
+  "author": "Raze Viana",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RazeViana/Caitlyn/issues"
+  },
+  "homepage": "https://github.com/RazeViana/Caitlyn#readme",
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.14.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "eslint": "^9.24.0"
+  }
 }

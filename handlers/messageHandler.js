@@ -12,10 +12,17 @@
 
 import { socialMediaMessage } from "../messages/socialMediaMessage.js";
 import { caitlynAI } from "../messages/caitlynAI.js";
+import { trackMessage } from "../core/activityTracker.js";
 
-function messageHandler(message) {
-  // Check if the message is from a bot or if it doesn't contain any content
-  if (message.author.bot || !message.content) return;
+async function messageHandler(message) {
+  // Track message for activity statistics
+  if (message.guild) {
+    await trackMessage(
+      message.guild.id,
+      message.author.id,
+      message.author.username,
+    );
+  }
 
   // Social media message handling for embedding
   socialMediaMessage(message);

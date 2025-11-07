@@ -6,16 +6,16 @@
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
 ☐ Add personality to the bot
-    ✔ Commissioned avatar @done(25-06-09 18:13)
     ☐ Commissioned banner
-    ☐ Connect LLM to the bot
-☐ Activity tracker
-    ☐ User join counter
-    ☐ User message counter
-    ☐ User leave counter
-    ☐ User in channel tracker counter
 
 Archive:```~
+✔ Activity tracker
+    ✔ User join counter
+    ✔ User message counter
+    ✔ User leave counter
+    ✔ User in channel tracker counter
+✔ Connect LLM to the bot
+✔ Commissioned avatar @done(25-06-09 18:13)
 ✔ Add bot to home server @done(25-04-17 13:06)
 ✔ Embeds (Ezembed) @done(25-04-17 11:03)
     ✔ Convert Twitter links to embeds @done(25-04-17 00:58)

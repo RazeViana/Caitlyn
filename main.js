@@ -14,6 +14,7 @@ const client = createClient([
 	GatewayIntentBits.GuildMessages,
 	GatewayIntentBits.MessageContent,
 	GatewayIntentBits.GuildMembers,
+	GatewayIntentBits.GuildVoiceStates,
 ]);
 
 // Create a PostgreSQL connection pool

@@ -2,8 +2,7 @@
  * @file messageCreate.js
  * @description This module handles the `messageCreate` event for a Discord.js bot.
  * It is triggered whenever a new message is sent in a text channel the bot has access to.
- *
- * The event listener checks if the message is from a bot or contains no content, and ignores it.
+ * Tracks message activity for user statistics and routes to message handlers.
  *
  * @module messageCreate
  */
@@ -12,6 +11,9 @@ import { messageHandler } from "../handlers/messageHandler.js";
 
 export const name = Events.MessageCreate;
 export async function execute(message) {
-	// Message handler for processing incoming messages
-	messageHandler(message);
+  // Ignore bot messages
+  if (message.author.bot) return;
+
+  // Message handler for processing incoming messages
+  messageHandler(message);
 }
