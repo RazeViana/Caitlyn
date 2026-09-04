@@ -27,7 +27,7 @@ function commandHandler(client: Client): void {
 	for (const folder of commandFolders) {
 		// Reads the current commands folder path
 		const commandsPath = path.join(foldersPath, folder);
-		// Reads the files in the current commands folder and filters them to only include .js files
+		// Reads the files in the current commands folder and filters them to the current runtime extension (.ts in source, .js when compiled)
 		const moduleExtension = path.extname(__filename);
 		const commandFiles = fs
 			.readdirSync(commandsPath)

@@ -1,5 +1,5 @@
 /**
- * @file ping.js
+ * @file ping.ts
  * @description This module defines a simple "ping" command for a Discord bot using the Discord.js library.
  * The command responds with "Pong" when invoked, serving as a basic utility to check the bot's responsiveness.
  *
