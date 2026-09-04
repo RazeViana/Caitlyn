@@ -1,5 +1,5 @@
 /**
- * @file command_handler.js
+ * @file commandHandler.ts
  * @description This module provides a function to dynamically load and register command files for a Discord bot client.
  * It reads command files from a structured directory, validates their structure, and adds them to the client's command collection.
  *
@@ -11,51 +11,54 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { Collection } from "discord.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { Collection, type Client } from "discord.js";
 import logger from "../core/logger.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { isBotCommand } from "../types/command.js";
 
-async function commandHandler(client) {
+async function commandHandler(
+	client: Client,
+	commandsRoot = fileURLToPath(new URL("../commands", import.meta.url)),
+): Promise<void> {
 	if (!client) throw new Error("Client is not defined");
 
 	client.commands = new Collection();
 
 	// Finds the commands folder path
-	const foldersPath = path.join(__dirname, "../commands");
+	const foldersPath = commandsRoot;
+	const moduleExtension = path.extname(fileURLToPath(import.meta.url));
 	// Reads the folders in the commands folder
 	const commandFolders = fs.readdirSync(foldersPath);
 	// Loops through each folder
 	for (const folder of commandFolders) {
 		// Reads the current commands folder path
 		const commandsPath = path.join(foldersPath, folder);
-		// Reads the files in the current commands folder and filters them to only include .js files
+		// Reads the files in the current commands folder and filters them to the current runtime extension
 		const commandFiles = fs
 			.readdirSync(commandsPath)
-			.filter((file) => file.endsWith(".js"));
+			.filter((file) => file.endsWith(moduleExtension));
 		// Loops through each command file
 		for (const file of commandFiles) {
 			// Reads the current command file path
 			const filePath = path.join(commandsPath, file);
 			// Imports the command file
-			const fileUrl = new URL(`file://${filePath}`);
-			const command = await import(fileUrl.href);
+			const command: unknown = await import(pathToFileURL(filePath).href);
 
 			// Set a new item in the Collection with the key as the command name and the value as the exported module
-			if ("data" in command && "execute" in command) {
+			if (isBotCommand(command)) {
 				client.commands.set(command.data.name, command);
-			} else {
+			}
+			else {
 				logger.warn(
-					`The command at ${filePath} is missing a required "data" or "execute" property.`
+					`The command at ${filePath} is missing a required "data" or "execute" property.`,
 				);
 			}
 		}
 	}
 	// Log the loaded commands
 	logger.info(
-		`Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`
+		`Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`,
 	);
 }
 
