@@ -28,6 +28,10 @@ function createOperations() {
 	};
 }
 
+function waitForEventLoopTurn() {
+	return new Promise((resolve) => setImmediate(resolve));
+}
+
 require.cache[aiPath] = {
 	id: aiPath,
 	filename: aiPath,
@@ -85,7 +89,7 @@ async function assertResolutionOrder(first, second) {
 		assert.deepEqual(activeOperations.starts, ["ai", "social"]);
 
 		activeOperations[first].resolve();
-		await Promise.resolve();
+		await waitForEventLoopTurn();
 		assert.equal(settled, false);
 
 		activeOperations[second].resolve();
