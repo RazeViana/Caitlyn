@@ -10,6 +10,7 @@ process.env.PGHOST = "localhost";
 process.env.PGPASSWORD = "dummy_password";
 process.env.PGPORT = "5432";
 process.env.PGUSER = "dummy_user";
+process.env.TOKEN = "dummy-import-token";
 process.env.WEBUI_API_KEY = "dummy-webui-key";
 process.env.WEBUI_CHAT_ENDPOINT = "https://webui.invalid/api/chat/completions";
 
@@ -22,6 +23,7 @@ const {
 	toggleAI,
 } = await import("../core/aiState.ts");
 const { generateEmbedding } = await import("../core/embeddingService.ts");
+const { loginClient } = await import("../core/loginClient.ts");
 const { chat } = await import("../core/ollama.ts");
 
 const originalPoolQuery = pool.query.bind(pool);
@@ -54,6 +56,51 @@ test("AI state honors LLM_ENABLED and toggles in memory", () => {
 	process.env.LLM_ENABLED = "true";
 	resetAIState();
 	assert.equal(isAIEnabled(), true);
+});
+
+test("Discord login reads the call-time token and handles rejected logins", async () => {
+	const originalToken = process.env.TOKEN;
+	const originalConsoleError = console.error;
+	const loginTokens = [];
+	const loggedErrors = [];
+	const unhandledRejections = [];
+	let rejectLogin;
+	const loginPromise = new Promise((_resolve, reject) => {
+		rejectLogin = reject;
+	});
+	const unhandledRejectionHandler = (reason) => {
+		unhandledRejections.push(reason);
+	};
+
+	process.env.TOKEN = "dummy-call-time-token";
+	console.error = (...args) => {
+		loggedErrors.push(args.join(" "));
+	};
+	process.on("unhandledRejection", unhandledRejectionHandler);
+
+	try {
+		const result = loginClient({
+			login(token) {
+				loginTokens.push(token);
+				return loginPromise;
+			},
+		});
+
+		assert.deepEqual(loginTokens, ["dummy-call-time-token"]);
+		assert.equal(result, undefined);
+
+		rejectLogin(new Error("dummy login rejection"));
+		await new Promise((resolve) => setImmediate(resolve));
+
+		assert.equal(loggedErrors.length, 1);
+		assert.match(loggedErrors[0], /Error logging in:.*dummy login rejection/s);
+		assert.deepEqual(unhandledRejections, []);
+	}
+	finally {
+		process.env.TOKEN = originalToken;
+		console.error = originalConsoleError;
+		process.off("unhandledRejection", unhandledRejectionHandler);
+	}
 });
 
 test("embedding requests preserve endpoint, model, and response vector", async () => {

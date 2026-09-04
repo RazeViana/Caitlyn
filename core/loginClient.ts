@@ -20,15 +20,14 @@ if (!TOKEN) {
 	throw new Error("No TOKEN found. Set a TOKEN environment variable");
 }
 
-function loginClient(client: Client): Promise<string> {
+function loginClient(client: Client): void {
 	// Check if the client is defined
 	if (!client) {
 		throw new Error("Client is not defined");
 	}
 	// Try to log in the client and catch any errors
-	return client.login(TOKEN).catch((error: unknown) => {
+	client.login(process.env.TOKEN).catch((error: unknown) => {
 		logger.error("Error logging in:", error);
-		throw error;
 	});
 }
 
