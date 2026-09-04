@@ -13,8 +13,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { REST, Routes } from "discord.js";
-import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { REST, Routes, type SlashCommandBuilder } from "discord.js";
 import "dotenv/config";
 import type { BotCommand } from "../types/command.js";
 
@@ -22,7 +21,7 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-const commands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
+const commands: ReturnType<SlashCommandBuilder["toJSON"]>[] = [];
 // Grab all the command folders from the commands directory you created earlier
 const foldersPath = path.join(__dirname, "../commands");
 const commandFolders = fs.readdirSync(foldersPath);

@@ -6,12 +6,7 @@
  */
 
 import type { Client } from "discord.js";
-
-const {
-	startBirthdayScheduledEvent,
-}: {
-	startBirthdayScheduledEvent: (client: Client) => void;
-} = require("../jobs/birthdayScheduledEvent.js");
+import { startBirthdayScheduledEvent } from "../jobs/birthdayScheduledEvent.js";
 
 function startCronJobs(client: Client): void {
 	startBirthdayScheduledEvent(client);

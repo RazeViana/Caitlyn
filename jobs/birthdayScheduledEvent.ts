@@ -1,19 +1,18 @@
 /**
- * @file birthdayScheduledEvent.js
+ * @file birthdayScheduledEvent.ts
  * @description This module schedules a daily cron job to send birthday messages using a Discord bot.
  *
  * @module birthdayScheduledEvent
  */
 
-const cron = require("node-cron");
-const {
-	birthdayReminderMessage,
-} = require("../messages/birthdayReminderMessage.js");
+import cron from "node-cron";
+import type { Client } from "discord.js";
+import { birthdayReminderMessage } from "../messages/birthdayReminderMessage.js";
 
 // Start the cron job to run every day at 9 AM
-function startBirthdayScheduledEvent(client) {
+function startBirthdayScheduledEvent(client: Client): void {
 	cron.schedule("0 9 * * *", () => {
-		birthdayReminderMessage(client);
+		void birthdayReminderMessage(client);
 	});
 
 	// Log the scheduled event
@@ -22,4 +21,4 @@ function startBirthdayScheduledEvent(client) {
 	);
 }
 
-module.exports = { startBirthdayScheduledEvent };
+export { startBirthdayScheduledEvent };

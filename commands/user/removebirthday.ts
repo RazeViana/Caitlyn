@@ -1,5 +1,5 @@
 /**
- * @file removeBirthday.js
+ * @file removeBirthday.ts
  * @description This module defines a Discord slash command for removing a user's birthday reminder from the database.
  * It allows users to specify a target user whose birthday reminder should be deleted. The command checks if the
  * specified user has a birthday set in the database and removes it if found.
@@ -9,14 +9,16 @@
  * @module removeBirthday
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	MessageFlags,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
+import type { BotCommand } from "../../types/command.js";
+import type { BirthdayRow } from "../../types/models.js";
 
-module.exports = {
+const command: BotCommand = {
 	cooldown: 5,
 	category: "user",
 	data: new SlashCommandBuilder()
@@ -29,12 +31,13 @@ module.exports = {
 				.setRequired(true)
 		),
 	async execute(interaction) {
-		const displayName = interaction.options.getUser("user").username;
-		const userId = interaction.options.getUser("user").id;
+		const user = interaction.options.getUser("user", true);
+		const displayName = user.username;
+		const userId = user.id;
 
 		try {
 			// Check if the user has a birthday set
-			const res = await pool.query(
+			const res = await pool.query<BirthdayRow>(
 				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`
 			);
 
@@ -64,3 +67,5 @@ module.exports = {
 		}
 	},
 };
+
+export = command;

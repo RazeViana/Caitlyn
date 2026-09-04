@@ -1,5 +1,5 @@
 /**
- * @file addBirthday.js
+ * @file addBirthday.ts
  * @description This module defines a Discord slash command for setting a birthday reminder for a specified user.
  * It allows users to input a day, month, and year to store a birthday in a PostgreSQL database.
  * The command checks if a birthday is already set for the user and prevents duplicate entries.
@@ -9,14 +9,16 @@
  * @module addBirthday
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	MessageFlags,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
+import type { BotCommand } from "../../types/command.js";
+import type { BirthdayRow } from "../../types/models.js";
 
-module.exports = {
+const command: BotCommand = {
 	cooldown: 5,
 	category: "user",
 	data: new SlashCommandBuilder()
@@ -62,13 +64,14 @@ module.exports = {
 		),
 	async execute(interaction) {
 		// Get the user for whom the birthday is being set
-		const displayName = interaction.options.getUser("user").username;
-		const userId = interaction.options.getUser("user").id;
+		const user = interaction.options.getUser("user", true);
+		const displayName = user.username;
+		const userId = user.id;
 
 		// Get the birthday details from the interaction options
-		const day = interaction.options.getInteger("day");
-		const month = interaction.options.getString("month");
-		const year = interaction.options.getInteger("year");
+		const day = interaction.options.getInteger("day", true);
+		const month = interaction.options.getString("month", true);
+		const year = interaction.options.getInteger("year", true);
 		const birthdayDate = new Date(`${year}-${month}-${day}`);
 		const birthday = new Date(`${year}-${month}-${day + 1}`)
 			.toISOString()
@@ -97,7 +100,7 @@ module.exports = {
 
 		try {
 			// Check if the user already has a birthday set
-			const res = await pool.query(
+			const res = await pool.query<BirthdayRow>(
 				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`
 			);
 
@@ -136,3 +139,5 @@ module.exports = {
 		}
 	},
 };
+
+export = command;

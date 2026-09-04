@@ -1,12 +1,12 @@
 import type {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,
+	SlashCommandBuilder,
 } from "discord.js";
-import type { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
 interface CommandData {
 	readonly name: string;
-	toJSON(): RESTPostAPIChatInputApplicationCommandsJSONBody;
+	toJSON(): ReturnType<SlashCommandBuilder["toJSON"]>;
 }
 
 export interface BotCommand {

@@ -1,5 +1,5 @@
 /**
- * @file showbirthdays.js
+ * @file showbirthdays.ts
  * @description This module defines a Discord slash command for displaying all saved birthdays grouped by month.
  * It fetches birthday data from a PostgreSQL database, organizes it by month, and displays it in an embed message.
  * The command highlights birthdays happening today and calculates the number of days remaining for upcoming birthdays.
@@ -10,20 +10,35 @@
  * @module showbirthdays
  */
 
-const {
+import {
 	SlashCommandBuilder,
 	EmbedBuilder,
 	userMention,
-} = require("discord.js");
-const { pool } = require("../../core/createPGPool.js");
-const {
+} from "discord.js";
+import { pool } from "../../core/createPGPool.js";
+import {
 	format,
 	isSameDay,
 	parseISO,
 	getMonth,
 	differenceInCalendarDays,
-} = require("date-fns");
+} from "date-fns";
+import type { BotCommand } from "../../types/command.js";
+import type { BirthdayRow } from "../../types/models.js";
 require("dotenv").config();
+
+interface GiphyResponse {
+	data?: {
+		images?: {
+			original?: { url?: string };
+		};
+	};
+}
+
+interface BirthdayDisplay {
+	day: number;
+	text: string;
+}
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
@@ -43,7 +58,7 @@ const monthNames = [
 	"December",
 ];
 
-module.exports = {
+const command: BotCommand = {
 	category: "user",
 	data: new SlashCommandBuilder()
 		.setName("showbirthdays")
@@ -61,7 +76,7 @@ module.exports = {
 			// Fetch random gif from Giphy API
 			const giphyResponse = await fetch(GIPHY_ENDPOINT);
 
-			const giphyData = await giphyResponse.json();
+			const giphyData = (await giphyResponse.json()) as GiphyResponse;
 
 			if (!giphyResponse.ok) {
 				console.error(
@@ -77,14 +92,19 @@ module.exports = {
 
 		try {
 			// Fetch all birthdays from the database
-			const res = await pool.query(`SELECT * FROM discord.birthdays`);
+			const res = await pool.query<BirthdayRow>(
+				`SELECT * FROM discord.birthdays`
+			);
 			// If no birthdays are found, return a message
 			if (res.rows.length === 0) {
 				return interaction.editReply("😢 No birthdays found!");
 			}
 
 			// Group birthdays by month
-			const months = Array.from({ length: 12 }, () => []);
+			const months: BirthdayDisplay[][] = Array.from(
+				{ length: 12 },
+				() => []
+			);
 
 			for (const row of res.rows) {
 				const dob = parseISO(row.dob.toISOString());
@@ -101,7 +121,7 @@ module.exports = {
 
 				const isToday = isSameDay(bdayThisYear, now);
 				const daysUntil = differenceInCalendarDays(bdayThisYear, now);
-				const member = await guild.members
+				const member = await guild!.members
 					.fetch(row.discord_id)
 					.catch(() => null);
 
@@ -168,3 +188,5 @@ module.exports = {
 		}
 	},
 };
+
+export = command;
