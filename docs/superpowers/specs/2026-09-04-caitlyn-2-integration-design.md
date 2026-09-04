@@ -48,7 +48,7 @@ Operational database scripts are converted to TypeScript when they are intended 
 
 ## Merge and conflict policy
 
-The integration is recorded as a real merge of `typescript-migration` into `caitlyn-2.0`.
+The integration is recorded as a real merge of `typescript-migration` into `caitlyn-2.0`. Because the two branches independently replaced the module architecture, the ancestry merge uses Git's `ours` strategy to avoid one unreviewable conflict-resolution snapshot; focused commits immediately afterward port the migration branch's TypeScript, test, build, Docker, and CI changes onto the newer ESM tree.
 
 Conflict resolution follows these rules:
 
