@@ -1,8 +1,20 @@
-import { configs } from "@eslint/js";
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
 
-export default [
-	configs.recommended,
+export default tseslint.config(
 	{
+		ignores: ["dist/**", "node_modules/**"],
+	},
+	eslint.configs.recommended,
+	...tseslint.configs.recommended,
+	{
+		files: ["**/*.js"],
+		rules: {
+			"@typescript-eslint/no-require-imports": "off",
+		},
+	},
+	{
+		files: ["**/*.js", "**/*.mjs", "**/*.ts"],
 		languageOptions: {
 			ecmaVersion: "latest",
 		},
@@ -14,7 +26,6 @@ export default [
 			"comma-style": "error",
 			curly: ["error", "multi-line", "consistent"],
 			"dot-location": ["error", "property"],
-			"handle-callback-err": "off",
 			indent: ["error", "tab"],
 			"keyword-spacing": "error",
 			"max-nested-callbacks": ["error", { max: 4 }],
@@ -27,9 +38,9 @@ export default [
 			"no-multi-spaces": "error",
 			"no-multiple-empty-lines": ["error", { max: 2, maxEOF: 1, maxBOF: 0 }],
 			"no-shadow": ["error", { allow: ["err", "resolve", "reject"] }],
-			"no-trailing-spaces": ["error"],
-			"no-var": "error",
+			"no-trailing-spaces": "error",
 			"no-undef": "off",
+			"no-var": "error",
 			"object-curly-spacing": ["error", "always"],
 			"prefer-const": "error",
 			quotes: ["error", "double"],
@@ -50,4 +61,4 @@ export default [
 			yoda: "error",
 		},
 	},
-];
+);

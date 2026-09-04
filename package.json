@@ -3,11 +3,23 @@
   "version": "2.1.0",
   "description": "A Discord bot that has a little personality to it. It is a work in progress*",
   "type": "module",
-  "main": "main.js",
-  "scripts": {
-    "start": "node main.js",
-    "deploy": "node core/deployCommands.js && echo \"Commands deployed\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+	"main": "dist/main.js",
+	"engines": {
+		"node": ">=24 <25",
+		"npm": ">=11 <12"
+	},
+	"scripts": {
+		"build": "npm run clean && tsc -p tsconfig.build.json",
+		"check": "npm run typecheck && npm run lint && npm run build && npm test",
+		"clean": "node scripts/cleanDist.mjs",
+		"deploy": "tsx core/deployCommands.ts",
+		"deploy:prod": "node dist/core/deployCommands.js",
+		"dev": "tsx main.ts",
+		"dev:watch": "tsx watch main.ts",
+		"lint": "eslint .",
+		"start": "node dist/main.js",
+		"test": "node --import tsx --test",
+		"typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -32,7 +44,14 @@
     "pg": "^8.14.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.24.0",
-    "eslint": "^9.24.0"
-  }
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^24.13.3",
+		"@types/node-cron": "^3.0.11",
+		"@types/pg": "^8.23.1",
+		"@typescript/native": "npm:typescript@^7.0.2",
+		"eslint": "^10.10.0",
+		"tsx": "^4.23.13",
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
+		"typescript-eslint": "^8.69.0"
+	}
 }
