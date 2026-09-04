@@ -109,6 +109,44 @@ test("interaction dispatch preserves autocomplete and command error responses", 
 	assert.match(errors[0], /Error executing explode:.*command failed/s);
 });
 
+test("autocomplete errors are logged and swallowed without interaction responses", async () => {
+	const originalConsoleError = console.error;
+	const errors = [];
+	const responses = [];
+	const failure = new Error("autocomplete failed");
+	console.error = (...args) => {
+		errors.push(args.join(" "));
+	};
+
+	try {
+		await assert.doesNotReject(() => interactionCreate.execute({
+			client: {
+				commands: new Map([["search", {
+					autocomplete: async () => {
+						throw failure;
+					},
+				}]]),
+			},
+			commandName: "search",
+			isAutocomplete: () => true,
+			isChatInputCommand: () => false,
+			reply: async (response) => {
+				responses.push(["reply", response]);
+			},
+			respond: async (response) => {
+				responses.push(["respond", response]);
+			},
+		}));
+	}
+	finally {
+		console.error = originalConsoleError;
+	}
+
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /Error in autocomplete for search:.*autocomplete failed/s);
+	assert.deepEqual(responses, []);
+});
+
 test("event metadata and ready behavior remain compatible with Discord", async () => {
 	assert.equal(interactionCreate.name, Events.InteractionCreate);
 	assert.equal(messageCreate.name, Events.MessageCreate);

@@ -1,10 +1,27 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-process.env.CONTEXT_RECENT_COUNT = "4";
-process.env.CONTEXT_SIMILAR_COUNT = "2";
+const originalContextRecentCount = process.env.CONTEXT_RECENT_COUNT;
+const originalContextSimilarCount = process.env.CONTEXT_SIMILAR_COUNT;
+let caitlynAI;
 
-const { caitlynAI } = await import("../messages/caitlynAI.ts");
+try {
+	process.env.CONTEXT_RECENT_COUNT = "4";
+	process.env.CONTEXT_SIMILAR_COUNT = "2";
+	({ caitlynAI } = await import("../messages/caitlynAI.ts"));
+}
+finally {
+	restoreEnvironmentVariable("CONTEXT_RECENT_COUNT", originalContextRecentCount);
+	restoreEnvironmentVariable("CONTEXT_SIMILAR_COUNT", originalContextSimilarCount);
+}
+
+function restoreEnvironmentVariable(name, value) {
+	if (value === undefined) {
+		delete process.env[name];
+		return;
+	}
+	process.env[name] = value;
+}
 
 function createMessage(sentMessages) {
 	return {
@@ -138,18 +155,26 @@ test("AI replies use vector context and store both user and assistant messages",
 
 test("AI errors send the existing user-facing fallback", async () => {
 	const sentMessages = [];
+	const loggedErrors = [];
+	const failure = new Error("context unavailable");
 
 	await caitlynAI(createMessage(sentMessages), {
 		chat: async () => "Unexpected reply",
 		getConversationContext: async () => {
-			throw new Error("context unavailable");
+			throw failure;
 		},
 		isAIEnabled: () => true,
-		logger: createLogger(),
+		logger: {
+			debug: () => undefined,
+			error: (...args) => {
+				loggedErrors.push(args);
+			},
+		},
 		storeMessage: async () => 1,
 	});
 
 	assert.deepEqual(sentMessages, [
 		"Sorry, I encountered an error processing your message. Please try again.",
 	]);
+	assert.deepEqual(loggedErrors, [["Error processing AI message:", failure]]);
 });

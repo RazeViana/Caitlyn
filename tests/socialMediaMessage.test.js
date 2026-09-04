@@ -3,22 +3,23 @@ import { test } from "node:test";
 
 const { socialMediaMessage } = await import("../messages/socialMediaMessage.ts");
 
-function createMessage(content) {
-	const sentMessages = [];
-	let deleteCount = 0;
+function createMessage(content, failures = {}) {
+	const calls = [];
 	return {
 		message: {
 			channel: {
 				send: async (sentMessage) => {
-					sentMessages.push(sentMessage);
+					calls.push(["send", sentMessage]);
+					if (failures.send) throw failures.send;
 				},
 			},
 			content,
 			delete: async () => {
-				deleteCount += 1;
+				calls.push(["delete"]);
+				if (failures.delete) throw failures.delete;
 			},
 		},
-		readEffects: () => ({ deleteCount, sentMessages }),
+		readCalls: () => calls,
 	};
 }
 
@@ -32,20 +33,40 @@ test("supported social URLs are replaced and unsupported messages remain untouch
 	];
 
 	for (const [content, expectedMessage] of cases) {
-		const { message, readEffects } = createMessage(content);
+		const { message, readCalls } = createMessage(content);
 		await socialMediaMessage(message);
-		assert.deepEqual(readEffects(), {
-			deleteCount: 1,
-			sentMessages: [expectedMessage],
-		});
+		assert.deepEqual(readCalls(), [
+			["delete"],
+			["send", expectedMessage],
+		]);
 	}
 
 	for (const content of [
 		"https://youtube.com/watch?v=abc",
 		"Have a look https://x.com/alice/status/1",
 	]) {
-		const { message, readEffects } = createMessage(content);
+		const { message, readCalls } = createMessage(content);
 		await socialMediaMessage(message);
-		assert.deepEqual(readEffects(), { deleteCount: 0, sentMessages: [] });
+		assert.deepEqual(readCalls(), []);
 	}
+});
+
+test("social URL replacement silently handles delete and send failures", async () => {
+	const content = "https://x.com/alice/status/1";
+	const expectedMessage = "[x.com](https://twitterez.com/alice/status/1)";
+	const deleteFailure = createMessage(content, {
+		delete: new Error("delete failed"),
+	});
+
+	await assert.doesNotReject(() => socialMediaMessage(deleteFailure.message));
+	assert.deepEqual(deleteFailure.readCalls(), [["delete"]]);
+
+	const sendFailure = createMessage(content, {
+		send: new Error("send failed"),
+	});
+	await assert.doesNotReject(() => socialMediaMessage(sendFailure.message));
+	assert.deepEqual(sendFailure.readCalls(), [
+		["delete"],
+		["send", expectedMessage],
+	]);
 });
