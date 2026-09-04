@@ -9,23 +9,25 @@
  * @module eventHandler
  */
 
-const fs = require("node:fs");
-const path = require("node:path");
+import fs from "node:fs";
+import path from "node:path";
+import type { Client } from "discord.js";
+import type { BotEvent } from "../types/event.js";
 
-function eventHandler(client) {
+function eventHandler(client: Client): void {
 	// Get the events folder path
 	const eventsPath = path.join(__dirname, "../events");
 	// Get the files in the events folder and filter them to only include .js files
 	const eventFiles = fs
 		.readdirSync(eventsPath)
-		.filter((file) => file.endsWith(".js"));
+		.filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 
 	// Loop through each event file
 	for (const file of eventFiles) {
 		// Get the current event file path
 		const filePath = path.join(eventsPath, file);
 		// Import the event file
-		const event = require(filePath);
+		const event = require(filePath) as BotEvent;
 		// Check if the event has a name and an execute function
 		if (event.once) {
 			client.once(event.name, (...args) => event.execute(...args));
@@ -39,4 +41,4 @@ function eventHandler(client) {
 	);
 }
 
-module.exports = { eventHandler };
+export { eventHandler };

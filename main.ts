@@ -1,10 +1,10 @@
-const { GatewayIntentBits } = require("discord.js");
-const { commandHandler } = require("./handlers/commandHandler.js");
-const { eventHandler } = require("./handlers/eventHandler.js");
-const { createClient } = require("./core/createClient.js");
-const { loginClient } = require("./core/loginClient.js");
-const { createPGPool } = require("./core/createPGPool.js");
-const { startCronJobs } = require("./handlers/cronJobHandler.js");
+import { GatewayIntentBits } from "discord.js";
+import { createClient } from "./core/createClient.js";
+import { createPGPool } from "./core/createPGPool.js";
+import { loginClient } from "./core/loginClient.js";
+import { commandHandler } from "./handlers/commandHandler.js";
+import { eventHandler } from "./handlers/eventHandler.js";
+import { startCronJobs } from "./handlers/cronJobHandler.js";
 
 // Create a new client instance
 const client = createClient([

@@ -5,13 +5,16 @@
  * @module cronJobHandler
  */
 
+import type { Client } from "discord.js";
+
 const {
 	startBirthdayScheduledEvent,
+}: {
+	startBirthdayScheduledEvent: (client: Client) => void;
 } = require("../jobs/birthdayScheduledEvent.js");
 
-function startCronJobs(client) {
+function startCronJobs(client: Client): void {
 	startBirthdayScheduledEvent(client);
 }
-module.exports = {
-	startCronJobs,
-};
+
+export { startCronJobs };

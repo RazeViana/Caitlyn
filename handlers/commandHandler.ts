@@ -9,11 +9,12 @@
  * @module command_handler
  */
 
-const fs = require("node:fs");
-const path = require("node:path");
-const { Collection } = require("discord.js");
+import fs from "node:fs";
+import path from "node:path";
+import { Collection, type Client } from "discord.js";
+import type { BotCommand } from "../types/command.js";
 
-function commandHandler(client) {
+function commandHandler(client: Client): void {
 	if (!client) throw new Error("Client is not defined");
 
 	client.commands = new Collection();
@@ -29,13 +30,13 @@ function commandHandler(client) {
 		// Reads the files in the current commands folder and filters them to only include .js files
 		const commandFiles = fs
 			.readdirSync(commandsPath)
-			.filter((file) => file.endsWith(".js"));
+			.filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 		// Loops through each command file
 		for (const file of commandFiles) {
 			// Reads the current command file path
 			const filePath = path.join(commandsPath, file);
 			// Imports the command file
-			const command = require(filePath);
+			const command = require(filePath) as BotCommand;
 
 			// Set a new item in the Collection with the key as the command name and the value as the exported module
 			if ("data" in command && "execute" in command) {
@@ -53,4 +54,4 @@ function commandHandler(client) {
 	);
 }
 
-module.exports = { commandHandler };
+export { commandHandler };
