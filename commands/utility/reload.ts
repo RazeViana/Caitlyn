@@ -34,7 +34,7 @@ const command: BotCommand = {
 		}
 
 		const moduleExtension = path.extname(__filename);
-		const commandPath = `../${command.category}/${command.data.name}${moduleExtension}`;
+		const commandPath = `../${loadedCommand.category}/${loadedCommand.data.name}${moduleExtension}`;
 
 		// Delete the command from the require cache
 		try {
