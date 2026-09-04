@@ -1,3 +1,13 @@
+/**
+ * @file createPGPool.ts
+ * @description This module provides functionality to create and manage a PostgreSQL connection pool
+ * using the `pg` library.
+ *
+ * The pool instance is exported for use in other parts of the application.
+ *
+ * @module createPGPool
+ */
+
 import { Pool } from "pg";
 
 const pool = new Pool();

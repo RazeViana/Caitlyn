@@ -1,3 +1,11 @@
+/**
+ * @file ollama.ts
+ * @description This module provides a function to interact with a local Ollama chat API.
+ * It sends user input along with a system prompt to the Ollama model and awaits a response.
+ *
+ * @module ollama
+ */
+
 import type {
 	ChatMessage,
 	OllamaChatResponse,
