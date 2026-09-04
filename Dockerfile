@@ -1,15 +1,32 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
-# Install prod‑only deps
+COPY package*.json ./
+RUN npm ci
+
+COPY tsconfig*.json ./
+COPY types ./types
+COPY commands ./commands
+COPY core ./core
+COPY events ./events
+COPY handlers ./handlers
+COPY jobs ./jobs
+COPY messages ./messages
+COPY scripts ./scripts
+COPY main.ts ./
+
+RUN npm run typecheck && npm run build
+
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+ENV NODE_ENV=production
+
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy the bot
-COPY . .
+COPY --from=build /app/dist ./dist
 
-# ↓ Run the slash‑command deploy script *every* container start,
-#   then launch the bot.
-CMD ["sh", "-c", "npm run deploy && npm start"]
+CMD ["sh", "-c", "npm run deploy:prod && npm start"]
