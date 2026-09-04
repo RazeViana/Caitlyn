@@ -1,19 +1,21 @@
 /**
- * @file aiState.js
+ * @file aiState.ts
  * @description Manages the AI enabled/disabled state at runtime.
  * This allows toggling AI without modifying the .env file.
  *
  * @module aiState
  */
 
+import "dotenv/config";
+
 // Runtime state override (null means use .env value)
-let aiEnabledOverride = null;
+let aiEnabledOverride: boolean | null = null;
 
 /**
  * Check if AI is currently enabled
  * @returns {boolean} - True if AI is enabled
  */
-function isAIEnabled() {
+function isAIEnabled(): boolean {
 	if (aiEnabledOverride !== null) {
 		return aiEnabledOverride;
 	}
@@ -23,22 +25,24 @@ function isAIEnabled() {
 /**
  * Enable AI
  */
-function enableAI() {
+function enableAI(): boolean {
 	aiEnabledOverride = true;
+	return aiEnabledOverride;
 }
 
 /**
  * Disable AI
  */
-function disableAI() {
+function disableAI(): boolean {
 	aiEnabledOverride = false;
+	return aiEnabledOverride;
 }
 
 /**
  * Toggle AI on/off
  * @returns {boolean} - New AI enabled state
  */
-function toggleAI() {
+function toggleAI(): boolean {
 	const currentState = isAIEnabled();
 	aiEnabledOverride = !currentState;
 	return aiEnabledOverride;
@@ -47,7 +51,7 @@ function toggleAI() {
 /**
  * Reset to .env default
  */
-function resetAIState() {
+function resetAIState(): void {
 	aiEnabledOverride = null;
 }
 

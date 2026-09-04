@@ -1,5 +1,5 @@
 /**
- * @file createClient.js
+ * @file createClient.ts
  * @description This module provides a function to create and configure a new Discord.js client instance.
  * It allows you to initialize a client with specific gateway intents, enabling the bot to listen to and respond
  * to various events on the Discord platform.
@@ -10,10 +10,10 @@
  * @module createClient
  */
 
-import { Client } from "discord.js";
+import { Client, type GatewayIntentBits } from "discord.js";
 import logger from "./logger.js";
 
-function createClient(intents) {
+function createClient(intents: GatewayIntentBits[]): Client {
 	// Create a new client instance
 	const client = new Client({
 		intents: intents,

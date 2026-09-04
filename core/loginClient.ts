@@ -1,5 +1,5 @@
 /**
- * @file loginClient.js
+ * @file loginClient.ts
  * @description This module provides a function to log in a Discord bot client using a token stored in environment variables.
  * It ensures that the required token is set and validates the client object before attempting to log in.
  * If the token is missing or the client is undefined, appropriate errors are thrown.
@@ -8,6 +8,9 @@
  * @module loginClient
  */
 
+import "dotenv/config";
+
+import type { Client } from "discord.js";
 import logger from "./logger.js";
 
 const TOKEN = process.env.TOKEN;
@@ -17,14 +20,15 @@ if (!TOKEN) {
 	throw new Error("No TOKEN found. Set a TOKEN environment variable");
 }
 
-function loginClient(client) {
+function loginClient(client: Client): Promise<string> {
 	// Check if the client is defined
 	if (!client) {
 		throw new Error("Client is not defined");
 	}
 	// Try to log in the client and catch any errors
-	client.login(process.env.TOKEN).catch((error) => {
+	return client.login(TOKEN).catch((error: unknown) => {
 		logger.error("Error logging in:", error);
+		throw error;
 	});
 }
 
