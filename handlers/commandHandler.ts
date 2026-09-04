@@ -1,5 +1,5 @@
 /**
- * @file command_handler.js
+ * @file commandHandler.ts
  * @description This module provides a function to dynamically load and register command files for a Discord bot client.
  * It reads command files from a structured directory, validates their structure, and adds them to the client's command collection.
  *
