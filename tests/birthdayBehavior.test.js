@@ -117,11 +117,14 @@ test("removebirthday deletes an existing birthday with the original SQL", async 
 	}
 });
 
-test("birthday reminder queries birthdays and sends matching mentions", async () => {
+test("birthday reminder queries birthdays and sends matching mentions", async (context) => {
 	const originalQuery = pool.query;
 	const queries = [];
 	const sent = [];
-	const now = new Date();
+	context.mock.timers.enable({
+		apis: ["Date"],
+		now: new Date("2026-09-04T12:00:00Z"),
+	});
 	const channel = Object.create(TextChannel.prototype);
 	channel.send = async (message) => sent.push(message);
 	const fetched = [];
@@ -146,12 +149,7 @@ test("birthday reminder queries birthdays and sends matching mentions", async ()
 		return {
 			rows: [{
 				discord_id: "birthday-user",
-				dob: new Date(
-					now.getFullYear() - 20,
-					now.getMonth(),
-					now.getDate(),
-					12,
-				),
+				dob: new Date("2000-09-04T12:00:00Z"),
 				name: "Birthday User",
 			}],
 		};
@@ -171,20 +169,18 @@ test("birthday reminder queries birthdays and sends matching mentions", async ()
 	}
 	finally {
 		pool.query = originalQuery;
+		context.mock.timers.reset();
 	}
 });
 
-test("showbirthdays edits the deferred reply with the birthday embed", async () => {
+test("showbirthdays edits the deferred reply with the birthday embed", async (context) => {
 	const originalFetch = global.fetch;
 	const originalQuery = pool.query;
 	const edits = [];
-	const now = new Date();
-	const tomorrow = new Date(
-		now.getFullYear(),
-		now.getMonth(),
-		now.getDate() + 1,
-		12,
-	);
+	context.mock.timers.enable({
+		apis: ["Date"],
+		now: new Date("2026-09-04T12:00:00Z"),
+	});
 	let deferred = false;
 
 	global.fetch = async (url) => {
@@ -207,12 +203,7 @@ test("showbirthdays edits the deferred reply with the birthday embed", async () 
 		return {
 			rows: [{
 				discord_id: "birthday-user",
-				dob: new Date(
-					tomorrow.getFullYear() - 20,
-					tomorrow.getMonth(),
-					tomorrow.getDate(),
-					12,
-				),
+				dob: new Date("2000-09-05T12:00:00Z"),
 				name: "Birthday User",
 			}],
 		};
@@ -259,5 +250,6 @@ test("showbirthdays edits the deferred reply with the birthday embed", async () 
 	finally {
 		global.fetch = originalFetch;
 		pool.query = originalQuery;
+		context.mock.timers.reset();
 	}
 });

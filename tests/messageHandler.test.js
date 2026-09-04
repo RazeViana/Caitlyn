@@ -9,9 +9,24 @@ const handlerPath = require.resolve("../handlers/messageHandler.ts");
 const previousAI = require.cache[aiPath];
 const previousSocial = require.cache[socialPath];
 const previousHandler = require.cache[handlerPath];
-const starts = [];
-let resolveAI;
-let resolveSocial;
+let activeOperations;
+
+function createDeferred() {
+	let resolve;
+	const promise = new Promise((deferredResolve) => {
+		resolve = deferredResolve;
+	});
+
+	return { promise, resolve };
+}
+
+function createOperations() {
+	return {
+		ai: createDeferred(),
+		social: createDeferred(),
+		starts: [],
+	};
+}
 
 require.cache[aiPath] = {
 	id: aiPath,
@@ -19,10 +34,8 @@ require.cache[aiPath] = {
 	loaded: true,
 	exports: {
 		caitlynAI() {
-			starts.push("ai");
-			return new Promise((resolve) => {
-				resolveAI = resolve;
-			});
+			activeOperations.starts.push("ai");
+			return activeOperations.ai.promise;
 		},
 	},
 };
@@ -32,10 +45,8 @@ require.cache[socialPath] = {
 	loaded: true,
 	exports: {
 		socialMediaMessage() {
-			starts.push("social");
-			return new Promise((resolve) => {
-				resolveSocial = resolve;
-			});
+			activeOperations.starts.push("social");
+			return activeOperations.social.promise;
 		},
 	},
 };
@@ -58,22 +69,40 @@ after(() => {
 	}
 });
 
-test("message handling starts AI then social work concurrently and awaits both", async () => {
+async function assertResolutionOrder(first, second) {
+	activeOperations = createOperations();
 	let settled = false;
-	const operation = messageHandler({
-		author: { bot: false },
-		content: "https://x.com/example/status/123",
-	}).then(() => {
-		settled = true;
-	});
+	let operation;
 
-	assert.deepEqual(starts, ["ai", "social"]);
+	try {
+		operation = messageHandler({
+			author: { bot: false },
+			content: "https://x.com/example/status/123",
+		}).then(() => {
+			settled = true;
+		});
 
-	resolveSocial();
-	await Promise.resolve();
-	assert.equal(settled, false);
+		assert.deepEqual(activeOperations.starts, ["ai", "social"]);
 
-	resolveAI();
-	await operation;
-	assert.equal(settled, true);
+		activeOperations[first].resolve();
+		await Promise.resolve();
+		assert.equal(settled, false);
+
+		activeOperations[second].resolve();
+		await operation;
+		assert.equal(settled, true);
+	}
+	finally {
+		activeOperations.ai.resolve();
+		activeOperations.social.resolve();
+		if (operation) await operation;
+	}
+}
+
+test("message handling remains pending for social work after AI settles", async () => {
+	await assertResolutionOrder("ai", "social");
+});
+
+test("message handling remains pending for AI work after social settles", async () => {
+	await assertResolutionOrder("social", "ai");
 });
