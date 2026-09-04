@@ -14,6 +14,26 @@
     ☐ User message counter
     ☐ User leave counter
     ☐ User in channel tracker counter
+☐ Modernize project stack
+    ☐ Establish tests for existing bot behavior before upgrading
+    ☐ Upgrade Docker and development runtime from Node.js 20 to Node.js 24 LTS
+    ☐ Declare supported Node.js and npm versions in package.json
+    ☐ Migrate codebase to TypeScript
+        ☐ Add TypeScript, tsx, Node types, and tsconfig
+        ☐ Define configuration, command, event, and database types
+        ☐ Convert existing JavaScript while preserving its code style and CommonJS behavior
+        ☐ Add typecheck, development, build, and production scripts
+        ☐ Compile production output to dist and update Docker
+        ☐ Verify every existing feature after conversion
+        ☐ Evaluate ESM conversion separately after migration
+    ☐ Audit and update production dependencies
+        ☐ Verify discord.js compatibility
+        ☐ Migrate node-cron from v3 to v4
+        ☐ Remove node-fetch if native fetch covers all current uses
+    ☐ Upgrade ESLint and repair the broken lint configuration
+    ☐ Update GitHub Actions and add lint/test checks before publishing images
+    ☐ Add an example environment configuration and validate required settings
+    ☐ Run regression checks for commands, birthdays, embeds, database access, and optional LLM responses
 
 Archive:```~
 ✔ Add bot to home server @done(25-04-17 13:06)
