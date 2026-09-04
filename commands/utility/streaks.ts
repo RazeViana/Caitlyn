@@ -1,14 +1,27 @@
 /**
- * @file streaks.js
+ * @file streaks.ts
  * @description Command to view the server activity streak leaderboard.
  * Shows users with the longest daily streaks.
  *
  * @module streaks
  */
 
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import {
+	EmbedBuilder,
+	SlashCommandBuilder,
+	type ChatInputCommandInteraction,
+} from "discord.js";
 import { getTopStreakUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import type { ActivityRow } from "../../types/models.js";
+
+export interface StreaksCommandDependencies {
+	getTopStreakUsers: (guildId: string, limit?: number) => Promise<ActivityRow[]>;
+}
+
+const defaultStreaksCommandDependencies: StreaksCommandDependencies = {
+	getTopStreakUsers,
+};
 
 export const cooldown = 5;
 export const category = "utility";
@@ -21,16 +34,19 @@ export const data = new SlashCommandBuilder()
 			.setDescription("Number of users to show (default: 10)")
 			.setMinValue(5)
 			.setMaxValue(25)
-			.setRequired(false)
+			.setRequired(false),
 	);
 
-export async function execute(interaction) {
+export async function execute(
+	interaction: ChatInputCommandInteraction,
+	dependencies: StreaksCommandDependencies = defaultStreaksCommandDependencies,
+): Promise<void> {
 	try {
 		const limit = interaction.options.getInteger("limit") || 10;
-		const guildId = interaction.guild.id;
+		const guildId = interaction.guild!.id;
 
 		// Fetch top streak users
-		const topUsers = await getTopStreakUsers(guildId, limit);
+		const topUsers = await dependencies.getTopStreakUsers(guildId, limit);
 
 		if (topUsers.length === 0) {
 			await interaction.reply({
@@ -66,7 +82,8 @@ export async function execute(interaction) {
 		await interaction.reply({ embeds: [embed] });
 
 		logger.debug("Streak leaderboard viewed");
-	} catch (error) {
+	}
+	catch (error) {
 		logger.error("Error fetching streak leaderboard:", error);
 		await interaction.reply({
 			content: "❌ Failed to fetch streak leaderboard. Please try again later.",

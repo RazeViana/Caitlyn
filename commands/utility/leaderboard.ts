@@ -1,14 +1,27 @@
 /**
- * @file leaderboard.js
+ * @file leaderboard.ts
  * @description Command to view the server activity leaderboard.
  * Shows the most active users based on messages, voice time, and overall activity.
  *
  * @module leaderboard
  */
 
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getTopActiveUsers, formatDuration } from "../../core/activityTracker.js";
+import {
+	EmbedBuilder,
+	SlashCommandBuilder,
+	type ChatInputCommandInteraction,
+} from "discord.js";
+import { formatDuration, getTopActiveUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import type { ActivityRow } from "../../types/models.js";
+
+export interface LeaderboardCommandDependencies {
+	getTopActiveUsers: (guildId: string, limit?: number) => Promise<ActivityRow[]>;
+}
+
+const defaultLeaderboardCommandDependencies: LeaderboardCommandDependencies = {
+	getTopActiveUsers,
+};
 
 export const cooldown = 10;
 export const category = "utility";
@@ -21,18 +34,21 @@ export const data = new SlashCommandBuilder()
 			.setDescription("Number of users to show (default: 10)")
 			.setMinValue(5)
 			.setMaxValue(25)
-			.setRequired(false)
+			.setRequired(false),
 	);
 
-export async function execute(interaction) {
+export async function execute(
+	interaction: ChatInputCommandInteraction,
+	dependencies: LeaderboardCommandDependencies = defaultLeaderboardCommandDependencies,
+): Promise<void> {
 	try {
 		const limit = interaction.options.getInteger("limit") || 10;
-		const guildId = interaction.guild.id;
+		const guildId = interaction.guild!.id;
 
 		await interaction.deferReply();
 
 		// Fetch leaderboard data
-		const topUsers = await getTopActiveUsers(guildId, limit);
+		const topUsers = await dependencies.getTopActiveUsers(guildId, limit);
 
 		if (topUsers.length === 0) {
 			await interaction.editReply({
@@ -45,14 +61,14 @@ export async function execute(interaction) {
 		const leaderboardText = topUsers
 			.map((user, index) => {
 				const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `**${index + 1}.**`;
-				const voiceTime = formatDuration(parseInt(user.total_voice_time));
+				const voiceTime = formatDuration(Number.parseInt(String(user.total_voice_time)));
 
 				return (
-					`${medal} **${user.username}**\n` +
-					`    💬 ${user.message_count} messages | ` +
-					`🎤 ${user.voice_join_count} joins | ` +
-					`⏱️ ${voiceTime}\n` +
-					`    📊 Score: ${user.activity_score}`
+					`${medal} **${user.username}**\n`
+					+ `    💬 ${user.message_count} messages | `
+					+ `🎤 ${user.voice_join_count} joins | `
+					+ `⏱️ ${voiceTime}\n`
+					+ `    📊 Score: ${user.activity_score}`
 				);
 			})
 			.join("\n\n");
@@ -60,17 +76,18 @@ export async function execute(interaction) {
 		// Create embed
 		const embed = new EmbedBuilder()
 			.setColor(0xffd700)
-			.setTitle(`🏆 ${interaction.guild.name} Activity Leaderboard`)
+			.setTitle(`🏆 ${interaction.guild!.name} Activity Leaderboard`)
 			.setDescription(leaderboardText)
 			.setFooter({
-				text: `Activity Score = Messages + Voice Joins + (Voice Time / 60)`,
+				text: "Activity Score = Messages + Voice Joins + (Voice Time / 60)",
 			})
 			.setTimestamp();
 
 		await interaction.editReply({ embeds: [embed] });
 
 		logger.debug(`Leaderboard viewed in guild ${guildId}`);
-	} catch (error) {
+	}
+	catch (error) {
 		logger.error("Error fetching leaderboard:", error);
 		await interaction.editReply({
 			content: "❌ Failed to fetch leaderboard. Please try again later.",

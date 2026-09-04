@@ -1,14 +1,27 @@
 /**
- * @file activity.js
+ * @file activity.ts
  * @description Command to view user activity statistics.
  * Shows message count, voice joins, time in voice, and activity streaks.
  *
  * @module activity
  */
 
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
-import { getUserActivity, formatDuration } from "../../core/activityTracker.js";
+import {
+	EmbedBuilder,
+	SlashCommandBuilder,
+	type ChatInputCommandInteraction,
+} from "discord.js";
+import { formatDuration, getUserActivity } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import type { ActivityRow } from "../../types/models.js";
+
+export interface ActivityCommandDependencies {
+	getUserActivity: (guildId: string, userId: string) => Promise<ActivityRow | null>;
+}
+
+const defaultActivityCommandDependencies: ActivityCommandDependencies = {
+	getUserActivity,
+};
 
 export const cooldown = 5;
 export const category = "user";
@@ -19,16 +32,19 @@ export const data = new SlashCommandBuilder()
 		option
 			.setName("user")
 			.setDescription("The user to view activity for (defaults to yourself)")
-			.setRequired(false)
+			.setRequired(false),
 	);
 
-export async function execute(interaction) {
+export async function execute(
+	interaction: ChatInputCommandInteraction,
+	dependencies: ActivityCommandDependencies = defaultActivityCommandDependencies,
+): Promise<void> {
 	try {
 		const targetUser = interaction.options.getUser("user") || interaction.user;
-		const guildId = interaction.guild.id;
+		const guildId = interaction.guild!.id;
 
 		// Fetch activity data
-		const activity = await getUserActivity(guildId, targetUser.id);
+		const activity = await dependencies.getUserActivity(guildId, targetUser.id);
 
 		if (!activity) {
 			await interaction.reply({
@@ -39,15 +55,18 @@ export async function execute(interaction) {
 		}
 
 		// Calculate relative time for first/last seen
-		const firstSeenTimestamp = Math.floor(new Date(activity.first_seen_at).getTime() / 1000);
-		const lastSeenTimestamp = Math.floor(new Date(activity.last_seen_at).getTime() / 1000);
+		const firstSeenTimestamp = Math.floor(new Date(activity.first_seen_at!).getTime() / 1000);
+		const lastSeenTimestamp = Math.floor(new Date(activity.last_seen_at!).getTime() / 1000);
 
 		// Calculate days active and averages
-		const firstSeenDate = new Date(activity.first_seen_at);
-		const lastSeenDate = new Date(activity.last_seen_at);
-		const daysActive = Math.max(1, Math.ceil((lastSeenDate - firstSeenDate) / (1000 * 60 * 60 * 24)) + 1);
-		const avgMessagesPerDay = (parseInt(activity.message_count) / daysActive).toFixed(1);
-		const avgVoiceTimePerDay = Math.floor(parseInt(activity.total_voice_time) / daysActive);
+		const firstSeenDate = new Date(activity.first_seen_at!);
+		const lastSeenDate = new Date(activity.last_seen_at!);
+		const daysActive = Math.max(
+			1,
+			Math.ceil((lastSeenDate.getTime() - firstSeenDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+		);
+		const avgMessagesPerDay = (Number.parseInt(String(activity.message_count)) / daysActive).toFixed(1);
+		const avgVoiceTimePerDay = Math.floor(Number.parseInt(String(activity.total_voice_time)) / daysActive);
 
 		// Create embed
 		const embed = new EmbedBuilder()
@@ -57,17 +76,17 @@ export async function execute(interaction) {
 			.addFields(
 				{
 					name: "💬 Messages Sent",
-					value: activity.message_count.toString(),
+					value: activity.message_count!.toString(),
 					inline: true,
 				},
 				{
 					name: "🎤 Voice Joins",
-					value: activity.voice_join_count.toString(),
+					value: activity.voice_join_count!.toString(),
 					inline: true,
 				},
 				{
 					name: "⏱️ Time in Voice",
-					value: formatDuration(parseInt(activity.total_voice_time)),
+					value: formatDuration(Number.parseInt(String(activity.total_voice_time))),
 					inline: true,
 				},
 				{
@@ -114,7 +133,7 @@ export async function execute(interaction) {
 					name: "📆 Monthly Streak",
 					value: `**${activity.monthly_streak_current || 0}** months (Best: ${activity.monthly_streak_longest || 0})`,
 					inline: true,
-				}
+				},
 			)
 			.setTimestamp()
 			.setFooter({
@@ -125,7 +144,8 @@ export async function execute(interaction) {
 		await interaction.reply({ embeds: [embed] });
 
 		logger.debug(`Activity stats viewed for ${targetUser.username}`);
-	} catch (error) {
+	}
+	catch (error) {
 		logger.error("Error fetching activity stats:", error);
 		await interaction.reply({
 			content: "❌ Failed to fetch activity stats. Please try again later.",
