@@ -1,5 +1,5 @@
 /**
- * @file socialMediaMessage.js
+ * @file socialMediaMessage.ts
  * @description This module provides a function to process and replace social media URLs in Discord messages.
  * It identifies URLs from supported social media platforms (e.g., Instagram, Reddit, TikTok, Twitter),
  * replaces their domains with alternative "ez" domains, and sends the modified URL back to the channel.
@@ -16,10 +16,12 @@
  * @module socialMediaMessage
  */
 
-async function socialMediaMessage(message) {
+import type { Message, SendableChannels } from "discord.js";
+
+async function socialMediaMessage(message: Message): Promise<void> {
 	// Extract the URL if it’s the first thing in the message
 	const match = message.content.match(
-		/^(https?:\/\/(?:www\.)?(instagram\.com|reddit\.com|tiktok\.com|twitter\.com|x\.com)\/\S+)/i
+		/^(https?:\/\/(?:www\.)?(instagram\.com|reddit\.com|tiktok\.com|twitter\.com|x\.com)\/\S+)/i,
 	);
 	// If no match, return early
 	if (!match) return;
@@ -30,7 +32,7 @@ async function socialMediaMessage(message) {
 	const domain = match[2].toLowerCase();
 
 	// Map of domains to their replacements
-	const ezDomains = {
+	const ezDomains: Record<string, string> = {
 		"instagram.com": "instagramez.com",
 		"reddit.com": "redditez.com",
 		"tiktok.com": "tiktokez.com",
@@ -48,8 +50,9 @@ async function socialMediaMessage(message) {
 	// Delete the original message and send the new URL
 	try {
 		await message.delete();
-		await message.channel.send(`[${domain}](${ezUrl})`);
-	} catch (err) {
+		await (message.channel as SendableChannels).send(`[${domain}](${ezUrl})`);
+	}
+	catch {
 		// Silently fail - message might have been deleted or permissions issue
 	}
 }

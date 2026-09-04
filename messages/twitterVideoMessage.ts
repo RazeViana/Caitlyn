@@ -1,5 +1,5 @@
 /**
- * @file twitterVideoMessage.js
+ * @file twitterVideoMessage.ts
  * @description This module provides a utility function to handle embedding Twitter/X content
  * in a Discord channel. It fetches media (e.g., videos) from tweets using the VXTwitter API
  * and sends them to the channel, cleaning up the original message.
@@ -13,16 +13,30 @@
  * @deprecated This module is deprecated.
  */
 
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder, type Message, type SendableChannels } from "discord.js";
 import logger from "../core/logger.js";
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
 
-async function twitterVideoMessage(message) {
+interface VxTwitterResponse {
+	date: string;
+	media_extended?: Array<{
+		preview_image_url?: string;
+	}>;
+	mediaURLs?: string[];
+	text?: string;
+	tweetURL: string;
+	user_name: string;
+	user_profile_image_url: string;
+	user_screen_name: string;
+}
+
+async function twitterVideoMessage(message: Message): Promise<void> {
+	const channel = message.channel as SendableChannels;
 	// Find the first matching Twitter/X domain
 	const matchedDomain = TWITTER_DOMAINS.find((domain) =>
-		message.content.startsWith(domain)
+		message.content.startsWith(domain),
 	);
 
 	if (!matchedDomain) return;
@@ -37,7 +51,7 @@ async function twitterVideoMessage(message) {
 		if (!res.ok) throw new Error(`API returned ${res.status}`);
 
 		// Parse the response
-		const data = await res.json();
+		const data = await res.json() as VxTwitterResponse;
 		// Check if the data contains media URLs
 		const mediaUrls = data?.mediaURLs || [];
 
@@ -82,16 +96,17 @@ async function twitterVideoMessage(message) {
 			.setImage(data.media_extended?.[0]?.preview_image_url ?? null);
 
 		// Send the embed to the channel
-		await message.channel.send({ embeds: [embed] });
+		await channel.send({ embeds: [embed] });
 
 		// Send videos one by one (to keep formatting clean)
 		for (const videoUrl of videoLinks) {
-			await message.channel.send(`[.](${videoUrl})`);
+			await channel.send(`[.](${videoUrl})`);
 		}
-	} catch (error) {
+	}
+	catch (error) {
 		logger.error("Error fetching from VXTwitter:", error);
 		// Notify the user if the fetch fails
-		await message.channel.send("Couldn't fetch the video from Twitter/X.");
+		await channel.send("Couldn't fetch the video from Twitter/X.");
 	}
 }
 

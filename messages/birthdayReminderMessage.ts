@@ -1,5 +1,5 @@
 /**
- * @file birthdayReminderMessage.js
+ * @file birthdayReminderMessage.ts
  * @description This module provides a scheduled event handler for celebrating user birthdays in a Discord server.
  * It fetches user birthdays from a PostgreSQL database, checks if any birthdays match the current date, and sends
  * a celebratory message to a specified text channel in the Discord server.
@@ -10,14 +10,19 @@
  * @module birthdayReminderMessage
  */
 
-import { TextChannel, userMention } from "discord.js";
+import { TextChannel, userMention, type Client } from "discord.js";
 import { pool } from "../core/createPGPool.js";
 import { format } from "date-fns";
 
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
 
-async function birthdayReminderMessage(client) {
+interface BirthdayRow {
+	discord_id: string;
+	dob: Date | string;
+}
+
+async function birthdayReminderMessage(client: Client): Promise<void> {
 	const cakeEmojis = ["🎂", "🍰", "🧁", "🎉", "🎊", "🥳", "🎈"];
 	const randomEmoji = () =>
 		cakeEmojis[Math.floor(Math.random() * cakeEmojis.length)];
@@ -25,7 +30,7 @@ async function birthdayReminderMessage(client) {
 	const today = format(new Date(), "MM-dd");
 
 	// Fetch all birthdays from the database
-	const res = await pool.query(`SELECT * FROM discord.birthdays`);
+	const res = await pool.query<BirthdayRow>("SELECT * FROM discord.birthdays");
 
 	// Filter the birthdays to find those that match today's date
 	const birthdayPeople = res.rows.filter((row) => {
@@ -47,17 +52,17 @@ async function birthdayReminderMessage(client) {
 	// Set the mentions for the birthday people
 	const mentions = birthdayPeople
 		.map(
-			(p) => `${randomEmoji()} ${userMention(p.discord_id)} ${randomEmoji()}`
+			(p) => `${randomEmoji()} ${userMention(p.discord_id)} ${randomEmoji()}`,
 		)
 		.join("\n");
 
 	// Send the birthday message to the channel
 	await channel.send({
 		content: [
-			`🎉🎂 **It's Party Time!** 🎂🎉`,
-			`Today we're celebrating these fellas:`,
+			"🎉🎂 **It's Party Time!** 🎂🎉",
+			"Today we're celebrating these fellas:",
 			`\n${mentions}`,
-			`\nSend them my regards 🥳`,
+			"\nSend them my regards 🥳",
 		].join("\n"),
 	});
 }
