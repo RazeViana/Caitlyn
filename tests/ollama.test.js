@@ -5,7 +5,7 @@ process.env.OLLAMA_CHAT_ENDPOINT = "http://ollama.test/api/chat";
 process.env.OLLAMA_MODEL = "caitlyn-test";
 
 const originalFetch = global.fetch;
-const { chat } = require("../core/ollama.js");
+const { chat } = require("../core/ollama.ts");
 
 afterEach(() => {
 	global.fetch = originalFetch;

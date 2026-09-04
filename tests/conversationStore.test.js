@@ -7,7 +7,7 @@ const {
 	addMessage,
 	getConversation,
 	resetConversation,
-} = require("../core/conversationStore.js");
+} = require("../core/conversationStore.ts");
 
 const keys = [];
 

@@ -14,7 +14,7 @@
 		"dev": "tsx main.ts",
 		"dev:watch": "tsx watch main.ts",
 		"start": "node dist/main.js",
-		"test": "node --test",
+		"test": "node --import tsx --test",
 		"typecheck": "tsc --noEmit"
 	},
 	"repository": {
