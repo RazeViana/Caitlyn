@@ -8,9 +8,10 @@
  * @module ping
  */
 
-const { SlashCommandBuilder } = require("discord.js");
+import { SlashCommandBuilder } from "discord.js";
+import type { BotCommand } from "../../types/command.js";
 
-module.exports = {
+const command: BotCommand = {
 	cooldown: 5,
 	category: "utility",
 	data: new SlashCommandBuilder()
@@ -20,3 +21,5 @@ module.exports = {
 		await interaction.reply("Pong");
 	},
 };
+
+export = command;

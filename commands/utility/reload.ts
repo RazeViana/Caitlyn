@@ -1,6 +1,8 @@
-const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+import path from "node:path";
+import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import type { BotCommand } from "../../types/command.js";
 
-module.exports = {
+const command: BotCommand = {
 	category: "utility",
 	data: new SlashCommandBuilder()
 		.setName("reload")
@@ -16,7 +18,7 @@ module.exports = {
 		// Get the command name to be reloaded
 		const commandName = interaction.options
 			.getString("command", true)
-			.tolowerCase();
+			.toLowerCase();
 		// Get the command from the client using the command name
 		const command = interaction.client.commands.get(commandName);
 
@@ -28,11 +30,12 @@ module.exports = {
 			});
 		}
 
+		const moduleExtension = path.extname(__filename);
+		const commandPath = `../${command.category}/${command.data.name}${moduleExtension}`;
+
 		// Delete the command from the require cache
 		try {
-			delete require.cache[
-				require.resolve(`../${command.category}/${command.data.name}.js`)
-			];
+			delete require.cache[require.resolve(commandPath)];
 		} catch (error) {
 			console.error(error);
 			await interaction.reply({
@@ -45,7 +48,7 @@ module.exports = {
 			// Delete the command from the client commands collection
 			interaction.client.commands.delete(command.data.name);
 			// Require the command again and add it back to the client commands collection
-			const newCommand = require(`../${command.category}/${command.data.name}.js`);
+			const newCommand = require(commandPath);
 			// Set the commands to the client commands collection
 			interaction.client.commands.set(newCommand.data.name, newCommand);
 			await interaction.reply(
@@ -54,7 +57,7 @@ module.exports = {
 		} catch (error) {
 			console.error(error);
 			await interaction.reply({
-				content: `There was an error while reloading a command \`/${command.data.name}\`:\n\`${error.message}\``,
+				content: `There was an error while reloading a command \`/${command.data.name}\`:\n\`${(error as Error).message}\``,
 				flags: MessageFlags.Ephemeral,
 			});
 		}
@@ -75,3 +78,5 @@ module.exports = {
 		);
 	},
 };
+
+export = command;

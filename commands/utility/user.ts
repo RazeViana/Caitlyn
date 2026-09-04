@@ -8,9 +8,11 @@
  * @module user_command
  */
 
-const { SlashCommandBuilder } = require("discord.js");
+import { SlashCommandBuilder } from "discord.js";
+import type { BotCommand } from "../../types/command.js";
+import type { GuildMember } from "discord.js";
 
-module.exports = {
+const command: BotCommand = {
 	cooldown: 5,
 	category: "utility",
 	data: new SlashCommandBuilder()
@@ -20,7 +22,9 @@ module.exports = {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		await interaction.reply(
-			`This command was run by ${interaction.user.username}, who joined on ${interaction.member.joinedAt}.`
+			`This command was run by ${interaction.user.username}, who joined on ${(interaction.member as GuildMember).joinedAt}.`
 		);
 	},
 };
+
+export = command;

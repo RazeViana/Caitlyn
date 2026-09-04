@@ -8,9 +8,10 @@
  * @module server_command
  */
 
-const { SlashCommandBuilder } = require("discord.js");
+import { SlashCommandBuilder } from "discord.js";
+import type { BotCommand } from "../../types/command.js";
 
-module.exports = {
+const command: BotCommand = {
 	cooldown: 5,
 	category: "utility",
 	data: new SlashCommandBuilder()
@@ -19,7 +20,9 @@ module.exports = {
 	async execute(interaction) {
 		// interaction.guild is the object representing the Guild in which the command was run
 		await interaction.reply(
-			`This server is ${interaction.guild.name} and has ${interaction.guild.memberCount} members.`
+			`This server is ${interaction.guild!.name} and has ${interaction.guild!.memberCount} members.`
 		);
 	},
 };
+
+export = command;
