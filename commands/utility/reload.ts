@@ -7,7 +7,7 @@ import {
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import logger from "../../core/logger.js";
-import type { BotCommand } from "../../types/command.js";
+import { isBotCommand } from "../../types/command.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,8 +62,6 @@ export async function execute(
 	}
 
 	try {
-		// Delete the command from the client commands collection
-		interaction.client.commands.delete(loadedCommand.data.name);
 		// Import the command again with a timestamp to force reload
 		const moduleExtension = path.extname(__filename);
 		const commandPath = path.join(
@@ -74,8 +72,20 @@ export async function execute(
 		);
 		const fileUrl = pathToFileURL(commandPath);
 		fileUrl.searchParams.set("update", dependencies.now().toString());
-		const newCommand = await dependencies.importModule(fileUrl.href) as BotCommand;
+		let newCommand: unknown;
+		try {
+			newCommand = await dependencies.importModule(fileUrl.href);
+		}
+		catch (error) {
+			// Preserve the current behavior of removing a command when its import fails.
+			interaction.client.commands.delete(loadedCommand.data.name);
+			throw error;
+		}
+		if (!isBotCommand(newCommand)) {
+			throw new Error("Reloaded command is invalid.");
+		}
 		// Set the commands to the client commands collection
+		interaction.client.commands.delete(loadedCommand.data.name);
 		interaction.client.commands.set(newCommand.data.name, newCommand);
 		await interaction.reply(
 			`Command \`/${newCommand.data.name}\` was reloaded!`,

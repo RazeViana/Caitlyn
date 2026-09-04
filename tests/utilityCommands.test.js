@@ -143,6 +143,63 @@ test("reload preserves missing-command and missing-category ephemeral replies", 
 	}]);
 });
 
+test("reload rejects an invalid imported namespace without replacing the command", async () => {
+	const originalConsoleError = console.error;
+	const loggedErrors = [];
+	console.error = (...args) => {
+		loggedErrors.push(args);
+	};
+
+	try {
+		const mutations = [];
+		class TrackedCommands extends Map {
+			delete(key) {
+				mutations.push(["delete", key]);
+				return super.delete(key);
+			}
+
+			set(key, value) {
+				mutations.push(["set", key, value]);
+				return super.set(key, value);
+			}
+		}
+
+		const oldCommand = {
+			category: "utility",
+			data: pingCommand.data,
+			execute: pingCommand.execute,
+		};
+		const commands = new TrackedCommands([["ping", oldCommand]]);
+		mutations.length = 0;
+		const replies = [];
+
+		await reloadCommand.execute({
+			client: { commands },
+			options: { getString: () => "ping" },
+			reply: async (response) => {
+				replies.push(response);
+			},
+		}, {
+			importModule: async () => ({ data: pingCommand.data }),
+			now: () => 1788541200000,
+		});
+
+		assert.equal(commands.size, 1);
+		assert.equal(commands.get("ping"), oldCommand);
+		assert.deepEqual(mutations, []);
+		assert.deepEqual(replies, [{
+			content: "There was an error while reloading a command `/ping`:\n`Reloaded command is invalid.`",
+			flags: MessageFlags.Ephemeral,
+		}]);
+		assert.equal(loggedErrors.length, 1);
+		assert.match(loggedErrors[0].join(" "), /Error reloading command:/);
+		assert.match(loggedErrors[0].join(" "), /Reloaded command is invalid\./);
+	}
+	finally {
+		console.error = originalConsoleError;
+	}
+});
+
 test("reload autocomplete keeps case-sensitive filtering and caps choices at 25", async () => {
 	const commandNames = [
 		"ping",
