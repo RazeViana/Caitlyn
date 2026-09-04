@@ -14,25 +14,37 @@ test("preserves utility slash command names", () => {
 });
 
 test("reload replaces the requested non-reload command from its module", async () => {
-	const previousPing = { ...ping };
+	const pingModulePath = require.resolve("../commands/utility/ping.ts");
+	const previousPingModule = require.cache[pingModulePath];
+	const previousPing = ping;
 	const commands = new Map([
 		["ping", previousPing],
 		["reload", reload],
 	]);
 	let reply;
 
-	await reload.execute({
-		options: {
-			getString: () => "ping",
-		},
-		client: { commands },
-		reply: async (message) => {
-			reply = message;
-		},
-	});
+	try {
+		await reload.execute({
+			options: {
+				getString: () => "ping",
+			},
+			client: { commands },
+			reply: async (message) => {
+				reply = message;
+			},
+		});
 
-	assert.equal(commands.get("ping").data.name, "ping");
-	assert.notEqual(commands.get("ping"), previousPing);
-	assert.equal(commands.get("reload"), reload);
-	assert.equal(reply, "Command `/ping` was reloaded!");
+		assert.equal(commands.get("ping").data.name, "ping");
+		assert.notEqual(commands.get("ping"), previousPing);
+		assert.equal(commands.get("reload"), reload);
+		assert.equal(reply, "Command `/ping` was reloaded!");
+	}
+	finally {
+		if (previousPingModule) {
+			require.cache[pingModulePath] = previousPingModule;
+		}
+		else {
+			delete require.cache[pingModulePath];
+		}
+	}
 });
