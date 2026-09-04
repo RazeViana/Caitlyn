@@ -1,5 +1,5 @@
 /**
- * @file eventHandler.js
+ * @file eventHandler.ts
  * @description This module provides a function to dynamically load and register event files for a Discord bot client.
  * It reads event files from a structured directory, validates their structure, and attaches them to the client's event listeners.
  *
@@ -17,9 +17,11 @@ import type { BotEvent } from "../types/event.js";
 
 const loadModule = createRequire(__filename);
 
-function eventHandler(client: Client): void {
+function eventHandler(
+	client: Client,
+	eventsPath = path.join(__dirname, "../events"),
+): void {
 	// Get the events folder path
-	const eventsPath = path.join(__dirname, "../events");
 	const moduleExtension = path.extname(__filename);
 	// Get the files in the events folder and filter them to only include the runtime extension
 	const eventFiles = fs

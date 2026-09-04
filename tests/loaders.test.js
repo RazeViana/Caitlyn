@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const { test } = require("node:test");
 const { Client } = require("discord.js");
@@ -27,22 +28,32 @@ test("registers every TypeScript event module", () => {
 
 test("loads events matching the runtime module extension only", () => {
 	const client = new Client({ intents: [] });
-	const fixturePath = path.join(
-		__dirname,
-		"../events/runtime-extension-fixture.js",
-	);
-
-	fs.writeFileSync(
-		fixturePath,
-		"module.exports = { name: \"ready\", execute() {} };\n",
+	const fixtureRoot = fs.mkdtempSync(
+		path.join(os.tmpdir(), "caitlyn-events-"),
 	);
 
 	try {
-		eventHandler(client);
+		fs.writeFileSync(
+			path.join(fixtureRoot, "runtime-extension-fixture.ts"),
+			[
+				"export = {",
+				"\tname: \"error\",",
+				"\texecute() { return undefined; },",
+				"};",
+				"",
+			].join("\n"),
+		);
+		fs.writeFileSync(
+			path.join(fixtureRoot, "other-extension-fixture.js"),
+			"module.exports = { name: \"ready\", execute() { return undefined; } };\n",
+		);
 
-		assert.equal(client.listenerCount("ready"), 1);
+		eventHandler(client, fixtureRoot);
+
+		assert.equal(client.listenerCount("error"), 1);
+		assert.equal(client.listenerCount("ready"), 0);
 	}
 	finally {
-		fs.unlinkSync(fixturePath);
+		fs.rmSync(fixtureRoot, { recursive: true, force: true });
 	}
 });

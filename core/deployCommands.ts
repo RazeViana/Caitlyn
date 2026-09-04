@@ -1,5 +1,5 @@
 /**
- * @file deployCommands.js
+ * @file deployCommands.ts
  * @description This script is responsible for dynamically loading and deploying Discord bot slash commands to a specific guild.
  * It reads command files from a structured directory, validates their structure, and registers them with the Discord API.
  *

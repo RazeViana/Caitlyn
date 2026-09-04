@@ -8,6 +8,11 @@ declare namespace NodeJS {
 		LLM_ENABLED?: "true" | "false";
 		OLLAMA_CHAT_ENDPOINT: string;
 		OLLAMA_MODEL: string;
+		PGDATABASE: string;
+		PGHOST: string;
+		PGPASSWORD: string;
+		PGPORT: string;
+		PGUSER: string;
 		SYSTEM_PROMPT: string;
 		TOKEN: string;
 	}

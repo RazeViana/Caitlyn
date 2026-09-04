@@ -6,6 +6,7 @@
  * @module ollama
  */
 
+import "dotenv/config";
 import type {
 	ChatMessage,
 	OllamaChatResponse,

@@ -7,6 +7,7 @@
  * @module conversationStore
  */
 
+import "dotenv/config";
 import type { ChatMessage, ChatRole } from "../types/models.js";
 
 const conversationMap = new Map<string, ChatMessage[]>();
