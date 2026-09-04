@@ -35,11 +35,24 @@ test("clean production build emits every runtime entry point", () => {
 });
 
 test("emitted ESM entry points load without starting the bot", async () => {
-	const mainModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/main.js")).href);
-	const commandModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/commands/utility/ping.js")).href);
-	const eventModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/events/ready.js")).href);
+	const originalToken = process.env.TOKEN;
+	process.env.TOKEN = "test-token";
 
-	assert.equal(typeof mainModule.startBot, "function");
-	assert.equal(commandModule.data.name, "ping");
-	assert.equal(eventModule.name, "clientReady");
+	try {
+		const mainModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/main.js")).href);
+		const commandModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/commands/utility/ping.js")).href);
+		const eventModule = await import(pathToFileURL(path.join(repositoryRoot, "dist/events/ready.js")).href);
+
+		assert.equal(typeof mainModule.startBot, "function");
+		assert.equal(commandModule.data.name, "ping");
+		assert.equal(eventModule.name, "clientReady");
+	}
+	finally {
+		if (originalToken === undefined) {
+			delete process.env.TOKEN;
+		}
+		else {
+			process.env.TOKEN = originalToken;
+		}
+	}
 });
