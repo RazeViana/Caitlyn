@@ -18,10 +18,11 @@ async function createPGPool(): Promise<void> {
 		if (res.rows.length) {
 			console.log("[INFO] Connected to PostgreSQL Caitlyn~DB");
 		}
-	} catch (err) {
+	}
+	catch (err) {
 		console.error(
 			"[Error] PostgreSQL connection failed: \n",
-			err instanceof Error ? err.stack : err
+			err instanceof Error ? err.stack : err,
 		);
 	}
 }

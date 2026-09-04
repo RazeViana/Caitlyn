@@ -14,8 +14,7 @@ import { TextChannel, type Client, userMention } from "discord.js";
 import { format } from "date-fns";
 import { pool } from "../core/createPGPool.js";
 import type { BirthdayRow } from "../types/models.js";
-
-require("dotenv").config();
+import "dotenv/config";
 
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
@@ -28,7 +27,7 @@ async function birthdayReminderMessage(client: Client): Promise<void> {
 	const today = format(new Date(), "MM-dd");
 
 	// Fetch all birthdays from the database
-	const res = await pool.query<BirthdayRow>(`SELECT * FROM discord.birthdays`);
+	const res = await pool.query<BirthdayRow>("SELECT * FROM discord.birthdays");
 
 	// Filter the birthdays to find those that match today's date
 	const birthdayPeople = res.rows.filter((row) => {
@@ -50,17 +49,17 @@ async function birthdayReminderMessage(client: Client): Promise<void> {
 	// Set the mentions for the birthday people
 	const mentions = birthdayPeople
 		.map(
-			(p) => `${randomEmoji()} ${userMention(p.discord_id)} ${randomEmoji()}`
+			(p) => `${randomEmoji()} ${userMention(p.discord_id)} ${randomEmoji()}`,
 		)
 		.join("\n");
 
 	// Send the birthday message to the channel
 	await channel.send({
 		content: [
-			`🎉🎂 **It's Party Time!** 🎂🎉`,
-			`Today we're celebrating these fellas:`,
+			"🎉🎂 **It's Party Time!** 🎂🎉",
+			"Today we're celebrating these fellas:",
 			`\n${mentions}`,
-			`\nSend them my regards 🥳`,
+			"\nSend them my regards 🥳",
 		].join("\n"),
 	});
 }

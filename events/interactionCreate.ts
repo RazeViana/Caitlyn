@@ -21,7 +21,8 @@ const event: BotEvent<Events.InteractionCreate> = {
 			if (!command || typeof command.autocomplete !== "function") return;
 			try {
 				await command.autocomplete(interaction);
-			} catch (error) {
+			}
+			catch (error) {
 				console.error(`Error in autocomplete for ${interaction.commandName}`);
 				console.error(error);
 			}
@@ -36,7 +37,7 @@ const event: BotEvent<Events.InteractionCreate> = {
 		// Check if the command exists
 		if (!command) {
 			console.error(
-				`No command matching ${interaction.commandName} was found.`
+				`No command matching ${interaction.commandName} was found.`,
 			);
 			return;
 		}
@@ -80,7 +81,8 @@ const event: BotEvent<Events.InteractionCreate> = {
 		// Try to execute the command
 		try {
 			await command.execute(interaction);
-		} catch (error) {
+		}
+		catch (error) {
 			console.error(`Error executing ${interaction.commandName}`);
 			console.error(error);
 		}

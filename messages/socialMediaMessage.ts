@@ -21,7 +21,7 @@ import type { Message } from "discord.js";
 async function socialMediaMessage(message: Message<true>): Promise<void> {
 	// Extract the URL if it’s the first thing in the message
 	const match = message.content.match(
-		/^(https?:\/\/(?:www\.)?(instagram\.com|reddit\.com|tiktok\.com|twitter\.com|x\.com)\/\S+)/i
+		/^(https?:\/\/(?:www\.)?(instagram\.com|reddit\.com|tiktok\.com|twitter\.com|x\.com)\/\S+)/i,
 	);
 	// If no match, return early
 	if (!match) return;
@@ -51,7 +51,8 @@ async function socialMediaMessage(message: Message<true>): Promise<void> {
 	try {
 		await message.delete();
 		await message.channel.send(`[${domain}](${ezUrl})`);
-	} catch (err) {
+	}
+	catch (err) {
 		console.error("Could not replace URL:", err);
 	}
 }

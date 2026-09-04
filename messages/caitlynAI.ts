@@ -9,8 +9,7 @@
 import type { Message } from "discord.js";
 import { addMessage, getConversation } from "../core/conversationStore.js";
 import { chat } from "../core/ollama.js";
-
-require("dotenv").config();
+import "dotenv/config";
 
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;
 

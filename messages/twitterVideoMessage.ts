@@ -32,7 +32,7 @@ interface VXTwitterResponse {
 async function twitterVideoMessage(message: Message<true>): Promise<void> {
 	// Find the first matching Twitter/X domain
 	const matchedDomain = TWITTER_DOMAINS.find((domain) =>
-		message.content.startsWith(domain)
+		message.content.startsWith(domain),
 	);
 
 	if (!matchedDomain) return;
@@ -96,7 +96,8 @@ async function twitterVideoMessage(message: Message<true>): Promise<void> {
 		for (const videoUrl of videoLinks) {
 			await message.channel.send(`[.](${videoUrl})`);
 		}
-	} catch (error) {
+	}
+	catch (error) {
 		console.error("[Error] fetching from VXTwitter:", error);
 		// Notify the user if the fetch fails
 		await message.channel.send("Couldn’t fetch the video from Twitter/X.");

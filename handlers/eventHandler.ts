@@ -10,9 +10,12 @@
  */
 
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import type { Client } from "discord.js";
 import type { BotEvent } from "../types/event.js";
+
+const loadModule = createRequire(__filename);
 
 function eventHandler(client: Client): void {
 	// Get the events folder path
@@ -28,17 +31,18 @@ function eventHandler(client: Client): void {
 		// Get the current event file path
 		const filePath = path.join(eventsPath, file);
 		// Import the event file
-		const event = require(filePath) as BotEvent;
+		const event = loadModule(filePath) as BotEvent;
 		// Check if the event has a name and an execute function
 		if (event.once) {
 			client.once(event.name, (...args) => event.execute(...args));
-		} else {
+		}
+		else {
 			client.on(event.name, (...args) => event.execute(...args));
 		}
 	}
 	// Log the loaded events
 	console.log(
-		`[INFO] Event Handler loaded ${eventFiles.length} events from the events folder.`
+		`[INFO] Event Handler loaded ${eventFiles.length} events from the events folder.`,
 	);
 }
 

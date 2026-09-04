@@ -13,8 +13,7 @@
 import type { Message } from "discord.js";
 import { caitlynAI } from "../messages/caitlynAI.js";
 import { socialMediaMessage } from "../messages/socialMediaMessage.js";
-
-require("dotenv").config();
+import "dotenv/config";
 
 const LLM_ENABLED = process.env.LLM_ENABLED;
 

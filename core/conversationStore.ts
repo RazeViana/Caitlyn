@@ -11,7 +11,7 @@ import type { ChatMessage, ChatRole } from "../types/models.js";
 
 const conversationMap = new Map<string, ChatMessage[]>();
 const CONVERSATION_MEMORY_SIZE = Number(
-	process.env.CONVERSATION_MEMORY_SIZE
+	process.env.CONVERSATION_MEMORY_SIZE,
 );
 
 function getConversation(key: string): ChatMessage[] {

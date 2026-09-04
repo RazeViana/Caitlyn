@@ -1,6 +1,9 @@
 import path from "node:path";
+import { createRequire } from "node:module";
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import type { BotCommand } from "../../types/command.js";
+
+const loadModule = createRequire(__filename);
 
 const command: BotCommand = {
 	category: "utility",
@@ -12,7 +15,7 @@ const command: BotCommand = {
 				.setName("command")
 				.setDescription("The command to reload.")
 				.setRequired(true)
-				.setAutocomplete(true)
+				.setAutocomplete(true),
 		),
 	async execute(interaction) {
 		// Get the command name to be reloaded
@@ -20,10 +23,10 @@ const command: BotCommand = {
 			.getString("command", true)
 			.toLowerCase();
 		// Get the command from the client using the command name
-		const command = interaction.client.commands.get(commandName);
+		const loadedCommand = interaction.client.commands.get(commandName);
 
 		// Check if the command exists
-		if (!command) {
+		if (!loadedCommand) {
 			return interaction.reply({
 				content: `There is no command with name \`/${commandName}\``,
 				flags: MessageFlags.Ephemeral,
@@ -35,8 +38,9 @@ const command: BotCommand = {
 
 		// Delete the command from the require cache
 		try {
-			delete require.cache[require.resolve(commandPath)];
-		} catch (error) {
+			delete loadModule.cache[loadModule.resolve(commandPath)];
+		}
+		catch (error) {
 			console.error(error);
 			await interaction.reply({
 				content: "Command missing category, sort it out mate",
@@ -46,18 +50,19 @@ const command: BotCommand = {
 
 		try {
 			// Delete the command from the client commands collection
-			interaction.client.commands.delete(command.data.name);
+			interaction.client.commands.delete(loadedCommand.data.name);
 			// Require the command again and add it back to the client commands collection
-			const newCommand = require(commandPath);
+			const newCommand = loadModule(commandPath);
 			// Set the commands to the client commands collection
 			interaction.client.commands.set(newCommand.data.name, newCommand);
 			await interaction.reply(
-				`Command \`/${newCommand.data.name}\` was reloaded!`
+				`Command \`/${newCommand.data.name}\` was reloaded!`,
 			);
-		} catch (error) {
+		}
+		catch (error) {
 			console.error(error);
 			await interaction.reply({
-				content: `There was an error while reloading a command \`/${command.data.name}\`:\n\`${(error as Error).message}\``,
+				content: `There was an error while reloading a command \`/${loadedCommand.data.name}\`:\n\`${(error as Error).message}\``,
 				flags: MessageFlags.Ephemeral,
 			});
 		}
@@ -68,13 +73,14 @@ const command: BotCommand = {
 		const choices = [...interaction.client.commands.keys()];
 
 		const filtered = choices.filter((cmd) => cmd.startsWith(focused));
+		// Discord only allows 25 choices max
 		await interaction.respond(
 			filtered
 				.map((cmd) => ({
 					name: cmd,
 					value: cmd,
 				}))
-				.slice(0, 25) // Discord only allows 25 choices max
+				.slice(0, 25),
 		);
 	},
 };

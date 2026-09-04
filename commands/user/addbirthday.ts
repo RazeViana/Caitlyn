@@ -28,13 +28,13 @@ const command: BotCommand = {
 			option
 				.setName("user")
 				.setDescription("The user of the birthday you want to add")
-				.setRequired(true)
+				.setRequired(true),
 		)
 		.addIntegerOption((option) =>
 			option
 				.setName("day")
 				.setDescription("The day of the birthday e.g. 28")
-				.setRequired(true)
+				.setRequired(true),
 		)
 		.addStringOption((option) =>
 			option
@@ -53,14 +53,14 @@ const command: BotCommand = {
 					{ name: "September", value: "9" },
 					{ name: "October", value: "10" },
 					{ name: "November", value: "11" },
-					{ name: "December", value: "12" }
-				)
+					{ name: "December", value: "12" },
+				),
 		)
 		.addIntegerOption((option) =>
 			option
 				.setName("year")
 				.setDescription("The year of the birthday e.g. 1997")
-				.setRequired(true)
+				.setRequired(true),
 		),
 	async execute(interaction) {
 		// Get the user for whom the birthday is being set
@@ -101,14 +101,14 @@ const command: BotCommand = {
 		try {
 			// Check if the user already has a birthday set
 			const res = await pool.query<BirthdayRow>(
-				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`
+				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`,
 			);
 
 			// If the user already has a birthday set, update the birthday
 			if (res.rows[0]) {
 				await pool.query(
-					`UPDATE discord.birthdays SET dob = $1, name = $2 WHERE discord_id = $3`,
-					[birthday, displayName, userId]
+					"UPDATE discord.birthdays SET dob = $1, name = $2 WHERE discord_id = $3",
+					[birthday, displayName, userId],
 				);
 
 				// If the birthday was updated successfully, return a message
@@ -117,7 +117,8 @@ const command: BotCommand = {
 					flags: MessageFlags.Ephemeral,
 				});
 			}
-		} catch (error) {
+		}
+		catch (error) {
 			// If there was an error checking the database, log it and return a message
 			console.error("Error checking existing birthday:", error);
 			return null;
@@ -126,10 +127,11 @@ const command: BotCommand = {
 		try {
 			// Insert the birthday into the database
 			await pool.query(
-				`INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3)`,
-				[userId, displayName, birthday]
+				"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3)",
+				[userId, displayName, birthday],
 			);
-		} catch (error) {
+		}
+		catch (error) {
 			// If there was an error inserting the birthday, log it and return a message
 			console.error("Error inserting birthday:", error);
 			return interaction.reply({

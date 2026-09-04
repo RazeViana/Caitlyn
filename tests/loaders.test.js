@@ -29,19 +29,20 @@ test("loads events matching the runtime module extension only", () => {
 	const client = new Client({ intents: [] });
 	const fixturePath = path.join(
 		__dirname,
-		"../events/runtime-extension-fixture.js"
+		"../events/runtime-extension-fixture.js",
 	);
 
 	fs.writeFileSync(
 		fixturePath,
-		'module.exports = { name: "ready", execute() {} };\n'
+		"module.exports = { name: \"ready\", execute() {} };\n",
 	);
 
 	try {
 		eventHandler(client);
 
 		assert.equal(client.listenerCount("ready"), 1);
-	} finally {
+	}
+	finally {
 		fs.unlinkSync(fixturePath);
 	}
 });

@@ -10,9 +10,12 @@
  */
 
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { Collection, type Client } from "discord.js";
 import type { BotCommand } from "../types/command.js";
+
+const loadModule = createRequire(__filename);
 
 function commandHandler(client: Client): void {
 	if (!client) throw new Error("Client is not defined");
@@ -37,21 +40,22 @@ function commandHandler(client: Client): void {
 			// Reads the current command file path
 			const filePath = path.join(commandsPath, file);
 			// Imports the command file
-			const command = require(filePath) as BotCommand;
+			const command = loadModule(filePath) as BotCommand;
 
 			// Set a new item in the Collection with the key as the command name and the value as the exported module
 			if ("data" in command && "execute" in command) {
 				client.commands.set(command.data.name, command);
-			} else {
+			}
+			else {
 				console.log(
-					`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+					`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`,
 				);
 			}
 		}
 	}
 	// Log the loaded commands
 	console.log(
-		`[INFO] Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`
+		`[INFO] Command Handler loaded ${client.commands.size} commands from ${commandFolders.length} folders.`,
 	);
 }
 

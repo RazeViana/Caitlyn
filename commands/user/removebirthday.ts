@@ -28,40 +28,41 @@ const command: BotCommand = {
 			option
 				.setName("user")
 				.setDescription("The birthday reminder of the user you want to remove")
-				.setRequired(true)
+				.setRequired(true),
 		),
 	async execute(interaction) {
 		const user = interaction.options.getUser("user", true);
-		const displayName = user.username;
 		const userId = user.id;
 
 		try {
 			// Check if the user has a birthday set
 			const res = await pool.query<BirthdayRow>(
-				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`
+				`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`,
 			);
 
 			// If the user already has a birthday set, delete it
 			if (res.rows[0]) {
 				await pool.query(
-					`DELETE FROM discord.birthdays WHERE discord_id = ${userId}`
+					`DELETE FROM discord.birthdays WHERE discord_id = ${userId}`,
 				);
 
 				// If the birthday was successfully deleted, return a message
 				return interaction.reply({
 					content: `Birthday reminder for ${userMention(
-						userId
+						userId,
 					)} has been deleted.`,
 					flags: MessageFlags.Ephemeral,
 				});
-			} else {
+			}
+			else {
 				// If the user does not have a birthday set, return a message
 				return interaction.reply({
 					content: `${userMention(userId)} does not have a birthday set.`,
 					flags: MessageFlags.Ephemeral,
 				});
 			}
-		} catch (error) {
+		}
+		catch (error) {
 			// If there was an error checking the database, log it and return a message
 			console.error("Error checking existing birthday:", error);
 		}

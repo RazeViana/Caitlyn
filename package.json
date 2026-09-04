@@ -13,6 +13,7 @@
 		"deploy:prod": "node dist/core/deployCommands.js",
 		"dev": "tsx main.ts",
 		"dev:watch": "tsx watch main.ts",
+		"lint": "eslint .",
 		"start": "node dist/main.js",
 		"test": "node --import tsx --test",
 		"typecheck": "tsc --noEmit"
@@ -40,13 +41,15 @@
 		"pg": "^8.14.1"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.24.0",
+		"@eslint/js": "^10.0.1",
 		"@types/node": "^24.13.3",
 		"@types/node-cron": "^3.0.11",
 		"@types/pg": "^8.23.1",
+		"@typescript/native": "npm:typescript@^7.0.2",
 		"discord-api-types": "^0.38.55",
-		"eslint": "^9.24.0",
+		"eslint": "^10.10.0",
 		"tsx": "^4.23.13",
-		"typescript": "^7.0.2"
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
+		"typescript-eslint": "^8.69.0"
 	}
 }

@@ -12,7 +12,8 @@ function loadLoginClient(token) {
 	if (token === undefined) {
 		delete process.env.TOKEN;
 		process.env.DOTENV_CONFIG_PATH = "missing-login-client-test.env";
-	} else {
+	}
+	else {
 		process.env.TOKEN = token;
 	}
 
@@ -24,13 +25,15 @@ afterEach(() => {
 
 	if (originalToken === undefined) {
 		delete process.env.TOKEN;
-	} else {
+	}
+	else {
 		process.env.TOKEN = originalToken;
 	}
 
 	if (originalDotenvConfigPath === undefined) {
 		delete process.env.DOTENV_CONFIG_PATH;
-	} else {
+	}
+	else {
 		process.env.DOTENV_CONFIG_PATH = originalDotenvConfigPath;
 	}
 });
@@ -38,7 +41,7 @@ afterEach(() => {
 test("throws a clear error when TOKEN is missing during module load", () => {
 	assert.throws(
 		() => loadLoginClient(undefined),
-		{ message: "No TOKEN found. Set a TOKEN environment variable" }
+		{ message: "No TOKEN found. Set a TOKEN environment variable" },
 	);
 });
 
@@ -47,6 +50,6 @@ test("throws a clear error when loginClient has no client", () => {
 
 	assert.throws(
 		() => loginClient(undefined),
-		{ message: "Client is not defined" }
+		{ message: "Client is not defined" },
 	);
 });

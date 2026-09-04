@@ -17,7 +17,7 @@ function startBirthdayScheduledEvent(client: Client): void {
 
 	// Log the scheduled event
 	console.log(
-		"[INFO] Birthday scheduled event started, running every day at 9 AM."
+		"[INFO] Birthday scheduled event started, running every day at 9 AM.",
 	);
 }
 

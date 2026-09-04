@@ -25,7 +25,7 @@ import {
 } from "date-fns";
 import type { BotCommand } from "../../types/command.js";
 import type { BirthdayRow } from "../../types/models.js";
-require("dotenv").config();
+import "dotenv/config";
 
 interface GiphyResponse {
 	data?: {
@@ -81,19 +81,20 @@ const command: BotCommand = {
 			if (!giphyResponse.ok) {
 				console.error(
 					"Failed to fetch GIF from Giphy API:",
-					giphyResponse.statusText
+					giphyResponse.statusText,
 				);
 			}
 
 			randomGIF = giphyData.data?.images?.original?.url;
-		} catch (error) {
+		}
+		catch (error) {
 			console.error("Error fetching GIF:", error);
 		}
 
 		try {
 			// Fetch all birthdays from the database
 			const res = await pool.query<BirthdayRow>(
-				`SELECT * FROM discord.birthdays`
+				"SELECT * FROM discord.birthdays",
 			);
 			// If no birthdays are found, return a message
 			if (res.rows.length === 0) {
@@ -103,7 +104,7 @@ const command: BotCommand = {
 			// Group birthdays by month
 			const months: BirthdayDisplay[][] = Array.from(
 				{ length: 12 },
-				() => []
+				() => [],
 			);
 
 			for (const row of res.rows) {
@@ -111,7 +112,7 @@ const command: BotCommand = {
 				const bdayThisYear = new Date(
 					now.getFullYear(),
 					dob.getMonth(),
-					dob.getDate()
+					dob.getDate(),
 				);
 
 				// If birthday already passed this year, move to next
@@ -132,8 +133,8 @@ const command: BotCommand = {
 				const display = isToday
 					? `🎉 **Today!** - ${mention}`
 					: `${format(
-							dob,
-							"dd MMM yyyy"
+						dob,
+						"dd MMM yyyy",
 					  )} — ⏳ ${daysUntil} day(s) left • ${mention}`;
 
 				months[getMonth(dob)].push({
@@ -148,7 +149,7 @@ const command: BotCommand = {
 				.setDescription("Here are all the saved birthdays")
 				.setColor(0xff80ab)
 				.setThumbnail(
-					`${randomGIF ? randomGIF : "https://i.imgur.com/4qijkuw.jpeg"}`
+					`${randomGIF ? randomGIF : "https://i.imgur.com/4qijkuw.jpeg"}`,
 				)
 				.setFooter({
 					text: `Requested by ${interaction.user.username}`,
@@ -182,7 +183,8 @@ const command: BotCommand = {
 
 			// Send the embed
 			await interaction.editReply({ embeds: [embed] });
-		} catch (error) {
+		}
+		catch (error) {
 			console.error("❌ Error fetching birthdays:", error);
 			await interaction.editReply("An error occurred fetching birthdays.");
 		}
