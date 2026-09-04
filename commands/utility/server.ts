@@ -8,16 +8,16 @@
  * @module server_command
  */
 
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
 
 export const cooldown = 5;
 export const category = "utility";
 export const data = new SlashCommandBuilder()
 	.setName("server")
 	.setDescription("Provides information about the server.");
-export async function execute(interaction) {
+export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	// interaction.guild is the object representing the Guild in which the command was run
 	await interaction.reply(
-		`This server is ${interaction.guild.name} and has ${interaction.guild.memberCount} members.`
+		`This server is ${interaction.guild!.name} and has ${interaction.guild!.memberCount} members.`,
 	);
 }
