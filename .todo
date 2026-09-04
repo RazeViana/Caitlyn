@@ -5,6 +5,19 @@
 'Alt+S' // Triggers `Todo: Toggle Start`
 'Cmd/Ctrl+Shift+A' // Triggers  `Todo: Archive`
 
+☐ Caitlyn 2.0 modernization
+    ✔ Convert the ESM application and operational scripts to TypeScript
+    ✔ Adopt the Node.js 24 and npm 11 toolchain
+    ✔ Add automated behavior and regression tests
+    ✔ Pass the repository-wide TypeScript-aware lint gate
+    ✔ Produce a verified clean compiled build
+    ☐ Modernize Docker for Node.js 24 and the compiled ESM runtime
+    ☐ Add the complete CI quality gate before image publication
+    ☐ Audit and update production dependencies
+    ☐ Upgrade node-cron to version 4
+    ☐ Remove the node-fetch dependency in favor of Node.js fetch
+    ☐ Validate all required environment variables at startup
+
 ☐ Add personality to the bot
     ☐ Commissioned banner
 

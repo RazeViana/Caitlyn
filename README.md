@@ -1,290 +1,184 @@
 # Caitlyn Discord Bot
 
-Caitlyn is a modular Discord bot that integrates with **Open WebUI** and local LLMs to interact naturally as a conversational Discord user. Built with Discord.js v14 and PostgreSQL with vector embeddings for advanced conversation memory.
+Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, pgvector, and Open WebUI. It provides conversational AI with persistent vector memory, activity tracking, birthday reminders, and social-link enhancements.
 
 ## Features
 
-### AI Integration
-- Powered by **Open WebUI** for LLM interactions
-- **Vector-based conversation memory** using PostgreSQL + pgvector
-- Semantic search for relevant conversation context
-- Per-channel conversation history
-- Runtime AI toggle (`/toggleai` command)
+- Open WebUI chat integration with a runtime `/toggleai` control.
+- PostgreSQL and pgvector conversation storage with recent and semantic context.
+- Message, voice, leaderboard, and daily/weekly/monthly streak tracking.
+- Birthday management and scheduled birthday reminders.
+- Twitter/X, Instagram, Reddit, and TikTok link handling.
+- Typed ESM command, event, job, and message modules.
+- Dynamic loaders that run TypeScript in development and compiled JavaScript in production.
 
-### User Activity Tracking
-- Message count tracking
-- Voice channel join/leave tracking
-- Voice time duration tracking
-- Daily/weekly/monthly activity streaks
-- Detailed activity statistics with averages
-- Activity leaderboards
-- Streak leaderboards
+## Requirements
 
-### Birthday Management
-- Add/remove birthday reminders
-- Automatic birthday notifications
-- List all upcoming birthdays
-- Age calculation
+- Node.js 24
+- npm 11
+- PostgreSQL 14 or newer with the pgvector extension
+- An Open WebUI chat-completions endpoint
+- An embeddings endpoint compatible with the configured model
+- A Discord application and bot token
 
-### Social Media Enhancements
-- Twitter/X video embedding
-- Instagram link conversion
-- Reddit link conversion
-- TikTok link conversion
+## Setup
 
-### Other Features
-- Clean ES Module architecture
-- Dynamic command/event handlers
-- Scheduled cron jobs
-- Docker support
-- ESLint configuration
-- Database migrations system
+1. Clone the repository and enter it:
 
-## Getting Started
+   ```bash
+   git clone https://github.com/RazeViana/Caitlyn.git
+   cd Caitlyn
+   ```
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+ with pgvector extension
-- Open WebUI instance (or Ollama)
-- Discord bot token
+2. Install the locked dependencies:
 
-### Installation
+   ```bash
+   npm ci
+   ```
 
-1. Clone the repository:
+3. Copy `.env.example` to `.env` and fill in every value used by your deployment.
+
+4. Run migrations `001` through `008` in numeric order:
+
+   ```bash
+   npx tsx scripts/runMigration.ts 001_create_messages_table.sql
+   npx tsx scripts/runMigration.ts 002_update_embedding_dimensions.sql
+   npx tsx scripts/runMigration.ts 003_create_user_activity_table.sql
+   npx tsx scripts/runMigration.ts 004_remove_server_leave_count.sql
+   npx tsx scripts/runMigration.ts 005_update_get_user_activity_function.sql
+   npx tsx scripts/runMigration.ts 006_add_activity_streaks.sql
+   npx tsx scripts/runMigration.ts 007_fix_streak_calculation.sql
+   npx tsx scripts/runMigration.ts 008_fix_daily_activity_tracking.sql
+   ```
+
+5. Register the slash commands for the configured guild:
+
+   ```bash
+   npm run deploy
+   ```
+
+6. Start the bot in development:
+
+   ```bash
+   npm run dev
+   ```
+
+## Development and production
+
+Run the complete local quality gate:
+
 ```bash
-git clone https://github.com/RazeViana/Caitlyn.git
-cd Caitlyn
+npm run check
 ```
 
-2. Install dependencies:
+Create a clean ESM build under `dist/`:
+
 ```bash
-npm install
+npm run build
 ```
 
-3. Set up PostgreSQL with pgvector:
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE SCHEMA IF NOT EXISTS discord;
-```
+Start that compiled build:
 
-4. Configure environment variables (see Configuration section below)
-
-5. Deploy commands to Discord:
 ```bash
-npm run deploy
+npm start
 ```
 
-6. Start the bot:
-```bash
-node main.js
-```
-
-### Run with Docker
-```bash
-docker build -t caitlyn .
-docker run caitlyn
-```
+`npm start` executes `dist/main.js`, so run the build first. Generated `dist/` files are not committed. See [docs/development.md](docs/development.md) for code conventions and the branch/release policy.
 
 ## Configuration
 
-Create a `.env` file with the following variables:
+The application reads these variables from `.env`:
 
-```env
-# Discord Configuration
-TOKEN=your_discord_bot_token
-CLIENT_ID=your_client_id
-GUILD_ID=your_guild_id
+| Variable | Purpose |
+| --- | --- |
+| `TOKEN` | Discord bot token |
+| `CLIENT_ID` | Discord application/client ID used when deploying commands |
+| `GUILD_ID` | Discord guild used for command deployment and reminders |
+| `GENERAL_CHAT_ID` | Channel that receives birthday reminders |
+| `GIPHY_API_KEY` | Giphy API key used by birthday responses |
+| `PGHOST`, `PGPORT` | PostgreSQL server address |
+| `PGUSER`, `PGPASSWORD`, `PGDATABASE` | PostgreSQL credentials and database |
+| `LLM_ENABLED` | Initial AI state; use `true` or `false` |
+| `OLLAMA_MODEL` | Model name sent to Open WebUI |
+| `WEBUI_API_KEY` | Bearer token for Open WebUI |
+| `WEBUI_CHAT_ENDPOINT` | Open WebUI chat-completions URL |
+| `EMBEDDING_MODEL` | Embedding model name |
+| `EMBEDDING_ENDPOINT` | Embeddings API URL |
+| `CONTEXT_RECENT_COUNT` | Recent messages included in AI context |
+| `CONTEXT_SIMILAR_COUNT` | Semantically similar messages included in AI context |
+| `LOG_LEVEL` | Optional `DEBUG`, `INFO`, `WARN`, or `ERROR` threshold |
 
-# Open WebUI Configuration
-LLM_ENABLED=true
-OLLAMA_MODEL=gemma3:12b
-WEBUI_API_KEY=your_api_key
-WEBUI_CHAT_ENDPOINT=http://localhost:8080/api/chat/completions
-WEBUI_ENABLE_WEB_SEARCH=false
-WEBUI_ENABLE_MEMORY=false
+The Open WebUI model configuration owns the system prompt.
 
-# Embedding Configuration
-EMBEDDING_MODEL=embeddinggemma:300m
-EMBEDDING_ENDPOINT=http://localhost:11434/api/embeddings
-CONTEXT_RECENT_COUNT=8
-CONTEXT_SIMILAR_COUNT=3
+## Database migrations
 
-# Conversation Settings
-CONVERSATION_MEMORY_SIZE=100
+Migrations are append-only and must be applied in filename order:
 
-# PostgreSQL Configuration
-PGHOST=localhost
-PGUSER=postgres
-PGPASSWORD=your_password
-PGDATABASE=caitlyn
-PGPORT=5432
+1. `001_create_messages_table.sql` creates pgvector support, the `discord` schema, message storage, indexes, and context functions.
+2. `002_update_embedding_dimensions.sql` changes stored embeddings and similarity search to 768 dimensions.
+3. `003_create_user_activity_table.sql` adds aggregate activity and voice-session tracking.
+4. `004_remove_server_leave_count.sql` removes the obsolete server-leave counter.
+5. `005_update_get_user_activity_function.sql` updates the activity lookup function after that removal.
+6. `006_add_activity_streaks.sql` adds daily activity and streak functions.
+7. `007_fix_streak_calculation.sql` counts only completed weeks and months.
+8. `008_fix_daily_activity_tracking.sql` separates daily message and voice-time accounting.
+
+## Commands
+
+### User commands
+
+- `/activity [user]` — show detailed activity statistics.
+- `/addbirthday` — add a birthday reminder.
+- `/removebirthday` — remove a birthday reminder.
+- `/showbirthdays` — list upcoming birthdays.
+
+### Utility commands
+
+- `/leaderboard [limit]` — rank members by activity.
+- `/ping` — check bot latency.
+- `/reload <command>` — reload a command at runtime.
+- `/server` — show server information.
+- `/streaks [limit]` — rank activity streaks.
+- `/toggleai` — enable or disable AI replies at runtime (administrator only).
+- `/user [user]` — show user information.
+
+## Operational scripts
+
+Run operational scripts from the repository checkout with `tsx`:
+
+```bash
+npx tsx scripts/checkMessages.ts
+npx tsx scripts/testContext.ts
+npx tsx scripts/testMemory.ts <channel_id>
 ```
 
-## Available Commands
+`testMemory.ts` deletes stored messages for the supplied channel before printing manual memory-test steps.
 
-### User Commands
-- `/activity [user]` - View detailed activity statistics for a user
-- `/addbirthday` - Add a birthday reminder
-- `/removebirthday` - Remove a birthday reminder
-- `/showbirthdays` - List all upcoming birthdays
+## Project structure
 
-### Utility Commands
-- `/ping` - Check bot latency
-- `/server` - Display server information
-- `/user [user]` - Display user information
-- `/reload <command>` - Reload a command (admin only)
-- `/toggleai` - Toggle AI responses on/off (admin only)
-- `/leaderboard [limit]` - View activity leaderboard
-- `/streaks [limit]` - View streak leaderboard
-
-## Project Structure
-
-```
+```text
 Caitlyn/
-├── commands/           # Slash commands
-│   ├── user/          # User-related commands
-│   └── utility/       # Utility commands
-├── core/              # Core utilities
-│   ├── createPGPool.js        # PostgreSQL connection
-│   ├── logger.js              # Logging utility
-│   ├── ollama.js              # LLM communication
-│   ├── aiState.js             # AI state management
-│   ├── activityTracker.js     # Activity tracking
-│   └── vectorMemory.js        # Vector-based memory
-├── events/            # Discord event handlers
-├── handlers/          # Business logic handlers
-├── jobs/              # Scheduled tasks (cron jobs)
-├── messages/          # Message processors
-├── migrations/        # Database migrations
-├── scripts/           # Utility scripts
-├── main.js           # Entry point
-└── Dockerfile        # Container setup
+├── commands/       # Slash-command modules
+├── core/           # PostgreSQL, AI, logging, deployment, and Discord services
+├── events/         # Discord event modules
+├── handlers/       # Command, event, cron, and message routing
+├── jobs/           # Scheduled jobs
+├── messages/       # AI, birthday, and social-message flows
+├── migrations/     # SQL migrations 001-008
+├── scripts/        # TypeScript operational tools and the ESM build cleaner
+├── tests/          # Node test runner behavior tests
+├── types/          # Shared TypeScript contracts
+└── main.ts         # Import-safe application entry point
 ```
 
-## Database Schema
+## Code style
 
-### Tables
-- **discord.messages** - Stores messages with vector embeddings for semantic search
-- **discord.user_activity** - Aggregate user activity statistics
-- **discord.daily_activity** - Daily activity records for streak calculation
-- **discord.voice_sessions** - Detailed voice session history
-- **discord.birthdays** - Birthday reminders
-
-## Development
-
-### Linting
-```bash
-npx eslint .
-```
-
-### Running Migrations
-```bash
-node scripts/runMigration.js <migration_file.sql>
-```
-
-### Code Style
-- Tabs for indentation
-- Double quotes for strings
-- Semicolons required
-- Stroustrup brace style
-- ES Module syntax (import/export)
-
----
-
-## Changelog
-
-### [Unreleased] - 2025-11-07
-#### Added
-- User activity tracking system with message counts, voice joins, and voice time
-- Daily/weekly/monthly activity streak tracking
-- `/activity` command with detailed stats and averages
-- `/leaderboard` command for top active users
-- `/streaks` command for top streak users
-- Per-day activity tracking in `daily_activity` table
-- Average messages per day and average voice time per day statistics
-
-#### Fixed
-- Weekly/monthly streak calculation to only count complete periods
-- Daily activity tracking to properly record messages and voice time separately
-- Streak calculation functions now start from previous week/month instead of current
-
-### [2025-11-07] - User Activity System
-#### Added
-- Complete user activity tracking system (commit bb5ef22)
-- Voice state tracking with duration calculation
-- Message count tracking
-- Database schema for activity tracking (migrations 003-008)
-
-### [2025-11-07] - AI Toggle Command
-#### Added
-- `/toggleai` command for runtime AI enable/disable (commit 01fcf2c)
-- `aiState.js` for runtime state management
-- Admin-only permission requirement
-
-### [2025-11-07] - Vector Memory Implementation
-#### Added
-- PostgreSQL + pgvector integration for conversation memory (commit 36529f6)
-- Semantic similarity search for relevant conversation context
-- 768-dimensional embeddings using embeddinggemma:300m
-- Context combining recent + semantically similar messages
-- `vectorMemory.js` core module
-
-### [2025-11-07] - Open WebUI Integration
-#### Changed
-- Refactored from Ollama direct integration to Open WebUI API (commit bbb319b)
-- Updated to use OpenAI-compatible chat completions endpoint
-- Added web search and memory feature toggles
-- System prompt now configured in Open WebUI instead of .env
-
-### [2025-11-06] - Logging System
-#### Added
-- Winston-based logging system (commit 63c0813)
-- `logger.js` core module
-- Consistent logging across all modules
-- Log levels: error, warn, info, debug
-
-### [2025-11-06] - ES Module Migration
-#### Changed
-- Refactored entire codebase from CommonJS to ES Modules (commit bfe61dd)
-- Updated all `require()` to `import`
-- Updated all `module.exports` to `export`
-- Updated package.json with `"type": "module"`
-
-### [2025-11-06] - Environment Configuration
-#### Changed
-- Consolidated dotenv declarations (commit 8192b89)
-- Added `.env.example` file
-- Removed redundant environment variable loading
-
-### [Earlier Updates]
-#### Added
-- Initial project setup and Discord bot foundation
-- Birthday tracking and reminder system
-- Social media link conversion (Twitter, Instagram, Reddit, TikTok)
-- Basic LLM integration with conversation memory
-- Docker support and CI/CD workflow
-- Command reload functionality
-- PostgreSQL database integration
-- Cron job scheduling system
-
-#### Features
-- Twitter/X video embedding with rich embeds
-- Birthday notifications with age calculation
-- Message handling system with routing
-- Event-driven architecture
-- Dynamic command and event loading
-- Error handling and validation
-
----
+- Tabs for indentation.
+- Double quotes for strings.
+- Semicolons.
+- Stroustrup braces.
+- Named ESM exports and `.js` relative import specifiers in TypeScript.
 
 ## License
 
 This project is licensed under the MIT License.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For issues, questions, or suggestions, please open an issue on GitHub.

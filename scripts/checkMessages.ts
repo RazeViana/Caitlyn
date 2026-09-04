@@ -1,13 +1,27 @@
 import "dotenv/config";
-import pg from "pg";
 
-const { Pool } = pg;
-const pool = new Pool();
+import { pathToFileURL } from "node:url";
+import { pool } from "../core/createPGPool.js";
 
-async function checkMessages() {
+interface ChannelMessageCount {
+	channel_id: string;
+	message_count: string;
+	with_embeddings: string;
+	latest_message: Date | null;
+}
+
+interface RecentMessage {
+	channel_id: string;
+	username: string;
+	role: string;
+	content_preview: string;
+	created_at: Date;
+}
+
+async function checkMessages(): Promise<void> {
 	try {
 		// Count messages per channel
-		const countResult = await pool.query(`
+		const countResult = await pool.query<ChannelMessageCount>(`
 			SELECT
 				channel_id,
 				COUNT(*) as message_count,
@@ -21,7 +35,8 @@ async function checkMessages() {
 		console.log("========================");
 		if (countResult.rows.length === 0) {
 			console.log("No messages found in database");
-		} else {
+		}
+		else {
 			for (const row of countResult.rows) {
 				console.log(`Channel: ${row.channel_id}`);
 				console.log(`  Messages: ${row.message_count}`);
@@ -32,7 +47,7 @@ async function checkMessages() {
 		}
 
 		// Show recent messages
-		const recentResult = await pool.query(`
+		const recentResult = await pool.query<RecentMessage>(`
 			SELECT
 				channel_id,
 				username,
@@ -46,15 +61,20 @@ async function checkMessages() {
 
 		console.log("\n📝 Recent Messages:");
 		console.log("==================");
-		for (const msg of recentResult.rows) {
-			console.log(`[${msg.created_at.toISOString()}] ${msg.username} (${msg.role}): ${msg.content_preview}...`);
+		for (const message of recentResult.rows) {
+			console.log(`[${message.created_at.toISOString()}] ${message.username} (${message.role}): ${message.content_preview}...`);
 		}
 
 		await pool.end();
-	} catch (error) {
+	}
+	catch (error: unknown) {
 		console.error("Error:", error);
 		process.exit(1);
 	}
 }
 
-checkMessages();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	void checkMessages();
+}
+
+export { checkMessages };

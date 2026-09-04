@@ -1,12 +1,9 @@
 import "dotenv/config";
-import pg from "pg";
 
-const { Pool } = pg;
-const pool = new Pool();
+import { pathToFileURL } from "node:url";
+import { pool } from "../core/createPGPool.js";
 
-async function testMemory() {
-	const channelId = process.argv[2];
-
+async function testMemory(channelId = process.argv[2]): Promise<void> {
 	if (!channelId) {
 		console.log("Usage: node scripts/testMemory.js <channel_id>");
 		console.log("\nThis will clear all messages from the specified channel.");
@@ -17,7 +14,7 @@ async function testMemory() {
 		// Delete all messages for this channel
 		const result = await pool.query(
 			"DELETE FROM discord.messages WHERE channel_id = $1",
-			[channelId]
+			[channelId],
 		);
 
 		console.log(`✓ Cleared ${result.rowCount} messages from channel ${channelId}`);
@@ -28,10 +25,15 @@ async function testMemory() {
 		console.log("\nIf it works, Caitlyn should remember the fact from earlier!");
 
 		await pool.end();
-	} catch (error) {
+	}
+	catch (error: unknown) {
 		console.error("Error:", error);
 		process.exit(1);
 	}
 }
 
-testMemory();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	void testMemory();
+}
+
+export { testMemory };
