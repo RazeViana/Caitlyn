@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": false,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"noEmit": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ES2024",
+		"types": ["node"]
+	},
+	"include": [
+		"commands/**/*.ts",
+		"core/**/*.ts",
+		"events/**/*.ts",
+		"handlers/**/*.ts",
+		"jobs/**/*.ts",
+		"messages/**/*.ts",
+		"types/**/*.ts",
+		"main.ts"
+	],
+	"exclude": ["dist", "node_modules"]
+}
