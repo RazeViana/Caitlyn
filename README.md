@@ -140,7 +140,7 @@ Migrations are append-only and must be applied in filename order:
 - `/server` — show server information.
 - `/streaks [limit]` — rank activity streaks.
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
-- `/user [user]` — show user information.
+- `/user` — show information about the user who runs the command.
 
 ## Operational scripts
 

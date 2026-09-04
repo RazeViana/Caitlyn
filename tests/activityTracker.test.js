@@ -100,6 +100,57 @@ test("voice join stores the returned session and voice leave records elapsed sec
 	assert.equal(sessions.has("guild-id-user-id"), false);
 });
 
+test("voice leave retains its session after each failed write until a complete retry succeeds", async (t) => {
+	const originalConsoleError = console.error;
+	console.error = () => undefined;
+
+	try {
+		for (const failedWrite of [0, 1, 2]) {
+			await t.test(`write ${failedWrite + 1} fails`, async () => {
+				const sessionKey = "guild-id-user-id";
+				const sessions = new Map([[sessionKey, {
+					channelId: "channel-id",
+					joinedAt: 10_000,
+					sessionId: 42,
+				}]]);
+				let callIndex = 0;
+				let injectedFailure = true;
+				const dependencies = {
+					now: () => 15_999,
+					query: async () => {
+						const currentCall = callIndex;
+						callIndex += 1;
+						if (injectedFailure && currentCall === failedWrite) {
+							throw new Error(`write ${failedWrite + 1} failed`);
+						}
+						return { rows: [] };
+					},
+					sessions,
+				};
+
+				await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", dependencies);
+
+				assert.equal(callIndex, failedWrite + 1);
+				assert.deepEqual(sessions.get(sessionKey), {
+					channelId: "channel-id",
+					joinedAt: 10_000,
+					sessionId: 42,
+				});
+
+				callIndex = 0;
+				injectedFailure = false;
+				await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", dependencies);
+
+				assert.equal(callIndex, 3);
+				assert.equal(sessions.has(sessionKey), false);
+			});
+		}
+	}
+	finally {
+		console.error = originalConsoleError;
+	}
+});
+
 test("missing voice sessions keep the existing warning behavior", async () => {
 	const warnings = [];
 	const queries = [];

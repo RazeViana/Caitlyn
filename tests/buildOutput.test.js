@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
@@ -54,5 +57,132 @@ test("emitted ESM entry points load without starting the bot", async () => {
 		else {
 			process.env.TOKEN = originalToken;
 		}
+	}
+});
+
+test("compiled handlers and deployment discover every production command and event from their default roots", async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-compiled-runtime-"));
+	const commandHandlerUrl = pathToFileURL(
+		path.join(repositoryRoot, "dist/handlers/commandHandler.js"),
+	).href;
+	const eventHandlerUrl = pathToFileURL(
+		path.join(repositoryRoot, "dist/handlers/eventHandler.js"),
+	).href;
+	const deployCommandsUrl = pathToFileURL(
+		path.join(repositoryRoot, "dist/core/deployCommands.js"),
+	).href;
+	const script = `
+		const environmentNames = ["TOKEN", "CLIENT_ID", "GUILD_ID"];
+		const originalEnvironment = Object.fromEntries(
+			environmentNames.map((name) => [name, process.env[name]]),
+		);
+		const ignoredLogs = [];
+		console.log = (...args) => ignoredLogs.push(args);
+		console.warn = (...args) => ignoredLogs.push(args);
+		console.error = (...args) => ignoredLogs.push(args);
+		let result;
+		try {
+			process.env.TOKEN = "compiled-token";
+			process.env.CLIENT_ID = "compiled-client-id";
+			process.env.GUILD_ID = "compiled-guild-id";
+			const { commandHandler } = await import(${JSON.stringify(commandHandlerUrl)});
+			const { eventHandler } = await import(${JSON.stringify(eventHandlerUrl)});
+			const { deployCommands } = await import(${JSON.stringify(deployCommandsUrl)});
+			const listeners = [];
+			const client = {
+				on: (name, listener) => listeners.push({ method: "on", name, listener }),
+				once: (name, listener) => listeners.push({ method: "once", name, listener }),
+			};
+			await commandHandler(client);
+			await eventHandler(client);
+			const restCalls = [];
+			const rest = {
+				put: async (route, options) => {
+					restCalls.push({ route, options });
+					return options.body;
+				},
+			};
+			await deployCommands(undefined, { rest });
+			result = {
+				commandNames: [...client.commands.keys()].sort(),
+				listeners: listeners.map(({ method, name }) => ({ method, name })),
+				restCalls,
+			};
+		}
+		finally {
+			for (const name of environmentNames) {
+				if (originalEnvironment[name] === undefined) delete process.env[name];
+				else process.env[name] = originalEnvironment[name];
+			}
+		}
+		process.stdout.write(JSON.stringify(result));
+	`;
+	const childEnvironment = {};
+	for (const name of ["SystemRoot", "WINDIR"]) {
+		if (process.env[name] !== undefined) childEnvironment[name] = process.env[name];
+	}
+
+	try {
+		const child = spawnSync(process.execPath, [
+			"--input-type=module",
+			"--eval",
+			script,
+		], {
+			cwd: temporaryDirectory,
+			encoding: "utf8",
+			env: childEnvironment,
+		});
+
+		assert.equal(child.status, 0, child.stderr);
+		const result = JSON.parse(child.stdout);
+		assert.deepEqual(result.commandNames, [
+			"activity",
+			"addbirthday",
+			"leaderboard",
+			"ping",
+			"reload",
+			"removebirthday",
+			"server",
+			"showbirthdays",
+			"streaks",
+			"toggleai",
+			"user",
+		]);
+		assert.deepEqual(result.listeners, [
+			{ method: "on", name: "interactionCreate" },
+			{ method: "on", name: "messageCreate" },
+			{ method: "once", name: "clientReady" },
+			{ method: "on", name: "voiceStateUpdate" },
+		]);
+		assert.equal(result.restCalls.length, 2);
+		assert.deepEqual(result.restCalls[0], {
+			options: { body: [] },
+			route: "/applications/compiled-client-id/commands",
+		});
+		assert.equal(
+			result.restCalls[1].route,
+			"/applications/compiled-client-id/guilds/compiled-guild-id/commands",
+		);
+		const guildPayload = result.restCalls[1].options.body;
+		assert.equal(guildPayload.length, 11);
+		assert.equal(guildPayload.every((command) => {
+			return command !== null && typeof command === "object" && !Array.isArray(command);
+		}), true);
+		assert.deepEqual(guildPayload.map(({ name }) => name).sort(), [
+			"activity",
+			"addbirthday",
+			"leaderboard",
+			"ping",
+			"reload",
+			"removebirthday",
+			"server",
+			"showbirthdays",
+			"streaks",
+			"toggleai",
+			"user",
+		]);
+	}
+	finally {
+		await rm(temporaryDirectory, { force: true, recursive: true });
 	}
 });

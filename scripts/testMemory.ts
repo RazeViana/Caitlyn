@@ -5,7 +5,7 @@ import { pool } from "../core/createPGPool.js";
 
 async function testMemory(channelId = process.argv[2]): Promise<void> {
 	if (!channelId) {
-		console.log("Usage: node scripts/testMemory.js <channel_id>");
+		console.log("Usage: npx tsx scripts/testMemory.ts <channel_id>");
 		console.log("\nThis will clear all messages from the specified channel.");
 		process.exit(1);
 	}

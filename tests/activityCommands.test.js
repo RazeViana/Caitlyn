@@ -319,8 +319,75 @@ test("toggleai preserves administrator metadata and ephemeral response", async (
 		}]);
 	}
 	finally {
+		if (originalLLMEnabled === undefined) delete process.env.LLM_ENABLED;
+		else process.env.LLM_ENABLED = originalLLMEnabled;
 		resetAIState();
-		process.env.LLM_ENABLED = originalLLMEnabled;
+		console.log = originalConsoleLog;
+	}
+});
+
+test("toggleai changes enabled AI to disabled and replies with the disabled ephemeral response", async () => {
+	const originalLLMEnabled = process.env.LLM_ENABLED;
+	const originalConsoleLog = console.log;
+	const replies = [];
+	console.log = () => undefined;
+	process.env.LLM_ENABLED = "true";
+	resetAIState();
+
+	try {
+		await toggleAICommand.execute({
+			reply: async (response) => {
+				replies.push(response);
+			},
+			user: commandUser("requester-id", "Requester"),
+		});
+
+		assert.equal(isAIEnabled(), false);
+		assert.deepEqual(replies, [{
+			content: "❌ Caitlyn AI is now **disabled**",
+			flags: MessageFlags.Ephemeral,
+		}]);
+	}
+	finally {
+		if (originalLLMEnabled === undefined) delete process.env.LLM_ENABLED;
+		else process.env.LLM_ENABLED = originalLLMEnabled;
+		resetAIState();
+		console.log = originalConsoleLog;
+	}
+});
+
+test("toggleai preserves the existing error reply payload when its success reply fails", async () => {
+	const originalLLMEnabled = process.env.LLM_ENABLED;
+	const originalConsoleError = console.error;
+	const originalConsoleLog = console.log;
+	const replies = [];
+	let replyAttempts = 0;
+	console.error = () => undefined;
+	console.log = () => undefined;
+	process.env.LLM_ENABLED = "false";
+	resetAIState();
+
+	try {
+		await toggleAICommand.execute({
+			reply: async (response) => {
+				replyAttempts += 1;
+				if (replyAttempts === 1) throw new Error("success reply unavailable");
+				replies.push(response);
+			},
+			user: commandUser("requester-id", "Requester"),
+		});
+
+		assert.equal(replyAttempts, 2);
+		assert.deepEqual(replies, [{
+			content: "❌ Failed to toggle AI. Check the logs for details.",
+			MessageFlags: MessageFlags.Ephemeral,
+		}]);
+	}
+	finally {
+		if (originalLLMEnabled === undefined) delete process.env.LLM_ENABLED;
+		else process.env.LLM_ENABLED = originalLLMEnabled;
+		resetAIState();
+		console.error = originalConsoleError;
 		console.log = originalConsoleLog;
 	}
 });

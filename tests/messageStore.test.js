@@ -10,7 +10,7 @@ process.env.PGPORT = "5432";
 process.env.PGUSER = "dummy_user";
 
 const { pool } = await import("../core/createPGPool.ts");
-const { getConversationContext, storeMessage } = await import("../core/messageStore.ts");
+const { clearOldMessages, getConversationContext, storeMessage } = await import("../core/messageStore.ts");
 
 const originalPoolQuery = pool.query.bind(pool);
 
@@ -73,4 +73,72 @@ test("message storage preserves vector SQL and context ordering", async () => {
 		{ id: 3, source: "similar" },
 		{ id: 2, source: "recent" },
 	]);
+});
+
+test("old-message cleanup preserves its exact SQL, arguments, default, and row-count fallback", async () => {
+	const calls = [];
+	const logs = [];
+	const originalConsoleLog = console.log;
+	console.log = (...args) => {
+		logs.push(args.join(" "));
+	};
+	pool.query = async (query, values) => {
+		calls.push({ query, values });
+		return { rowCount: calls.length === 1 ? 7 : null, rows: [] };
+	};
+
+	try {
+		assert.equal(await clearOldMessages("default-channel"), 7);
+		assert.equal(await clearOldMessages("custom-channel", 14), 0);
+	}
+	finally {
+		console.log = originalConsoleLog;
+	}
+
+	assert.deepEqual(calls, [
+		{
+			query: `
+			DELETE FROM discord.messages
+			WHERE channel_id = $1
+			AND created_at < NOW() - INTERVAL '30 days'
+		`,
+			values: ["default-channel"],
+		},
+		{
+			query: `
+			DELETE FROM discord.messages
+			WHERE channel_id = $1
+			AND created_at < NOW() - INTERVAL '14 days'
+		`,
+			values: ["custom-channel"],
+		},
+	]);
+	assert.equal(logs.length, 2);
+	assert.match(logs[0], /\[INFO\].*Cleared 7 old messages from channel default-channel/);
+	assert.match(logs[1], /\[INFO\].*Cleared 0 old messages from channel custom-channel/);
+});
+
+test("old-message cleanup logs and rethrows the database error", async () => {
+	const databaseError = new Error("cleanup database unavailable");
+	const errors = [];
+	const originalConsoleError = console.error;
+	console.error = (...args) => {
+		errors.push(args.join(" "));
+	};
+	pool.query = async () => {
+		throw databaseError;
+	};
+
+	try {
+		await assert.rejects(
+			() => clearOldMessages("error-channel", 5),
+			(error) => error === databaseError,
+		);
+	}
+	finally {
+		console.error = originalConsoleError;
+	}
+
+	assert.equal(errors.length, 1);
+	assert.match(errors[0], /\[ERROR\].*Error clearing old messages:.*cleanup database unavailable/s);
 });

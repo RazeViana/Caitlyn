@@ -70,3 +70,36 @@ test("diagnostic scripts import typed core services without executing on import"
 	assert.equal(result.stdout, "");
 	assert.equal(result.stderr, "");
 });
+
+test("memory diagnostic without a channel exits with runnable TypeScript self-help before touching services", async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-memory-help-"));
+	const scriptPath = path.resolve("scripts/testMemory.ts");
+	const childEnvironment = {};
+	for (const name of ["SystemRoot", "WINDIR"]) {
+		if (process.env[name] !== undefined) childEnvironment[name] = process.env[name];
+	}
+
+	try {
+		const result = spawnSync(process.execPath, [
+			"--import",
+			import.meta.resolve("tsx"),
+			scriptPath,
+		], {
+			cwd: temporaryDirectory,
+			encoding: "utf8",
+			env: childEnvironment,
+		});
+
+		assert.equal(result.status, 1);
+		assert.equal(result.signal, null);
+		assert.equal(
+			result.stdout,
+			"Usage: npx tsx scripts/testMemory.ts <channel_id>\n\n"
+			+ "This will clear all messages from the specified channel.\n",
+		);
+		assert.equal(result.stderr, "");
+	}
+	finally {
+		await rm(temporaryDirectory, { force: true, recursive: true });
+	}
+});

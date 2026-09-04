@@ -65,3 +65,59 @@ test("event loader imports only the current .ts runtime extension", async () => 
 		await rm(eventsRoot, { force: true, recursive: true });
 	}
 });
+
+test("command loader guard skips a malformed same-extension module without mutating the collection", async () => {
+	const commandsRoot = await createFixtureRoot("caitlyn-malformed-command-");
+	const categoryRoot = path.join(commandsRoot, "utility");
+	const originalConsoleWarn = console.warn;
+	const warnings = [];
+	await mkdir(categoryRoot);
+	console.warn = (...args) => {
+		warnings.push(args.join(" "));
+	};
+
+	try {
+		await writeFile(path.join(categoryRoot, "malformed-command.ts"), [
+			"export const category = \"utility\";",
+			"export const data = { name: \"malformed-command\", toJSON() { return { name: this.name }; } };",
+			"export const execute = \"not-a-function\";",
+			"",
+		].join("\n"));
+
+		const { commandHandler } = await import("../handlers/commandHandler.ts");
+		const client = new Client({ intents: [] });
+		await commandHandler(client, commandsRoot);
+
+		assert.equal(client.commands.size, 0);
+		assert.equal(client.commands.has("malformed-command"), false);
+		assert.equal(warnings.length, 1);
+		assert.match(warnings[0], /malformed-command\.ts.*missing a required "data" or "execute" property/s);
+	}
+	finally {
+		console.warn = originalConsoleWarn;
+		await rm(commandsRoot, { force: true, recursive: true });
+	}
+});
+
+test("event loader guard skips a malformed same-extension module without registering a listener", async () => {
+	const eventsRoot = await createFixtureRoot("caitlyn-malformed-event-");
+
+	try {
+		await writeFile(path.join(eventsRoot, "malformed-event.ts"), [
+			"export const name = \"debug\";",
+			"export const execute = \"not-a-function\";",
+			"",
+		].join("\n"));
+
+		const { eventHandler } = await import("../handlers/eventHandler.ts");
+		const client = new Client({ intents: [] });
+		const originalEventNames = client.eventNames();
+		await eventHandler(client, eventsRoot);
+
+		assert.equal(client.listenerCount("debug"), 0);
+		assert.deepEqual(client.eventNames(), originalEventNames);
+	}
+	finally {
+		await rm(eventsRoot, { force: true, recursive: true });
+	}
+});
