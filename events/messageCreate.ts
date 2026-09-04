@@ -1,5 +1,5 @@
 /**
- * @file messageCreate.js
+ * @file messageCreate.ts
  * @description This module handles the `messageCreate` event for a Discord.js bot.
  * It is triggered whenever a new message is sent in a text channel the bot has access to.
  *
@@ -7,13 +7,17 @@
  *
  * @module messageCreate
  */
-const { Events } = require("discord.js");
-const { messageHandler } = require("../handlers/messageHandler.js");
+import { Events } from "discord.js";
+import { messageHandler } from "../handlers/messageHandler.js";
+import type { BotEvent } from "../types/event.js";
 
-module.exports = {
+const event: BotEvent<Events.MessageCreate> = {
 	name: Events.MessageCreate,
 	async execute(message) {
 		// Message handler for processing incoming messages
-		messageHandler(message);
+		if (!message.inGuild()) return;
+		await messageHandler(message);
 	},
 };
+
+export = event;

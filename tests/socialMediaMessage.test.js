@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
+const { socialMediaMessage } = require("../messages/socialMediaMessage.ts");
 
 function createMessage(content) {
 	const sent = [];

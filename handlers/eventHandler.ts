@@ -17,10 +17,11 @@ import type { BotEvent } from "../types/event.js";
 function eventHandler(client: Client): void {
 	// Get the events folder path
 	const eventsPath = path.join(__dirname, "../events");
-	// Get the files in the events folder and filter them to only include .js files
+	const moduleExtension = path.extname(__filename);
+	// Get the files in the events folder and filter them to only include the runtime extension
 	const eventFiles = fs
 		.readdirSync(eventsPath)
-		.filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
+		.filter((file) => file.endsWith(moduleExtension));
 
 	// Loop through each event file
 	for (const file of eventFiles) {

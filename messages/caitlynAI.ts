@@ -1,19 +1,20 @@
 /**
- * @file caitlynAI.js
+ * @file caitlynAI.ts
  * @description This module provides the main AI handler for Caitlyn, managing conversation state and interaction with the chat model.
  * It retrieves and updates conversation history, formats user messages, injects a system prompt when needed, and sends/receives messages via the chat API.
  *
  * @module caitlynAI
  */
 
-const { getConversation, addMessage } = require("../core/conversationStore");
-const { chat } = require("../core/ollama.js");
+import type { Message } from "discord.js";
+import { addMessage, getConversation } from "../core/conversationStore.js";
+import { chat } from "../core/ollama.js";
 
 require("dotenv").config();
 
 const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT;
 
-async function caitlynAI(message) {
+async function caitlynAI(message: Message<true>): Promise<void> {
 	const key = message.channel.id;
 	const messages = getConversation(key);
 	const userMessageFormat = message.author.username + ": " + message.content;
@@ -33,8 +34,8 @@ async function caitlynAI(message) {
 
 	if (reply.trim() !== "NOTHING") {
 		addMessage(key, "assistant", reply);
-		message.channel.send(reply);
+		await message.channel.send(reply);
 	}
 }
 
-module.exports = { caitlynAI };
+export { caitlynAI };

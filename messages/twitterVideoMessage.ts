@@ -1,5 +1,5 @@
 /**
- * @file twitterVideoMessage.js
+ * @file twitterVideoMessage.ts
  * @description This module provides a utility function to handle embedding Twitter/X content
  * in a Discord channel. It fetches media (e.g., videos) from tweets using the VXTwitter API
  * and sends them to the channel, cleaning up the original message.
@@ -13,12 +13,23 @@
  * @deprecated This module is deprecated.
  */
 
-const { EmbedBuilder } = require("discord.js");
+import { EmbedBuilder, type Message } from "discord.js";
 
 const TWITTER_DOMAINS = ["https://twitter.com", "https://x.com"];
 const VX_TWITTER_BASE = "https://api.vxtwitter.com";
 
-async function twitterVideoMessage(message) {
+interface VXTwitterResponse {
+	date: string;
+	media_extended?: Array<{ preview_image_url?: string }>;
+	mediaURLs?: string[];
+	text?: string;
+	tweetURL: string;
+	user_name: string;
+	user_profile_image_url: string;
+	user_screen_name: string;
+}
+
+async function twitterVideoMessage(message: Message<true>): Promise<void> {
 	// Find the first matching Twitter/X domain
 	const matchedDomain = TWITTER_DOMAINS.find((domain) =>
 		message.content.startsWith(domain)
@@ -36,7 +47,7 @@ async function twitterVideoMessage(message) {
 		if (!res.ok) throw new Error(`API returned ${res.status}`);
 
 		// Parse the response
-		const data = await res.json();
+		const data = (await res.json()) as VXTwitterResponse;
 		// Check if the data contains media URLs
 		const mediaUrls = data?.mediaURLs || [];
 
@@ -92,4 +103,4 @@ async function twitterVideoMessage(message) {
 	}
 }
 
-module.exports = { twitterVideoMessage };
+export { twitterVideoMessage };

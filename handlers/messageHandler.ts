@@ -1,5 +1,5 @@
 /**
- * @file messageHandler.js
+ * @file messageHandler.ts
  * @description This module handles incoming messages for a Discord.js bot.
  * It processes messages to filter out bot messages and empty content,
  * and utilizes message functions to handle specific message content.
@@ -10,24 +10,29 @@
  * @module messageHandler
  */
 
-const { socialMediaMessage } = require("../messages/socialMediaMessage.js");
-const { caitlynAI } = require("../messages/caitlynAI.js");
+import type { Message } from "discord.js";
+import { caitlynAI } from "../messages/caitlynAI.js";
+import { socialMediaMessage } from "../messages/socialMediaMessage.js";
 
 require("dotenv").config();
 
 const LLM_ENABLED = process.env.LLM_ENABLED;
 
-function messageHandler(message) {
+async function messageHandler(message: Message<true>): Promise<void> {
 	// Check if the message is from a bot or if it doesn't contain any content
 	if (message.author.bot || !message.content) return;
 
 	// LLM message handling
 	if (LLM_ENABLED === "true") {
-		caitlynAI(message);
+		const aiOperation = caitlynAI(message);
+		const socialOperation = socialMediaMessage(message);
+
+		await Promise.all([aiOperation, socialOperation]);
+		return;
 	}
 
 	// Social media message handling for embedding
-	socialMediaMessage(message);
+	await socialMediaMessage(message);
 }
 
-module.exports = { messageHandler };
+export { messageHandler };

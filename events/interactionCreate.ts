@@ -1,5 +1,5 @@
 /**
- * @file interactionCreate.js
+ * @file interactionCreate.ts
  * @description This module handles the `interactionCreate` event for a Discord.js bot.
  * It processes user interactions, executes commands, and enforces cooldowns to prevent spamming.
  *
@@ -9,9 +9,10 @@
  * @module interactionCreate
  */
 
-const { Events, Collection } = require("discord.js");
+import { Collection, Events } from "discord.js";
+import type { BotEvent } from "../types/event.js";
 
-module.exports = {
+const event: BotEvent<Events.InteractionCreate> = {
 	name: Events.InteractionCreate,
 	async execute(interaction) {
 		// Check if the interaction is an autocomplete interaction
@@ -52,7 +53,7 @@ module.exports = {
 		// Get the current timestamp
 		const now = Date.now();
 		// Get the timestamps collection for the command
-		const timestamps = cooldowns.get(command.data.name);
+		const timestamps = cooldowns.get(command.data.name)!;
 		const defaultCooldownDuration = 3;
 		// Set the cooldown duration if not specified in the command, otherwise use the command's cooldown
 		const cooldownAmount = (command.cooldown ?? defaultCooldownDuration) * 1000;
@@ -60,7 +61,7 @@ module.exports = {
 		// Check if the user is on cooldown
 		if (timestamps.has(interaction.user.id)) {
 			const expirationTime =
-				timestamps.get(interaction.user.id) + cooldownAmount;
+				timestamps.get(interaction.user.id)! + cooldownAmount;
 
 			// If the user is on cooldown, calculate the expiration time
 			if (now < expirationTime) {
@@ -85,3 +86,5 @@ module.exports = {
 		}
 	},
 };
+
+export = event;

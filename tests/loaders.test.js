@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { test } = require("node:test");
 const { Client } = require("discord.js");
 
@@ -21,4 +23,25 @@ test("registers every TypeScript event module", () => {
 	assert.equal(client.listenerCount("interactionCreate"), 1);
 	assert.equal(client.listenerCount("messageCreate"), 1);
 	assert.equal(client.listenerCount("ready"), 1);
+});
+
+test("loads events matching the runtime module extension only", () => {
+	const client = new Client({ intents: [] });
+	const fixturePath = path.join(
+		__dirname,
+		"../events/runtime-extension-fixture.js"
+	);
+
+	fs.writeFileSync(
+		fixturePath,
+		'module.exports = { name: "ready", execute() {} };\n'
+	);
+
+	try {
+		eventHandler(client);
+
+		assert.equal(client.listenerCount("ready"), 1);
+	} finally {
+		fs.unlinkSync(fixturePath);
+	}
 });

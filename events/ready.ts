@@ -1,5 +1,5 @@
 /**
- * @file ready.js
+ * @file ready.ts
  * @description This module handles the `ready` event for a Discord.js bot.
  * It is triggered when the bot successfully logs in and becomes ready to interact with Discord.
  *
@@ -9,12 +9,15 @@
  * @module ready
  */
 
-const { Events } = require("discord.js");
+import { Events } from "discord.js";
+import type { BotEvent } from "../types/event.js";
 
-module.exports = {
+const event: BotEvent<Events.ClientReady> = {
 	name: Events.ClientReady,
 	once: true,
 	execute(client) {
 		console.log(`[INFO] ${client.user.username} is online`);
 	},
 };
+
+export = event;

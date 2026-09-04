@@ -1,5 +1,5 @@
 /**
- * @file birthdayReminderMessage.js
+ * @file birthdayReminderMessage.ts
  * @description This module provides a scheduled event handler for celebrating user birthdays in a Discord server.
  * It fetches user birthdays from a PostgreSQL database, checks if any birthdays match the current date, and sends
  * a celebratory message to a specified text channel in the Discord server.
@@ -10,16 +10,17 @@
  * @module birthdayReminderMessage
  */
 
-const { TextChannel, userMention } = require("discord.js");
-const { pool } = require("../core/createPGPool");
-const { format } = require("date-fns");
+import { TextChannel, type Client, userMention } from "discord.js";
+import { format } from "date-fns";
+import { pool } from "../core/createPGPool.js";
+import type { BirthdayRow } from "../types/models.js";
 
 require("dotenv").config();
 
 const GUILD_ID = process.env.GUILD_ID;
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
 
-async function birthdayReminderMessage(client) {
+async function birthdayReminderMessage(client: Client): Promise<void> {
 	const cakeEmojis = ["🎂", "🍰", "🧁", "🎉", "🎊", "🥳", "🎈"];
 	const randomEmoji = () =>
 		cakeEmojis[Math.floor(Math.random() * cakeEmojis.length)];
@@ -27,7 +28,7 @@ async function birthdayReminderMessage(client) {
 	const today = format(new Date(), "MM-dd");
 
 	// Fetch all birthdays from the database
-	const res = await pool.query(`SELECT * FROM discord.birthdays`);
+	const res = await pool.query<BirthdayRow>(`SELECT * FROM discord.birthdays`);
 
 	// Filter the birthdays to find those that match today's date
 	const birthdayPeople = res.rows.filter((row) => {
@@ -40,8 +41,8 @@ async function birthdayReminderMessage(client) {
 	if (!birthdayPeople.length) return;
 
 	// Fetch the guild and channel to send the birthday message
-	const guild = await client.guilds.fetch(GUILD_ID);
-	const channel = await guild.channels.fetch(GENERAL_CHAT_ID);
+	const guild = await client.guilds.fetch(GUILD_ID!);
+	const channel = await guild.channels.fetch(GENERAL_CHAT_ID!);
 
 	// Check if the channel is a TextChannel
 	if (!(channel instanceof TextChannel)) return;
@@ -64,4 +65,4 @@ async function birthdayReminderMessage(client) {
 	});
 }
 
-module.exports = { birthdayReminderMessage };
+export { birthdayReminderMessage };
