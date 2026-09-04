@@ -12,7 +12,7 @@
     ✔ Pass the repository-wide TypeScript-aware lint gate
     ✔ Produce a verified clean compiled build
     ☐ Modernize Docker for Node.js 24 and the compiled ESM runtime
-    ☐ Add the complete CI quality gate before image publication
+    ✔ Add the complete CI quality gate before image publication
     ☐ Audit and update production dependencies
     ☐ Upgrade node-cron to version 4
     ☐ Remove the node-fetch dependency in favor of Node.js fetch
