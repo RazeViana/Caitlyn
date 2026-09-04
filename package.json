@@ -9,6 +9,7 @@
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
+		"check": "npm run typecheck && npm run lint && npm run build && npm test",
 		"deploy": "tsx core/deployCommands.ts",
 		"deploy:prod": "node dist/core/deployCommands.js",
 		"dev": "tsx main.ts",
