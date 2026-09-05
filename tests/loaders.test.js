@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { Client } from "discord.js";
+import logger from "../core/logger.ts";
 
 async function createFixtureRoot(prefix) {
 	return mkdtemp(path.join(os.tmpdir(), prefix));
@@ -66,15 +67,14 @@ test("event loader imports only the current .ts runtime extension", async () => 
 	}
 });
 
-test("command loader guard skips a malformed same-extension module without mutating the collection", async () => {
+test("command loader guard skips a malformed same-extension module without mutating the collection", async (context) => {
 	const commandsRoot = await createFixtureRoot("caitlyn-malformed-command-");
 	const categoryRoot = path.join(commandsRoot, "utility");
-	const originalConsoleWarn = console.warn;
 	const warnings = [];
 	await mkdir(categoryRoot);
-	console.warn = (...args) => {
+	context.mock.method(logger, "warn", (...args) => {
 		warnings.push(args.join(" "));
-	};
+	});
 
 	try {
 		await writeFile(path.join(categoryRoot, "malformed-command.ts"), [
@@ -94,7 +94,6 @@ test("command loader guard skips a malformed same-extension module without mutat
 		assert.match(warnings[0], /malformed-command\.ts.*missing a required "data" or "execute" property/s);
 	}
 	finally {
-		console.warn = originalConsoleWarn;
 		await rm(commandsRoot, { force: true, recursive: true });
 	}
 });

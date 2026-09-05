@@ -13,14 +13,11 @@ import "dotenv/config";
 import type { Client } from "discord.js";
 import logger from "./logger.js";
 
-const TOKEN = process.env.TOKEN;
-
-// Check if the TOKEN is set
-if (!TOKEN) {
-	throw new Error("No TOKEN found. Set a TOKEN environment variable");
-}
-
 function loginClient(client: Client): void {
+	if (!process.env.TOKEN?.trim()) {
+		throw new Error("No TOKEN found. Set a TOKEN environment variable");
+	}
+
 	// Check if the client is defined
 	if (!client) {
 		throw new Error("Client is not defined");

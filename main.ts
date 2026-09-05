@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { GatewayIntentBits, type Client } from "discord.js";
 import { createClient } from "./core/createClient.js";
 import { createPGPool } from "./core/createPGPool.js";
+import { validateEnvironment } from "./core/environment.js";
 import { loginClient } from "./core/loginClient.js";
 import logger from "./core/logger.js";
 import { commandHandler } from "./handlers/commandHandler.js";
@@ -23,6 +24,7 @@ export interface StartBotDependencies {
 	loginClient: (client: Client) => void;
 	logger: StartBotLogger;
 	startCronJobs: (client: Client) => void;
+	validateEnvironment: () => void;
 }
 
 const defaultDependencies: StartBotDependencies = {
@@ -33,12 +35,14 @@ const defaultDependencies: StartBotDependencies = {
 	loginClient,
 	logger,
 	startCronJobs,
+	validateEnvironment,
 };
 
 export async function startBot(
 	dependencies: StartBotDependencies = defaultDependencies,
 ): Promise<void> {
 	try {
+		dependencies.validateEnvironment();
 		dependencies.logger.info("Starting Caitlyn bot...");
 
 		// Create a new client instance

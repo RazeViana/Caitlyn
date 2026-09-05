@@ -35,7 +35,7 @@ function readDeploymentConfiguration(
 ): DeploymentConfiguration {
 	function requireVariable(variable: keyof DeploymentEnvironment): string {
 		const value = environment[variable];
-		if (!value) {
+		if (!value?.trim()) {
 			throw new Error(`No ${variable} found. Set a ${variable} environment variable`);
 		}
 		return value;
@@ -116,5 +116,6 @@ export async function deployCommands(
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	void deployCommands().catch((error: unknown) => {
 		logger.error("Error deploying commands:", error);
+		process.exitCode = 1;
 	});
 }

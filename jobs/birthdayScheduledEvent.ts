@@ -13,7 +13,7 @@ import type { Client } from "discord.js";
 export interface BirthdayScheduledEventDependencies {
 	birthdayReminderMessage: (client: Client) => Promise<void>;
 	info: (...args: unknown[]) => void;
-	schedule: (expression: string, callback: () => void) => unknown;
+	schedule: (expression: string, callback: () => Promise<void>) => unknown;
 }
 
 const defaultBirthdayScheduledEventDependencies: BirthdayScheduledEventDependencies = {
@@ -27,9 +27,7 @@ function startBirthdayScheduledEvent(
 	client: Client,
 	dependencies: BirthdayScheduledEventDependencies = defaultBirthdayScheduledEventDependencies,
 ): void {
-	dependencies.schedule("0 9 * * *", () => {
-		void dependencies.birthdayReminderMessage(client);
-	});
+	dependencies.schedule("0 9 * * *", () => dependencies.birthdayReminderMessage(client));
 
 	// Log the scheduled event
 	dependencies.info(

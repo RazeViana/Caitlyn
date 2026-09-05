@@ -320,6 +320,51 @@ test("birthday scheduling registers 0 9 * * * and dispatches the reminder", asyn
 	assert.deepEqual(logs, [["Birthday scheduled event started, running every day at 9 AM."]]);
 	assert.deepEqual(reminders, []);
 
-	scheduled[0].callback();
+	await scheduled[0].callback();
 	assert.deepEqual(reminders, [client]);
+});
+
+test("node-cron v4 keeps the local 9 AM schedule and observes asynchronous reminder failures", async (context) => {
+	const { default: cron } = await import("node-cron");
+	context.mock.timers.enable({ apis: ["Date"], now: new Date(2026, 8, 5, 8, 0, 0) });
+	const client = {};
+	const reminders = [];
+	const failures = [];
+	const reminderError = new Error("reminder failed");
+	let shouldFail = false;
+	let task;
+
+	try {
+		startBirthdayScheduledEvent(client, {
+			birthdayReminderMessage: async (receivedClient) => {
+				await Promise.resolve();
+				if (shouldFail) throw reminderError;
+				reminders.push(receivedClient);
+			},
+			info: () => undefined,
+			schedule: (expression, callback) => {
+				task = cron.schedule(expression, callback, {
+					logger: {
+						debug: () => undefined,
+						error: () => undefined,
+						info: () => undefined,
+						warn: () => undefined,
+					},
+				});
+				task.on("execution:failed", (event) => failures.push(event.execution.error));
+				return task;
+			},
+		});
+
+		assert.deepEqual(reminders, []);
+		assert.equal(task.getNextRun().getTime(), new Date(2026, 8, 5, 9, 0, 0).getTime());
+		await task.execute();
+		assert.deepEqual(reminders, [client]);
+		shouldFail = true;
+		await assert.rejects(task.execute(), reminderError);
+		assert.deepEqual(failures, [reminderError]);
+	}
+	finally {
+		await task?.destroy();
+	}
 });

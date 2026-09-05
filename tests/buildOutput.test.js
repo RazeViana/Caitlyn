@@ -11,6 +11,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const expectedFiles = [
 	"dist/main.js",
 	"dist/core/deployCommands.js",
+	"dist/core/environment.js",
 	"dist/events/interactionCreate.js",
 	"dist/events/messageCreate.js",
 	"dist/events/ready.js",
@@ -60,6 +61,66 @@ test("emitted ESM entry points load without starting the bot", async () => {
 	}
 });
 
+test("compiled startup imports without secrets and reports missing configuration before connecting", async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-invalid-startup-"));
+	const moduleUrl = pathToFileURL(path.join(repositoryRoot, "dist/main.js")).href;
+	const childEnvironment = {};
+	for (const name of ["SystemRoot", "WINDIR"]) {
+		if (process.env[name] !== undefined) childEnvironment[name] = process.env[name];
+	}
+
+	try {
+		const child = spawnSync(process.execPath, [
+			"--input-type=module",
+			"--eval",
+			`const { startBot } = await import(${JSON.stringify(moduleUrl)});
+			process.stdout.write("imported safely\\n");
+			await startBot();`,
+		], {
+			cwd: temporaryDirectory,
+			encoding: "utf8",
+			env: childEnvironment,
+			timeout: 10000,
+		});
+
+		assert.equal(child.status, 1, child.stderr);
+		assert.equal(child.signal, null);
+		assert.equal(child.stdout, "imported safely\n");
+		for (const variable of ["TOKEN", "PGHOST", "GUILD_ID", "WEBUI_API_KEY", "EMBEDDING_ENDPOINT"]) {
+			assert.match(child.stderr, new RegExp(`${variable} is required`));
+		}
+	}
+	finally {
+		await rm(temporaryDirectory, { force: true, recursive: true });
+	}
+});
+
+test("compiled command deployment exits unsuccessfully when configuration is missing", async () => {
+	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-invalid-deployment-"));
+	const childEnvironment = {};
+	for (const name of ["SystemRoot", "WINDIR"]) {
+		if (process.env[name] !== undefined) childEnvironment[name] = process.env[name];
+	}
+
+	try {
+		const child = spawnSync(process.execPath, [
+			path.join(repositoryRoot, "dist/core/deployCommands.js"),
+		], {
+			cwd: temporaryDirectory,
+			encoding: "utf8",
+			env: childEnvironment,
+			timeout: 10000,
+		});
+		assert.equal(child.status, 1, child.stderr);
+		assert.equal(child.signal, null);
+		assert.equal(child.stdout, "");
+		assert.match(child.stderr, /No CLIENT_ID found/);
+	}
+	finally {
+		await rm(temporaryDirectory, { force: true, recursive: true });
+	}
+});
+
 test("compiled handlers and deployment discover every production command and event from their default roots", async () => {
 	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-compiled-runtime-"));
 	const commandHandlerUrl = pathToFileURL(
@@ -72,6 +133,9 @@ test("compiled handlers and deployment discover every production command and eve
 		path.join(repositoryRoot, "dist/core/deployCommands.js"),
 	).href;
 	const script = `
+		const { default: fs } = await import("node:fs");
+		const originalReaddir = fs.readdirSync;
+		fs.readdirSync = (...args) => originalReaddir(...args).reverse();
 		const environmentNames = ["TOKEN", "CLIENT_ID", "GUILD_ID"];
 		const originalEnvironment = Object.fromEntries(
 			environmentNames.map((name) => [name, process.env[name]]),
@@ -110,6 +174,7 @@ test("compiled handlers and deployment discover every production command and eve
 			};
 		}
 		finally {
+			fs.readdirSync = originalReaddir;
 			for (const name of environmentNames) {
 				if (originalEnvironment[name] === undefined) delete process.env[name];
 				else process.env[name] = originalEnvironment[name];
@@ -148,10 +213,10 @@ test("compiled handlers and deployment discover every production command and eve
 			"toggleai",
 			"user",
 		]);
-		assert.deepEqual(result.listeners, [
+		assert.deepEqual(result.listeners.toSorted((a, b) => a.name.localeCompare(b.name)), [
+			{ method: "once", name: "clientReady" },
 			{ method: "on", name: "interactionCreate" },
 			{ method: "on", name: "messageCreate" },
-			{ method: "once", name: "clientReady" },
 			{ method: "on", name: "voiceStateUpdate" },
 		]);
 		assert.equal(result.restCalls.length, 2);

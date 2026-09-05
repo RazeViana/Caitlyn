@@ -13,11 +13,11 @@
     ✔ Produce a verified clean compiled build
     ☐ Verify the Node.js 24 compiled-runtime Docker image on a Docker-enabled host
     ✔ Add the complete CI quality gate before image publication
-    ☐ Audit and update production dependencies (npm audit: 4 moderate, 3 high as of 2026-09-04)
-    ☐ Upgrade node-cron to version 4
-    ☐ Remove the node-fetch dependency in favor of Node.js fetch
-    ☐ Validate all required environment variables at startup
-    ☐ Make tests independent of ambient LOG_LEVEL and filesystem enumeration order
+    ✔ Audit and update production dependencies (npm audit: 0 vulnerabilities as of 2026-09-05)
+    ✔ Upgrade node-cron to version 4
+    ✔ Remove the node-fetch dependency in favor of Node.js fetch
+    ✔ Validate all required environment variables at startup
+    ✔ Make tests independent of ambient LOG_LEVEL and filesystem enumeration order
     ☐ Choose a project license and align README/package metadata
 
 ☐ Add personality to the bot

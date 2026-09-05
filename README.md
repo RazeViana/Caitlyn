@@ -104,11 +104,15 @@ The application reads these variables from `.env`:
 | `WEBUI_CHAT_ENDPOINT` | Open WebUI chat-completions URL |
 | `EMBEDDING_MODEL` | Embedding model name |
 | `EMBEDDING_ENDPOINT` | Embeddings API URL |
-| `CONTEXT_RECENT_COUNT` | Recent messages included in AI context |
-| `CONTEXT_SIMILAR_COUNT` | Semantically similar messages included in AI context |
+| `CONTEXT_RECENT_COUNT` | Optional recent-message count; defaults to `5` |
+| `CONTEXT_SIMILAR_COUNT` | Optional similar-message count; defaults to `3` |
 | `LOG_LEVEL` | Optional `DEBUG`, `INFO`, `WARN`, or `ERROR` threshold |
 
 The Open WebUI model configuration owns the system prompt.
+
+Startup validates configuration before creating the Discord client, connecting to PostgreSQL, or scheduling jobs. All variables above are required except `CLIENT_ID` (only required for command deployment), `LLM_ENABLED` (defaults to `false`), the context counts, and `LOG_LEVEL` (defaults to `INFO`). AI settings are required even when `LLM_ENABLED=false`, since `/toggleai` can enable replies without restarting.
+
+`GUILD_ID` and `GENERAL_CHAT_ID` must be numeric Discord IDs. `PGPORT` must be an integer from `1` to `65535`; context counts must be nonnegative PostgreSQL integers. Both AI endpoints must be absolute HTTP or HTTPS URLs. Invalid settings are reported together using variable names without their values. Command deployment requires nonempty `TOKEN`, `CLIENT_ID`, and `GUILD_ID`, and exits unsuccessfully on configuration or deployment failure.
 
 ## Database migrations
 

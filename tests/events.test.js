@@ -6,6 +6,7 @@ const interactionCreate = await import("../events/interactionCreate.ts");
 const messageCreate = await import("../events/messageCreate.ts");
 const ready = await import("../events/ready.ts");
 const voiceStateUpdate = await import("../events/voiceStateUpdate.ts");
+const { default: logger } = await import("../core/logger.ts");
 
 function deferred() {
 	let resolve;
@@ -147,24 +148,18 @@ test("autocomplete errors are logged and swallowed without interaction responses
 	assert.deepEqual(responses, []);
 });
 
-test("event metadata and ready behavior remain compatible with Discord", async () => {
+test("event metadata and ready behavior remain compatible with Discord", async (context) => {
 	assert.equal(interactionCreate.name, Events.InteractionCreate);
 	assert.equal(messageCreate.name, Events.MessageCreate);
 	assert.equal(ready.name, Events.ClientReady);
 	assert.equal(ready.once, true);
 	assert.equal(voiceStateUpdate.name, Events.VoiceStateUpdate);
 
-	const originalConsoleLog = console.log;
 	const logs = [];
-	console.log = (...args) => {
+	context.mock.method(logger, "success", (...args) => {
 		logs.push(args.join(" "));
-	};
-	try {
-		ready.execute({ user: { username: "Caitlyn" } });
-	}
-	finally {
-		console.log = originalConsoleLog;
-	}
+	});
+	ready.execute({ user: { username: "Caitlyn" } });
 	assert.equal(logs.length, 1);
 	assert.match(logs[0], /Caitlyn is online/);
 });

@@ -77,6 +77,37 @@ test("AI-disabled messages skip context, chat, storage, and replies", async () =
 	assert.deepEqual(sentMessages, []);
 });
 
+test("AI context uses numeric defaults when optional counts are absent", async () => {
+	const previousRecentCount = process.env.CONTEXT_RECENT_COUNT;
+	const previousSimilarCount = process.env.CONTEXT_SIMILAR_COUNT;
+	try {
+		delete process.env.CONTEXT_RECENT_COUNT;
+		delete process.env.CONTEXT_SIMILAR_COUNT;
+		const { caitlynAI: defaultAI } = await import("../messages/caitlynAI.ts?default-context-counts");
+		const contextQueries = [];
+		await defaultAI(createMessage([]), {
+			chat: async () => undefined,
+			getConversationContext: async (query) => {
+				contextQueries.push(query);
+				return [];
+			},
+			isAIEnabled: () => true,
+			logger: createLogger(),
+			storeMessage: async () => 1,
+		});
+		assert.deepEqual(contextQueries, [{
+			channelId: "channel-id",
+			currentMessage: "Where did we leave off?",
+			recentCount: 5,
+			similarCount: 3,
+		}]);
+	}
+	finally {
+		restoreEnvironmentVariable("CONTEXT_RECENT_COUNT", previousRecentCount);
+		restoreEnvironmentVariable("CONTEXT_SIMILAR_COUNT", previousSimilarCount);
+	}
+});
+
 test("AI replies use vector context and store both user and assistant messages", async () => {
 	const contextQueries = [];
 	const chatRequests = [];

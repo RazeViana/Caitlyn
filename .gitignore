@@ -5,6 +5,9 @@ npm-debug.log*
 # Environment variables
 .env
 
+# Local database copies
+/backups/
+
 # Logs
 logs/
 *.log

@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 
 const activityTracker = await import("../core/activityTracker.ts");
 const { pool } = await import("../core/createPGPool.ts");
+const { default: logger } = await import("../core/logger.ts");
 
 const originalPoolQuery = pool.query;
 
@@ -151,27 +152,21 @@ test("voice leave retains its session after each failed write until a complete r
 	}
 });
 
-test("missing voice sessions keep the existing warning behavior", async () => {
+test("missing voice sessions keep the existing warning behavior", async (context) => {
 	const warnings = [];
 	const queries = [];
-	const originalConsoleWarn = console.warn;
-	console.warn = (...args) => {
+	context.mock.method(logger, "warn", (...args) => {
 		warnings.push(args.join(" "));
-	};
+	});
 
-	try {
-		await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", {
-			now: () => 20_000,
-			query: async (text, values) => {
-				queries.push({ text, values });
-				return { rows: [] };
-			},
-			sessions: new Map(),
-		});
-	}
-	finally {
-		console.warn = originalConsoleWarn;
-	}
+	await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", {
+		now: () => 20_000,
+		query: async (text, values) => {
+			queries.push({ text, values });
+			return { rows: [] };
+		},
+		sessions: new Map(),
+	});
 
 	assert.deepEqual(queries, []);
 	assert.equal(warnings.length, 1);

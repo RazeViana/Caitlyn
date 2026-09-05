@@ -16,8 +16,8 @@ import { chat } from "../core/ollama.js";
 import type { ContextQuery, StoreMessageInput } from "../core/messageStore.js";
 import type { ChatMessage, MessageContext } from "../types/models.js";
 
-const CONTEXT_RECENT_COUNT = parseInt(process.env.CONTEXT_RECENT_COUNT);
-const CONTEXT_SIMILAR_COUNT = parseInt(process.env.CONTEXT_SIMILAR_COUNT);
+const CONTEXT_RECENT_COUNT = Number(process.env.CONTEXT_RECENT_COUNT ?? "5");
+const CONTEXT_SIMILAR_COUNT = Number(process.env.CONTEXT_SIMILAR_COUNT ?? "3");
 
 interface CaitlynAILogger {
 	debug: (...args: unknown[]) => void;

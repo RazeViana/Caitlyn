@@ -1,8 +1,8 @@
 declare namespace NodeJS {
 	interface ProcessEnv {
 		CLIENT_ID: string;
-		CONTEXT_RECENT_COUNT: string;
-		CONTEXT_SIMILAR_COUNT: string;
+		CONTEXT_RECENT_COUNT?: string;
+		CONTEXT_SIMILAR_COUNT?: string;
 		EMBEDDING_ENDPOINT: string;
 		EMBEDDING_MODEL: string;
 		GENERAL_CHAT_ID: string;
