@@ -48,7 +48,7 @@ test("database migrations bootstrap a fresh local database safely", {
 			.filter((name) => /^\d{3}_.*\.sql$/.test(name))
 			.sort();
 
-		await context.test("all migrations apply in order and create the five application tables", async () => {
+		await context.test("all migrations apply in order and create the application tables", async () => {
 			assert.ok(filenames.includes(birthdayMigration));
 			for (const filename of filenames) {
 				const sql = await readFile(new URL(filename, migrationsDirectory), "utf8");
@@ -58,8 +58,38 @@ test("database migrations bootstrap a fresh local database safely", {
 				"SELECT tablename FROM pg_tables WHERE schemaname = 'discord' ORDER BY tablename",
 			);
 			assert.deepEqual(rows.map((row) => row.tablename), [
-				"birthdays", "daily_activity", "messages", "user_activity", "voice_sessions",
+				"birthdays", "daily_activity", "guild_settings", "messages", "user_activity", "voice_sessions",
 			]);
+		});
+
+		await context.test("private logging survives replay and reserves one main server even while disabled", async () => {
+			const { createGuildSettingsStore } = await import("../core/guildSettings.ts");
+			const settings = createGuildSettingsStore(applicationPool);
+			await client.query("INSERT INTO discord.guild_settings (guild_id, log_channel_id) VALUES ('111', '222')");
+			await assert.rejects(settings.save("111", "222", false), /application owner/);
+			await settings.save("333", "444", true);
+			await settings.setLevels("333", "444", ["DEBUG", "ERROR"], true);
+			await client.query(await readFile(new URL("011_create_guild_settings.sql", migrationsDirectory), "utf8"));
+			await client.query(await readFile(new URL("012_private_logging_levels.sql", migrationsDirectory), "utf8"));
+			assert.deepEqual((await settings.getMain()).log_levels, ["DEBUG", "ERROR"]);
+			assert.equal((await settings.getMain()).guild_id, "333");
+			assert.equal((await settings.list()).length, 1);
+			await assert.rejects(settings.setLevels("333", "999", ["INFO"], true), /configured logging channel/);
+			await assert.rejects(settings.setLevels("333", "444", ["INVALID"], true), /Invalid log level/);
+			await assert.rejects(settings.setLevels("333", "444", ["INFO"], false), /application owner/);
+			await settings.save("333", null, true);
+			assert.equal((await settings.getMain()).log_channel_id, null);
+			await assert.rejects(settings.save("111", "222", true), /configured main server/);
+			await assert.rejects(client.query("INSERT INTO discord.guild_settings (guild_id, log_scope) VALUES ('999', 'console')"), /guild_settings_main_logging_server/);
+			await settings.save("333", "445", true);
+			assert.deepEqual((await settings.getMain()).log_levels, ["DEBUG", "ERROR"]);
+			await settings.setLevels("333", "445", [], true);
+			assert.deepEqual((await settings.getMain()).log_levels, []);
+			const results = await Promise.allSettled([
+				settings.save("555", "666", true),
+				settings.save("777", "888", true),
+			]);
+			assert.ok(results.every((result) => result.status === "rejected"));
 		});
 
 		await context.test("birthdays match the legacy column types, nullability, and primary key", async () => {

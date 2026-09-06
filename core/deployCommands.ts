@@ -1,7 +1,7 @@
 /**
  * @file deployCommands.ts
- * @description Validates configuration, discovers slash commands, and publishes them to the configured guild.
- * Leaves global registrations unchanged and keeps publication separate from runtime startup.
+ * @description Validates and publishes slash commands to a guild or explicitly to all installations.
+ * Keeps private operator controls out of global publication and never publishes during startup.
  *
  * @module deployCommands
  */
@@ -22,18 +22,20 @@ export interface DeploymentEnvironment {
 }
 
 export interface DeployCommandsDependencies {
+	global?: boolean;
 	commandsRoot?: string;
 	rest?: REST;
 }
 
 interface DeploymentConfiguration {
 	clientId: string;
-	guildId: string;
+	guildId?: string;
 	token: string;
 }
 
 function readDeploymentConfiguration(
 	environment: DeploymentEnvironment,
+	global: boolean,
 ): DeploymentConfiguration {
 	function requireVariable(variable: keyof DeploymentEnvironment): string {
 		const value = environment[variable];
@@ -45,13 +47,14 @@ function readDeploymentConfiguration(
 
 	return {
 		clientId: requireVariable("CLIENT_ID"),
-		guildId: requireVariable("GUILD_ID"),
+		guildId: global ? undefined : requireVariable("GUILD_ID"),
 		token: requireVariable("TOKEN"),
 	};
 }
 
 async function collectCommands(
 	commandsRoot: string,
+	global: boolean,
 ): Promise<ReturnType<SlashCommandBuilder["toJSON"]>[]> {
 	const commands: ReturnType<SlashCommandBuilder["toJSON"]>[] = [];
 	const commandFolders = fs.readdirSync(commandsRoot);
@@ -67,6 +70,7 @@ async function collectCommands(
 			const filePath = path.join(commandsPath, file);
 			const command: unknown = await import(pathToFileURL(filePath).href);
 			if (isBotCommand(command)) {
+				if (global && command.operatorOnly) continue;
 				commands.push(command.data.toJSON());
 			}
 			else {
@@ -84,10 +88,10 @@ export async function deployCommands(
 	environment: DeploymentEnvironment = process.env,
 	dependencies: DeployCommandsDependencies = {},
 ): Promise<void> {
-	const configuration = readDeploymentConfiguration(environment);
+	const configuration = readDeploymentConfiguration(environment, dependencies.global ?? false);
 	const commandsRoot = dependencies.commandsRoot
 		?? fileURLToPath(new URL("../commands", import.meta.url));
-	const commands = await collectCommands(commandsRoot);
+	const commands = await collectCommands(commandsRoot, dependencies.global ?? false);
 	const rest = dependencies.rest ?? new REST().setToken(configuration.token);
 
 	logger.info(
@@ -95,10 +99,9 @@ export async function deployCommands(
 	);
 
 	const data = await rest.put(
-		Routes.applicationGuildCommands(
-			configuration.clientId,
-			configuration.guildId,
-		),
+		dependencies.global
+			? Routes.applicationCommands(configuration.clientId)
+			: Routes.applicationGuildCommands(configuration.clientId, configuration.guildId!),
 		{
 			body: commands,
 		},
@@ -110,7 +113,7 @@ export async function deployCommands(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	void deployCommands().catch((error: unknown) => {
+	void deployCommands(undefined, { global: process.argv.includes("--global") }).catch((error: unknown) => {
 		logger.error("Error deploying commands:", error);
 		process.exitCode = 1;
 	});

@@ -31,7 +31,9 @@ Implemented on `improvements/database-bootstrap`, 2026-09-05. The original findi
 
 HTTP requests use abort signals. Shutdown stops accepting events, stops scheduled jobs, waits for accepted work within a deadline, destroys the Discord client, and closes the pool. Cleanup is idempotent and continues after an individual cleanup failure. The final process deadline can interrupt work that cannot finish. Active jobs are not allowed to overlap.
 
-The Docker command invokes Node directly for signal delivery. Normal container startup no longer publishes Discord commands. Command publication is a separate `npm run deploy:prod` operation, restricted to the configured guild; global commands are left untouched. The image still needs verification on a Docker-enabled host, and no live command publication or deployment was performed.
+The Docker command invokes Node directly for signal delivery. Normal container startup no longer publishes Discord commands. Command publication is a separate `npm run deploy:prod` operation, restricted to the configured guild by default; global commands are left untouched unless the operator explicitly passes `--global`. The image still needs verification on a Docker-enabled host, and no live command publication or deployment was performed.
+
+Optional [private main-server logging](discord-logging.md) preserves console output during database/Discord outages, uses bounded queues and delivery deadlines, and drains before the client disconnects. Apply migrations `011` and `012` before configuring the destination and selected log types. Other servers cannot configure or receive logs; `/logs` operates only in the reserved channel.
 
 ## Database rollout
 

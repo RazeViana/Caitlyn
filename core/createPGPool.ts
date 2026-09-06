@@ -1,7 +1,7 @@
 /**
  * @file createPGPool.ts
  * @description Configures the shared PostgreSQL pool with connection and query deadlines.
- * Logs idle-pool errors and retries transient startup probes before propagating failure.
+ * Keeps shared pool errors in the operator scope and retries transient startup probes.
  *
  * @module createPGPool
  */
@@ -10,6 +10,7 @@ import "dotenv/config";
 
 import pg from "pg";
 import logger from "./logger.js";
+import { withLogGuild } from "./logContext.js";
 import { setTimeout as delay } from "node:timers/promises";
 
 const { Pool } = pg;
@@ -22,7 +23,7 @@ const pool = new Pool({
 	idle_in_transaction_session_timeout: 15_000,
 });
 pool.on("error", (error) => {
-	logger.error("PostgreSQL background connection error; failed connection removed:", error);
+	withLogGuild(undefined, () => logger.error("PostgreSQL background connection error; failed connection removed:", error));
 });
 
 async function createPGPool(wait: (milliseconds: number) => Promise<unknown> = delay): Promise<void> {

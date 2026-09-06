@@ -1,7 +1,7 @@
 /**
  * @file birthdayScheduledEvent.ts
  * @description Schedules birthday reminders for 9 AM in the host's local timezone.
- * Prevents overlapping runs and waits for an active reminder during shutdown.
+ * Prevents overlapping runs, scopes failure logs to the configured server, and drains on shutdown.
  *
  * @module birthdayScheduledEvent
  */
@@ -9,6 +9,7 @@
 import cron, { type ScheduledTask } from "node-cron";
 import { birthdayReminderMessage } from "../messages/birthdayReminderMessage.js";
 import logger from "../core/logger.js";
+import { withLogGuild } from "../core/logContext.js";
 import type { Client } from "discord.js";
 
 export interface BirthdayScheduledEventDependencies {
@@ -32,7 +33,15 @@ function startBirthdayScheduledEvent(
 	let stopped = false;
 	const task = dependencies.schedule("0 9 * * *", async () => {
 		if (stopped || active) return;
-		active = dependencies.birthdayReminderMessage(client);
+		active = withLogGuild(process.env.GUILD_ID, async () => {
+			try {
+				await dependencies.birthdayReminderMessage(client);
+			}
+			catch (error) {
+				logger.error("Birthday reminder failed:", error);
+				throw error;
+			}
+		});
 		try {
 			await active;
 		}

@@ -15,6 +15,7 @@ export interface BotCommand {
 	autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
 	category: string;
 	cooldown?: number;
+	operatorOnly?: boolean;
 	data: {
 		readonly name: string;
 		toJSON(): ReturnType<SlashCommandBuilder["toJSON"]>;

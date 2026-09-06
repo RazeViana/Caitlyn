@@ -20,6 +20,11 @@ const expectedFiles = [
 	"dist/main.js",
 	"dist/core/deployCommands.js",
 	"dist/core/environment.js",
+	"dist/core/discordLogForwarder.js",
+	"dist/core/guildSettings.js",
+	"dist/events/guildCreate.js",
+	"dist/commands/utility/setup.js",
+	"dist/commands/utility/logs.js",
 	"dist/events/interactionCreate.js",
 	"dist/events/messageCreate.js",
 	"dist/events/ready.js",
@@ -212,10 +217,12 @@ test("compiled handlers and deployment discover every production command and eve
 			"activity",
 			"addbirthday",
 			"leaderboard",
+			"logs",
 			"ping",
 			"reload",
 			"removebirthday",
 			"server",
+			"setup",
 			"showbirthdays",
 			"streaks",
 			"toggleai",
@@ -223,6 +230,7 @@ test("compiled handlers and deployment discover every production command and eve
 		]);
 		assert.deepEqual(result.listeners.toSorted((a, b) => a.name.localeCompare(b.name)), [
 			{ method: "once", name: "clientReady" },
+			{ method: "on", name: "guildCreate" },
 			{ method: "on", name: "interactionCreate" },
 			{ method: "on", name: "messageCreate" },
 			{ method: "on", name: "voiceStateUpdate" },
@@ -233,7 +241,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"/applications/compiled-client-id/guilds/compiled-guild-id/commands",
 		);
 		const guildPayload = result.restCalls[0].options.body;
-		assert.equal(guildPayload.length, 11);
+		assert.equal(guildPayload.length, 13);
 		assert.equal(guildPayload.every((command) => {
 			return command !== null && typeof command === "object" && !Array.isArray(command);
 		}), true);
@@ -241,10 +249,12 @@ test("compiled handlers and deployment discover every production command and eve
 			"activity",
 			"addbirthday",
 			"leaderboard",
+			"logs",
 			"ping",
 			"reload",
 			"removebirthday",
 			"server",
+			"setup",
 			"showbirthdays",
 			"streaks",
 			"toggleai",

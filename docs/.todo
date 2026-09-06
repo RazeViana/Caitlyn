@@ -36,6 +36,12 @@
     ✔ Drain jobs/connections on shutdown and use persisted voice sessions
     ✔ Separate command publication from runtime startup and preserve global commands
     ✔ Consolidate supporting documentation under docs, keep README at the root, and align file headers with the existing pattern
+    ✔ Commit the resilience checkpoint and merge it into local caitlyn-2.0
+    ✔ Restrict persistent Discord log forwarding to one owner-configured main-server channel
+    ✔ Add owner-only in-channel log-type selection independent of console LOG_LEVEL
+    ✔ Keep logging controls out of global publication and remove public logging onboarding
+    ✔ Bound log delivery, redact credentials, and test settings persistence and failure handling
+    ☐ Publish updated commands and verify logging in a private Discord channel during an authorized release
     ☐ Add durable birthday reminder catch-up and deduplication after outages
 
 ☐ Add personality to the bot

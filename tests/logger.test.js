@@ -16,7 +16,7 @@ import { test } from "node:test";
 
 const loggerUrl = pathToFileURL(path.resolve("core/logger.ts")).href;
 
-async function runLogger(level) {
+async function runLogger(level, subscribe = false) {
 	const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-logger-"));
 	const script = `
 		const output = { error: [], log: [], warn: [] };
@@ -30,7 +30,11 @@ async function runLogger(level) {
 			}
 			static now() { return new NativeDate("2026-09-04T12:34:56.000Z").getTime(); }
 		};
-		const { default: logger } = await import(${JSON.stringify(loggerUrl)});
+		const { default: logger, subscribeLogs } = await import(${JSON.stringify(loggerUrl)});
+		if (${subscribe}) {
+			output.records = [];
+			subscribeLogs((record) => output.records.push(record));
+		}
 		logger.debug("debug", 1);
 		logger.info("info", 2);
 		logger.success("success", 3);
@@ -85,4 +89,13 @@ test("WARN logger level filters lower-severity output while preserving warning a
 		log: [],
 		warn: [["\u001b[90m2026-09-04 12:34:56\u001b[0m \u001b[33m\u001b[1m[WARN]\u001b[0m warn 4"]],
 	});
+});
+
+test("Discord subscribers can receive debug while the console remains filtered to ERROR", async () => {
+	const output = await runLogger("ERROR", true);
+	assert.deepEqual(output.log, []);
+	assert.deepEqual(output.warn, []);
+	assert.equal(output.error.length, 1);
+	assert.deepEqual(output.records.map((record) => record.level), ["DEBUG", "INFO", "SUCCESS", "WARN", "ERROR"]);
+	assert.ok(output.records.every((record) => record.timestamp === "2026-09-04 12:34:56"));
 });

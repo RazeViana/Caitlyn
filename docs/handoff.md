@@ -1,10 +1,22 @@
 # Caitlyn 2.0 modernization handoff
 
-Updated: 2026-09-05. Modernization checkpoint: `8ea6f5e` on `caitlyn-2.0`. Current improvements branch: `improvements/database-bootstrap`.
+Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`, merged into local `caitlyn-2.0`. Current feature branch: `features/discord-logging`.
 
-The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. The modernization continuation below was committed as `8ea6f5e`; the database-bootstrap improvements are separate working-tree changes.
+The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. The modernization continuation below was committed as `8ea6f5e`, and the resilience/documentation changes as `b998543`. The Discord logging implementation and verification are complete; its local integration target is `caitlyn-2.0`.
 
-## Latest continuation: file conventions and documentation
+## Latest continuation: Discord logging
+
+The owner requested a checkpoint commit and merge before starting server-configurable Discord logging. After reopening 1Password, signing succeeded: `b998543 feat: harden bot failure handling and organize documentation`. `caitlyn-2.0` was fast-forwarded to that commit, and `features/discord-logging` starts from the same base. No push or change to `main` was made.
+
+The owner clarified that only the main server should receive logs, and log types must be selectable from that channel. Replaced the experimental per-server mode with one reserved main-server destination. `/setup logs|status|disable` is bot-owner-only; disabling retains the server reservation. `/logs levels types:info,warning,error` selects exact types, with `all` and `none` shortcuts; `/logs status` shows them. These commands require ownership and administrator permission, and `/logs` only works inside the configured channel. Level selections persist and operate independently of console `LOG_LEVEL`, including debug output while the console is filtered to INFO/ERROR.
+
+No log-channel/server IDs are hard-coded. Legacy server-scope rows are ignored, not deleted or promoted. Other servers receive no logs or logging-onboarding announcements; global publication excludes `/setup` and `/logs`. Publish those private commands only to the main guild. Forwarding retains credential redaction, bounded queues/batching, backoff, channel privacy checks, and lifecycle cleanup. The `--global` publication option remains explicit and is never part of startup.
+
+`npm run check` passed typechecking, lint, a clean build, and 112 tests with one opt-in database test skipped. The separately enabled disposable PostgreSQL suite passed all nine tests and cleaned up its own database. Migrations `011` and `012` are applied to verified local `127.0.0.1:5432/caitlyn_test`; the settings table contains zero configurations. Migration `012` adds level selection and reserves one main server even while forwarding is disabled. Existing application records and the homeserver are unchanged. AI remains disabled locally.
+
+The owner requested a local checkpoint and merge into `caitlyn-2.0`; use Git history for the resulting integration commit. Nothing has been pushed or deployed. No live Discord login, slash-command publication, or channel messages were sent. Remaining release steps require separate authorization: apply migrations `011`/`012` to the intended deployment database, publish guild commands only to the main server, and verify `/setup logs` followed by `/logs levels` inside the private channel. See [private logging and setup](discord-logging.md) for commands, ownership, privacy, delivery limits, and remaining legacy multi-server constraints. The next feature candidate is durable birthday reminder catch-up and deduplication after outages, pending the owner's choice.
+
+## Completed file conventions and documentation
 
 Supporting project documentation is consolidated under `docs/`: the task list moved to `docs/.todo`, and private restore notes moved from `backups/README.md` to Git-ignored `docs/local-database.md` with owner-only permissions. At the owner's request, `README.md` is back at the repository root for GitHub, with links and conventions updated accordingly. Tool-discovery/configuration files remain where their tools require them.
 
@@ -25,7 +37,7 @@ The user authorized implementation of the application-wide error-handling audit.
 
 The local `.env` had `LLM_ENABLED=true`; it is now `false`. The example configuration and missing-variable runtime default were already disabled. Added a regression test for the absent-variable/default-reset case. No running or remote bot was changed.
 
-The disposable PostgreSQL suite passed all eight integration tests, including rollback at each voice write, concurrent completion counting a five-second session once, transactional message counters, and birthday uniqueness/upserts. `npm run check` passed typechecking, lint, a clean ESM build, and 88 tests; the opt-in database suite is skipped during the ordinary run. `git diff --check` is clean, the local application pool still targets `127.0.0.1:5432/caitlyn_test`, and AI remains disabled. Post-checkpoint changes are not committed or pushed.
+The disposable PostgreSQL suite passed all eight integration tests, including rollback at each voice write, concurrent completion counting a five-second session once, transactional message counters, and birthday uniqueness/upserts. At the resilience checkpoint, `npm run check` passed typechecking, lint, a clean ESM build, and 88 tests; the opt-in database suite was skipped during the ordinary run. The local application pool still targets `127.0.0.1:5432/caitlyn_test`, and AI remains disabled. These improvements are committed as `b998543`; nothing has been pushed.
 
 Applied migrations `009` (no-op) and `010` to local `caitlyn_test` only, after confirming no duplicate birthdays. The unique Discord-ID index exists and all ten birthday rows/dates remain intact. No production migration or Discord publication was performed.
 

@@ -8,6 +8,7 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
 - [Current progress and handoff](docs/handoff.md)
 - [Task list](docs/.todo)
 - [Resilience and rollout](docs/resilience.md)
+- [Private main-server logging](docs/discord-logging.md)
 - [Original error-handling audit](docs/error-handling-audit.md)
 - [Historical integration design](docs/superpowers/specs/2026-09-04-caitlyn-2-integration-design.md) and [plan](docs/superpowers/plans/2026-09-04-caitlyn-2-integration.md)
 
@@ -21,6 +22,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 - Birthday management and scheduled birthday reminders.
 - Twitter/X, Instagram, Reddit, and TikTok link handling.
 - Typed ESM command, event, job, and message modules.
+- Private main-server logging with owner-only channel setup and in-channel level selection.
 - Dynamic loaders that run TypeScript in development and compiled JavaScript in production.
 
 ## Requirements
@@ -49,7 +51,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 
 3. Copy `.env.example` to `.env` and fill in every value used by your deployment.
 
-4. On a **new, empty database**, run migrations `001` through `010` in numeric order:
+4. On a **new, empty database**, run migrations `001` through `012` in numeric order:
 
    ```bash
    npx tsx scripts/runMigration.ts 001_create_messages_table.sql
@@ -62,6 +64,8 @@ The README stays at the repository root for GitHub; supporting project documenta
    npx tsx scripts/runMigration.ts 008_fix_daily_activity_tracking.sql
    npx tsx scripts/runMigration.ts 009_create_birthdays_table.sql
    npx tsx scripts/runMigration.ts 010_unique_birthday_discord_id.sql
+   npx tsx scripts/runMigration.ts 011_create_guild_settings.sql
+   npx tsx scripts/runMigration.ts 012_private_logging_levels.sql
    ```
 
 5. Register the slash commands for the configured guild:
@@ -98,7 +102,7 @@ npm start
 
 `npm start` executes `dist/main.js`, so run the build first. Generated `dist/` files are not committed. See [development instructions](docs/development.md) for code conventions and the branch/release policy.
 
-The Docker image starts Node directly and does **not** register commands on every restart. Run `npm run deploy:prod` separately after building when publishing command changes. Deployment updates only the configured guild's commands; it no longer clears global registrations. See [failure handling and rollout notes](docs/resilience.md) before updating an existing installation.
+The Docker image starts Node directly and does **not** register commands on every restart. Run `npm run deploy:prod` separately after building when publishing command changes. By default, deployment updates only the configured guild's commands; it does not clear global registrations. The explicit `--global` option publishes ordinary commands for all server installations, excluding the private `/setup` and `/logs` controls. See [failure handling and rollout notes](docs/resilience.md) and [logging setup](docs/discord-logging.md#database-and-command-rollout) before updating an existing installation.
 
 ## Configuration
 
@@ -121,7 +125,7 @@ The application reads these variables from `.env`:
 | `EMBEDDING_ENDPOINT` | Embeddings API URL |
 | `CONTEXT_RECENT_COUNT` | Optional recent-message count; defaults to `5` |
 | `CONTEXT_SIMILAR_COUNT` | Optional similar-message count; defaults to `3` |
-| `LOG_LEVEL` | Optional `DEBUG`, `INFO`, `WARN`, or `ERROR` threshold |
+| `LOG_LEVEL` | Optional console `DEBUG`, `INFO`, `WARN`, or `ERROR` threshold; Discord types are configured with `/logs levels` |
 
 The Open WebUI model configuration owns the system prompt.
 
@@ -143,6 +147,8 @@ Migrations are append-only and must be applied in filename order:
 8. `008_fix_daily_activity_tracking.sql` separates daily message and voice-time accounting.
 9. `009_create_birthdays_table.sql` adds the legacy birthday table for fresh databases; existing birthday tables and data are left untouched.
 10. `010_unique_birthday_discord_id.sql` adds the unique Discord-ID index required by birthday upserts. It stops with an error if duplicates exist and never deletes or rewrites birthdays.
+11. `011_create_guild_settings.sql` stores each server's logging configuration and permits one owner-controlled console destination.
+12. `012_private_logging_levels.sql` persists the Discord type selection and reserves one main logging server even while forwarding is disabled. Legacy server-scoped destinations are ignored by the application.
 
 Apply only migrations that the target database has not already received. The runner does not track migration history; do not replay the entire set on a restored database, since historical migrations can replace stored embeddings. See [database verification](docs/development.md#database-work) for an isolated local migration test.
 
@@ -161,6 +167,8 @@ Apply only migrations that the target database has not already received. The run
 - `/ping` — check bot latency.
 - `/reload <command>` — reload a command at runtime (administrator only).
 - `/server` — show server information.
+- `/setup logs|status|disable` — configure the private main-server logging channel (bot owner with administrator permission only).
+- `/logs levels types:info,warning,error` and `/logs status` — select or inspect log types from inside the logging channel (bot owner only); `all` and `none` are also supported.
 - `/streaks [limit]` — rank activity streaks.
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
 - `/user` — show information about the user who runs the command.

@@ -1,7 +1,7 @@
 /**
  * @file main.ts
  * @description Coordinates validated bot startup, service readiness, and bounded shutdown.
- * Keeps imports inert and drains accepted work before closing Discord and PostgreSQL.
+ * Keeps imports inert and drains accepted work and log forwarding before closing services.
  *
  * @module main
  */
@@ -16,6 +16,7 @@ import { withTimeout } from "./core/asyncTools.js";
 import { validateEnvironment } from "./core/environment.js";
 import { loginClient } from "./core/loginClient.js";
 import logger from "./core/logger.js";
+import { createDiscordLogForwarder, logForwarders, type DiscordLogForwarder } from "./core/discordLogForwarder.js";
 import { commandHandler } from "./handlers/commandHandler.js";
 import { startCronJobs } from "./handlers/cronJobHandler.js";
 import { drainEvents, eventHandler } from "./handlers/eventHandler.js";
@@ -26,6 +27,7 @@ interface StartBotLogger {
 }
 
 export interface StartBotDependencies {
+	createLogForwarder?: (client: Client) => DiscordLogForwarder;
 	closeDatabase: () => Promise<void>;
 	commandHandler: (client: Client) => Promise<void>;
 	createClient: (intents: GatewayIntentBits[]) => Client;
@@ -39,6 +41,7 @@ export interface StartBotDependencies {
 }
 
 const defaultDependencies: StartBotDependencies = {
+	createLogForwarder: createDiscordLogForwarder,
 	closeDatabase: () => pool.end(),
 	commandHandler,
 	createClient,
@@ -57,6 +60,7 @@ export async function startBot(
 	let client: Client | undefined;
 	let closeJobs: (() => Promise<void>) | undefined;
 	let stopping: Promise<void> | undefined;
+	let logForwarder: DiscordLogForwarder | undefined;
 	const stop = (): Promise<void> => {
 		stopping ??= (async () => {
 			if (!client) return;
@@ -76,6 +80,8 @@ export async function startBot(
 				const failures = outcomes.filter((outcome) => outcome.status === "rejected");
 				if (failures.length) throw new AggregateError(failures.map((failure) => failure.reason), "Work drain failed");
 			});
+			await cleanup("log forwarding shutdown", async () => { await logForwarder?.stop(); });
+			logForwarders.delete(client);
 			await cleanup("Discord shutdown", () => client!.destroy());
 			await cleanup("database shutdown", dependencies.closeDatabase);
 		})();
@@ -93,9 +99,12 @@ export async function startBot(
 			GatewayIntentBits.GuildMembers,
 			GatewayIntentBits.GuildVoiceStates,
 		]);
+		logForwarder = dependencies.createLogForwarder?.(client);
+		if (logForwarder) logForwarders.set(client, logForwarder);
 
 		// Create a PostgreSQL connection pool
 		await dependencies.createPGPool();
+		await logForwarder?.start();
 
 		// Load the command & event handler
 		await dependencies.commandHandler(client);

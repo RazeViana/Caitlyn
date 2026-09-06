@@ -86,7 +86,7 @@ Run SQL migrations in filename order with the source-time migration runner:
 npx tsx scripts/runMigration.ts <migration_file.sql>
 ```
 
-A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. Migrations `001` through `010` are documented in the [project README](../README.md#database-migrations). Migration `009` matches the legacy birthday table and is safe when that table already exists. Migration `010` adds the unique Discord-ID index required by upserts and stops rather than deleting duplicate birthdays. Historical migrations `001` through `008` remain unchanged.
+A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. Migrations `001` through `012` are documented in the [project README](../README.md#database-migrations). Migration `009` matches the legacy birthday table and is safe when that table already exists. Migration `010` adds the unique Discord-ID index required by upserts and stops rather than deleting duplicate birthdays. Migrations `011`/`012` persist private logging settings, exact type selection, and the main-server reservation. Historical migrations `001` through `008` remain unchanged.
 
 The runner does not track applied migrations. Run the full sequence only on a new database; on restored databases, apply only missing migrations. In particular, replaying `002` replaces the embedding column and its data.
 
@@ -99,6 +99,8 @@ CAITLYN_TEST_POSTGRES=1 node --import tsx --test tests/databaseMigrations.test.j
 This opt-in test creates a uniquely named `caitlyn_migrations_*` database from `template0`, applies all migrations, checks birthday storage and repeat-application safety, and drops only its own database in cleanup. It also injects activity-write failures and concurrent voice retries using the application's transaction helper. Connections use only explicit test configuration: `127.0.0.1`, port `5432`, and the current OS user by default. Application imports may load `.env`, but its connection values never select the test target. The local role needs permission to create databases and install pgvector. Override the port, role, or password with `CAITLYN_TEST_PGPORT`, `CAITLYN_TEST_PGUSER`, and `CAITLYN_TEST_PGPASSWORD` if needed. The test is skipped during ordinary `npm test` unless explicitly enabled.
 
 Failure-handling contracts, migration requirements, and remaining rollout work are documented in [resilience and rollout](resilience.md). Never test outages by stopping production services or logging a test process into the real Discord bot.
+
+For private channel setup, owner-only `/logs levels`, delivery limits, and command publication, see [Discord logging](discord-logging.md). Preserve `withLogGuild` context when adding background work, but forward records only to the main-server destination. Operator-only logging controls must not be included in global command publication. Discord type filtering is independent of console `LOG_LEVEL`.
 
 Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 

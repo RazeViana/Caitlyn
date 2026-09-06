@@ -1,7 +1,7 @@
 /**
  * @file eventHandler.ts
  * @description Discovers and validates Discord event modules before registering guarded listeners.
- * Contains event failures and drains accepted work when shutdown stops new events.
+ * Contains failures, scopes logs to their server, and drains accepted work during shutdown.
  *
  * @module eventHandler
  */
@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { Client } from "discord.js";
 import logger from "../core/logger.js";
+import { eventLogGuild, withLogGuild } from "../core/logContext.js";
 
 import { isBotEvent } from "../types/event.js";
 
@@ -47,10 +48,11 @@ async function eventHandler(
 		if (!isBotEvent(event)) continue;
 		const listener = (...args: Parameters<typeof event.execute>): void => {
 			if (!state.accepting) return;
-			const operation = Promise.resolve().then(() => event.execute(...args)).then(
-				() => undefined,
-				(error: unknown) => logger.error(`Error handling Discord event ${event.name}:`, error),
-			);
+			const operation = withLogGuild(eventLogGuild(event.name, args), () =>
+				Promise.resolve().then(() => event.execute(...args)).then(
+					() => undefined,
+					(error: unknown) => logger.error(`Error handling Discord event ${event.name}:`, error),
+				));
 			state.pending.add(operation);
 			void operation.then(() => state.pending.delete(operation));
 		};

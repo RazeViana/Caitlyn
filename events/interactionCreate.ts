@@ -30,7 +30,7 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 
 	// Check if the interaction is a command
 	if (!interaction.isChatInputCommand()) return;
-	if (["reload", "toggleai"].includes(interaction.commandName)
+	if (["reload", "toggleai", "setup", "logs"].includes(interaction.commandName)
 		&& !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
 		await respondWithError(interaction, "Only server administrators can use this command.");
 		return;
