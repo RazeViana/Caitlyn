@@ -7,6 +7,7 @@
  */
 
 import "dotenv/config";
+import { birthdayTimezone } from "./birthdayClock.js";
 
 export type Environment = Record<string, string | undefined>;
 
@@ -65,6 +66,12 @@ export function validateEnvironment(environment: Environment = process.env): voi
 	validateInteger("PGPORT", 1, 65535);
 	validateInteger("CONTEXT_RECENT_COUNT", 0, 2147483647);
 	validateInteger("CONTEXT_SIMILAR_COUNT", 0, 2147483647);
+	try {
+		birthdayTimezone(environment.BIRTHDAY_TIMEZONE ?? Intl.DateTimeFormat().resolvedOptions().timeZone);
+	}
+	catch {
+		errors.push("BIRTHDAY_TIMEZONE must be a supported timezone name");
+	}
 
 	if (environment.LLM_ENABLED !== undefined
 		&& environment.LLM_ENABLED !== "true" && environment.LLM_ENABLED !== "false") {

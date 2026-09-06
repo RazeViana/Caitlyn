@@ -134,6 +134,7 @@ test("startup accepts documented optional defaults and AI configuration while di
 		LOG_LEVEL: "warn",
 		CONTEXT_RECENT_COUNT: "0",
 		CONTEXT_SIMILAR_COUNT: "3",
+		BIRTHDAY_TIMEZONE: "Europe/Brussels",
 	}));
 });
 
@@ -159,6 +160,7 @@ test("startup rejects malformed ports, context counts, IDs, URLs, and switches w
 		EMBEDDING_ENDPOINT: ["not-a-url", "file:///private/path", "secret-key"],
 		LLM_ENABLED: ["", "TRUE", "yes", "1"],
 		LOG_LEVEL: ["", "verbose", "secret-key"],
+		BIRTHDAY_TIMEZONE: ["", "Europe/Not-A-Zone", "secret-key", " Europe/Brussels "],
 	};
 	for (const [variable, values] of Object.entries(invalidValues)) {
 		for (const value of values) {

@@ -45,7 +45,7 @@ Historical snapshot cleanup is out of scope at the owner's request. Records rema
 
 ## Deliberate follow-ups
 
-- Design durable birthday reminder catch-up/deduplication after outages. Current jobs run at 9 AM host-local time and do not replay missed notifications. Automatic sending during restart is intentionally not introduced without delivery bookkeeping.
+- Birthday recovery is implemented on `features/birthday-recovery`: startup/five-minute checks, a configurable 9 AM same-day window, persisted grouped announcements, conditional send claims, and conservative uncertain-delivery reconciliation. Apply migration `013` before enabling it. See [birthday recovery](birthday-recovery.md) for the failure contracts and first-deployment precautions.
 - Verify the Docker build/signal path and publish the updated slash-command metadata in a separate release step.
 
 ## Verification

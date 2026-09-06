@@ -1,70 +1,112 @@
 /**
  * @file birthdayReminderMessage.ts
- * @description This module provides a scheduled event handler for celebrating user birthdays in a Discord server.
- * It fetches user birthdays from a PostgreSQL database, checks if any birthdays match the current date, and sends
- * a celebratory message to a specified text channel in the Discord server.
- *
- * The birthday message includes random celebratory emojis and mentions the users whose birthdays are being celebrated.
- * The module ensures that the target channel is a valid text channel before sending the message.
+ * @description Delivers same-day birthday catch-up using persisted claims and delivery reconciliation.
+ * Logs recovery through the shared guild-scoped logger and never blindly resends an uncertain message.
  *
  * @module birthdayReminderMessage
  */
 
-import { TextChannel, userMention, type Client } from "discord.js";
-import { pool } from "../core/createPGPool.js";
-import { format } from "date-fns";
+import type { Client } from "discord.js";
+import { birthdayTimezone, birthdayWindow } from "../core/birthdayClock.js";
+import { birthdayDeliveryStore, type BirthdayDelivery, type BirthdayDeliveryStore } from "../core/birthdayDeliveryStore.js";
+import { withTimeout } from "../core/asyncTools.js";
+import { withLogGuild } from "../core/logContext.js";
+import logger from "../core/logger.js";
+import { getBirthdayChannel, type BirthdayChannel } from "./birthdayDelivery.js";
 
-const GUILD_ID = process.env.GUILD_ID;
-const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID;
-
-interface BirthdayRow {
-	discord_id: string;
-	dob: Date | string;
+interface BirthdayReminderDependencies {
+	store: BirthdayDeliveryStore;
+	channel: (client: Client, delivery: BirthdayDelivery) => Promise<BirthdayChannel>;
+	now: () => Date;
+	timezone: () => string;
+	guildId: () => string;
+	channelId: () => string;
+	deliveryTimeout: number;
 }
 
-async function birthdayReminderMessage(client: Client): Promise<void> {
-	const cakeEmojis = ["🎂", "🍰", "🧁", "🎉", "🎊", "🥳", "🎈"];
-	const randomEmoji = () =>
-		cakeEmojis[Math.floor(Math.random() * cakeEmojis.length)];
-
-	const today = format(new Date(), "MM-dd");
-
-	// Fetch all birthdays from the database
-	const res = await pool.query<BirthdayRow>("SELECT * FROM discord.birthdays");
-
-	// Filter the birthdays to find those that match today's date
-	const birthdayPeople = res.rows.filter((row) => {
-		const dob = new Date(row.dob);
-		const dobStr = format(dob, "MM-dd");
-		return dobStr === today;
-	});
-
-	// If no birthdays are found, return early
-	if (!birthdayPeople.length) return;
-
-	// Fetch the guild and channel to send the birthday message
-	const guild = await client.guilds.fetch(GUILD_ID);
-	const channel = await guild.channels.fetch(GENERAL_CHAT_ID);
-
-	// Check if the channel is a TextChannel
-	if (!(channel instanceof TextChannel)) return;
-
-	// Set the mentions for the birthday people
-	const mentions = birthdayPeople
-		.map(
-			(p) => `${randomEmoji()} ${userMention(p.discord_id)} ${randomEmoji()}`,
-		)
-		.join("\n");
-
-	// Send the birthday message to the channel
-	await channel.send({
-		content: [
-			"🎉🎂 **It's Party Time!** 🎂🎉",
-			"Today we're celebrating these fellas:",
-			`\n${mentions}`,
-			"\nSend them my regards 🥳",
-		].join("\n"),
+export function createBirthdayReminder(dependencies: BirthdayReminderDependencies = {
+	store: birthdayDeliveryStore, channel: getBirthdayChannel, now: () => new Date(), timezone: birthdayTimezone,
+	guildId: () => process.env.GUILD_ID, channelId: () => process.env.GENERAL_CHAT_ID, deliveryTimeout: 10_000,
+}) {
+	return async (client: Client, stopped: () => boolean = () => false): Promise<void> => withLogGuild(dependencies.guildId(), async () => {
+		const { store } = dependencies;
+		const timezone = dependencies.timezone();
+		const window = birthdayWindow(dependencies.now(), timezone);
+		const canSend = (): boolean => {
+			const current = birthdayWindow(dependencies.now(), timezone);
+			return !stopped() && client.isReady() && current.due && current.date === window.date;
+		};
+		if (!window.due || !canSend()) {
+			logger.debug("Birthday check skipped: before 9 AM, Discord not ready, or stopping");
+			return;
+		}
+		const prepared = await store.prepare(dependencies.guildId(), dependencies.channelId(), window.date);
+		if (prepared.created) logger.info(`Birthday recovery queued ${prepared.created} recipient(s) for ${window.date} (${timezone})`);
+		if (prepared.expired) logger.warn(`Birthday recovery expired ${prepared.expired} unsent announcement(s); older birthdays will not be replayed`);
+		const pending = await store.pending(dependencies.guildId(), window.date);
+		logger.debug(`Birthday check ${window.date}: ${pending.length} due delivery/reconciliation batch(es)`);
+		for (const delivery of pending) {
+			if (!canSend()) break;
+			const label = `Birthday delivery ${delivery.id} (${delivery.occurrence_date})`;
+			// Recovery claims never become send claims, even when history has no match.
+			if (delivery.status !== "ready" && !await store.claimRecovery(delivery.id)) continue;
+			let channel: BirthdayChannel;
+			try {
+				channel = await dependencies.channel(client, delivery);
+			}
+			catch (error) {
+				if (delivery.status === "ready") await store.defer(delivery.id);
+				logger.warn(`${label}: channel unavailable; retry is delayed`, error);
+				continue;
+			}
+			if (!canSend()) break;
+			if (delivery.status !== "ready") {
+				try {
+					const messageId = await channel.find(delivery);
+					if (messageId) {
+						if (await store.sent(delivery.id, messageId)) logger.success(`${label}: recovered an existing Discord message; no duplicate sent`);
+					}
+					else {
+						logger.warn(`${label}: delivery remains uncertain; no matching message in the bounded history scan. Automatic resend withheld; operator review may be needed`);
+					}
+				}
+				catch (error) {
+					logger.error(`${label}: reconciliation failed; automatic resend remains blocked`, error);
+				}
+				continue;
+			}
+			if (!await store.claim(delivery.id)) {
+				logger.debug(`${label}: already claimed or completed by another worker`);
+				continue;
+			}
+			if (!canSend()) {
+				await store.releaseUnsent(delivery.id);
+				logger.warn(`${label}: unsent claim released because the delivery window closed or the bot stopped; only same-day retry is allowed`);
+				continue;
+			}
+			logger.info(`${label}: sending ${delivery.recipient_ids.length} birthday greeting(s)`);
+			// Keep observing the original request after our deadline; late success must be recorded.
+			const completion = (async () => channel.send(delivery))().then(async (messageId) => {
+				try {
+					if (await store.sent(delivery.id, messageId)) logger.success(`${label}: sent successfully (message ${messageId})`);
+				}
+				catch (error) {
+					logger.error(`${label}: Discord accepted message ${messageId}, but recording delivery failed; history reconciliation is required`, error);
+				}
+			}, async (error: unknown) => {
+				logger.error(`${label}: Discord send failed; delivery is uncertain and will be checked before any further action`, error);
+				try { await store.uncertain(delivery.id); }
+				catch (failure) { logger.error(`${label}: unable to record uncertain status; the persisted send claim still blocks duplicates`, failure); }
+			});
+			try {
+				await withTimeout(completion, dependencies.deliveryTimeout, "Birthday delivery");
+			}
+			catch (error) {
+				logger.warn(`${label}: delivery deadline reached; no automatic resend`, error);
+				await store.uncertain(delivery.id);
+			}
+		}
 	});
 }
 
-export { birthdayReminderMessage };
+export const birthdayReminderMessage = createBirthdayReminder();

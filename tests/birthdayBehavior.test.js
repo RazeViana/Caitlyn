@@ -1,6 +1,6 @@
 /**
  * @file birthdayBehavior.test.js
- * @description Tests birthday validation, calendar rendering, mutations, and daily scheduling.
+ * @description Tests birthday validation, calendar rendering, mutations, and recovery scheduling.
  * Uses controlled database, Discord, HTTP, and scheduling dependencies.
  *
  * @module birthdayBehavior.test
@@ -187,13 +187,13 @@ test("showbirthdays preserves deferred reply and deterministic embed grouping", 
 	}
 });
 
-test("birthday scheduling registers 0 9 * * * and dispatches the reminder", async () => {
+test("birthday scheduling checks at startup and every five minutes", async () => {
 	const scheduled = [];
 	const reminders = [];
 	const logs = [];
 	const client = { user: { id: "bot-id" } };
 
-	startBirthdayScheduledEvent(client, {
+	const stop = startBirthdayScheduledEvent(client, {
 		birthdayReminderMessage: async (receivedClient) => {
 			reminders.push(receivedClient);
 		},
@@ -206,15 +206,17 @@ test("birthday scheduling registers 0 9 * * * and dispatches the reminder", asyn
 	});
 
 	assert.equal(scheduled.length, 1);
-	assert.equal(scheduled[0].expression, "0 9 * * *");
-	assert.deepEqual(logs, [["Birthday scheduled event started, running every day at 9 AM."]]);
-	assert.deepEqual(reminders, []);
+	assert.equal(scheduled[0].expression, "*/5 * * * *");
+	assert.match(logs[0][0], /checking on startup and every five minutes; due after 9 AM/);
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.deepEqual(reminders, [client]);
 
 	await scheduled[0].callback();
-	assert.deepEqual(reminders, [client]);
+	assert.deepEqual(reminders, [client, client]);
+	await stop();
 });
 
-test("node-cron v4 keeps the local 9 AM schedule and observes asynchronous reminder failures", async (context) => {
+test("node-cron v4 schedules recovery checks and observes asynchronous reminder failures", async (context) => {
 	const { default: cron } = await import("node-cron");
 	context.mock.timers.enable({ apis: ["Date"], now: new Date(2026, 8, 5, 8, 0, 0) });
 	const client = {};
@@ -246,10 +248,11 @@ test("node-cron v4 keeps the local 9 AM schedule and observes asynchronous remin
 			},
 		});
 
-		assert.deepEqual(reminders, []);
-		assert.equal(task.getNextRun().getTime(), new Date(2026, 8, 5, 9, 0, 0).getTime());
-		await task.execute();
+		await new Promise((resolve) => setImmediate(resolve));
 		assert.deepEqual(reminders, [client]);
+		assert.equal(task.getNextRun().getTime(), new Date(2026, 8, 5, 8, 5, 0).getTime());
+		await task.execute();
+		assert.deepEqual(reminders, [client, client]);
 		shouldFail = true;
 		await assert.rejects(task.execute(), reminderError);
 		assert.deepEqual(failures, [reminderError]);

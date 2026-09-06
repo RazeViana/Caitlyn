@@ -19,7 +19,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 - Open WebUI chat integration with a runtime `/toggleai` control.
 - PostgreSQL and pgvector conversation storage with recent and semantic context.
 - Message, voice, leaderboard, and daily/weekly/monthly streak tracking.
-- Birthday management and scheduled birthday reminders.
+- Birthday management and scheduled reminders with same-day outage catch-up and persistent duplicate prevention.
 - Twitter/X, Instagram, Reddit, and TikTok link handling.
 - Typed ESM command, event, job, and message modules.
 - Private main-server logging with owner-only channel setup and in-channel level selection.
@@ -66,6 +66,7 @@ The README stays at the repository root for GitHub; supporting project documenta
    npx tsx scripts/runMigration.ts 010_unique_birthday_discord_id.sql
    npx tsx scripts/runMigration.ts 011_create_guild_settings.sql
    npx tsx scripts/runMigration.ts 012_private_logging_levels.sql
+   npx tsx scripts/runMigration.ts 013_birthday_delivery_tracking.sql
    ```
 
 5. Register the slash commands for the configured guild:
@@ -114,6 +115,7 @@ The application reads these variables from `.env`:
 | `CLIENT_ID` | Discord application/client ID used when deploying commands |
 | `GUILD_ID` | Discord guild used for command deployment and reminders |
 | `GENERAL_CHAT_ID` | Channel that receives birthday reminders |
+| `BIRTHDAY_TIMEZONE` | Optional reminder timezone, e.g. `Europe/Brussels`; defaults to the host timezone |
 | `GIPHY_API_KEY` | Giphy API key used by birthday responses |
 | `PGHOST`, `PGPORT` | PostgreSQL server address |
 | `PGUSER`, `PGPASSWORD`, `PGDATABASE` | PostgreSQL credentials and database |
@@ -129,7 +131,9 @@ The application reads these variables from `.env`:
 
 The Open WebUI model configuration owns the system prompt.
 
-Startup validates configuration before creating the Discord client, connecting to PostgreSQL, or scheduling jobs. All variables above are required except `CLIENT_ID` (only required for command deployment), `LLM_ENABLED` (defaults to `false`), the context counts, and `LOG_LEVEL` (defaults to `INFO`). AI settings are required even when `LLM_ENABLED=false`, since `/toggleai` can enable replies without restarting.
+Startup validates configuration before creating the Discord client, connecting to PostgreSQL, or scheduling jobs. All variables above are required except `CLIENT_ID` (only required for command deployment), `LLM_ENABLED` (defaults to `false`), `BIRTHDAY_TIMEZONE`, the context counts, and `LOG_LEVEL` (defaults to `INFO`). AI settings are required even when `LLM_ENABLED=false`, since `/toggleai` can enable replies without restarting.
+
+Birthday reminders are due at 9 AM in the selected timezone, with checks on startup and every five minutes until local midnight. Missed previous days are not replayed. Apply migration `013` before using recovery; the bot needs Read Message History in the birthday channel. See [birthday recovery](docs/birthday-recovery.md) for delivery tracking, uncertainty handling, logging, and the first-deployment precautions.
 
 `GUILD_ID` and `GENERAL_CHAT_ID` must be numeric Discord IDs. `PGPORT` must be an integer from `1` to `65535`; context counts must be nonnegative PostgreSQL integers. Both AI endpoints must be absolute HTTP or HTTPS URLs. Invalid settings are reported together using variable names without their values. Command deployment requires nonempty `TOKEN`, `CLIENT_ID`, and `GUILD_ID`, and exits unsuccessfully on configuration or deployment failure.
 
@@ -149,6 +153,7 @@ Migrations are append-only and must be applied in filename order:
 10. `010_unique_birthday_discord_id.sql` adds the unique Discord-ID index required by birthday upserts. It stops with an error if duplicates exist and never deletes or rewrites birthdays.
 11. `011_create_guild_settings.sql` stores each server's logging configuration and permits one owner-controlled console destination.
 12. `012_private_logging_levels.sql` persists the Discord type selection and reserves one main logging server even while forwarding is disabled. Legacy server-scoped destinations are ignored by the application.
+13. `013_birthday_delivery_tracking.sql` stores grouped birthday delivery state and unique server/person/date reservations without modifying existing birthdays.
 
 Apply only migrations that the target database has not already received. The runner does not track migration history; do not replay the entire set on a restored database, since historical migrations can replace stored embeddings. See [database verification](docs/development.md#database-work) for an isolated local migration test.
 

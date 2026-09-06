@@ -58,7 +58,7 @@ test("database migrations bootstrap a fresh local database safely", {
 				"SELECT tablename FROM pg_tables WHERE schemaname = 'discord' ORDER BY tablename",
 			);
 			assert.deepEqual(rows.map((row) => row.tablename), [
-				"birthdays", "daily_activity", "guild_settings", "messages", "user_activity", "voice_sessions",
+				"birthday_deliveries", "birthday_occurrences", "birthdays", "daily_activity", "guild_settings", "messages", "user_activity", "voice_sessions",
 			]);
 		});
 
@@ -211,6 +211,94 @@ test("database migrations bootstrap a fresh local database safely", {
 			}), /daily write failed/);
 			const result = await client.query("SELECT * FROM discord.user_activity WHERE user_id = 'message-user'");
 			assert.equal(result.rows.length, 0);
+		});
+		await context.test("birthday delivery preparation is concurrent-safe, date-only, grouped, and replay-safe", async () => {
+			const { createBirthdayDeliveryStore } = await import("../core/birthdayDeliveryStore.ts");
+			const store = createBirthdayDeliveryStore(applicationPool);
+			await client.query(`INSERT INTO discord.birthdays (discord_id, name, dob)
+				SELECT 8000 + n, 'Recovery fixture', '1990-09-06'::date FROM generate_series(1, 26) n`);
+			const birthdaysBefore = (await client.query("SELECT id, discord_id, name, dob::text FROM discord.birthdays ORDER BY id")).rows;
+			await Promise.all([store.prepare("800", "801", "2026-09-06"), store.prepare("800", "801", "2026-09-06")]);
+			const pending = await store.pending("800", "2026-09-06");
+			assert.deepEqual(pending.map((row) => row.recipient_ids.length).sort((a, b) => a - b), [1, 25]);
+			assert.equal(new Set(pending.flatMap((row) => row.recipient_ids)).size, 26);
+			assert.ok(pending.every((row) => row.occurrence_date === "2026-09-06" && row.channel_id === "801"));
+			const sql = await readFile(new URL("013_birthday_delivery_tracking.sql", migrationsDirectory), "utf8");
+			await client.query(sql);
+			assert.deepEqual(await store.pending("800", "2026-09-06"), pending);
+			assert.equal((await store.prepare("800", "999", "2026-09-06")).created, 0);
+			assert.deepEqual((await client.query("SELECT id, discord_id, name, dob::text FROM discord.birthdays ORDER BY id")).rows, birthdaysBefore);
+			const otherYear = await store.prepare("800", "801", "2027-09-06");
+			assert.equal(otherYear.created, 26);
+			assert.equal(otherYear.expired, 2);
+			assert.equal((await store.pending("800", "2026-09-06")).length, 0);
+			assert.equal((await store.prepare("900", "901", "2026-09-06")).created, 26);
+			assert.equal((await store.prepare("800", "801", "2027-02-28")).created, 0);
+			assert.equal((await store.prepare("800", "801", "2027-03-01")).created, 0);
+			assert.equal((await store.prepare("800", "801", "2028-02-29")).created, 2);
+		});
+
+		await context.test("birthday claims survive reconnect, block duplicate sends, and serialize reconciliation", async () => {
+			const { createBirthdayDeliveryStore } = await import("../core/birthdayDeliveryStore.ts");
+			const store = createBirthdayDeliveryStore(applicationPool);
+			const row = (await store.pending("900", "2026-09-06"))[0];
+			const results = await Promise.all([store.claim(row.id), store.claim(row.id)]);
+			assert.deepEqual(results.sort(), [false, true]);
+			assert.equal(await createBirthdayDeliveryStore(applicationPool).claim(row.id), false);
+			assert.equal(await store.claimRecovery(row.id), false);
+			await client.query("UPDATE discord.birthday_deliveries SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [row.id]);
+			const recoveries = await Promise.all([store.claimRecovery(row.id), store.claimRecovery(row.id)]);
+			assert.deepEqual(recoveries.sort(), [false, true]);
+			assert.equal(await store.claim(row.id), false);
+			assert.equal(await store.sent(row.id, "123456"), true);
+			assert.equal(await store.sent(row.id, "123456"), false);
+			await store.uncertain(row.id);
+			const stored = (await client.query("SELECT status, message_id, attempts FROM discord.birthday_deliveries WHERE id = $1", [row.id])).rows[0];
+			assert.deepEqual(stored, { status: "sent", message_id: "123456", attempts: 1 });
+			await assert.rejects(client.query(`INSERT INTO discord.birthday_occurrences (guild_id, discord_id, occurrence_date, delivery_id)
+				VALUES ($1, $2, $3, $4)`, [row.guild_id, row.recipient_ids[0], row.occurrence_date, row.id]), /duplicate key/);
+		});
+
+		await context.test("birthday retry backoff persists and definitely unsent claims can be recovered", async () => {
+			const { createBirthdayDeliveryStore } = await import("../core/birthdayDeliveryStore.ts");
+			const store = createBirthdayDeliveryStore(applicationPool);
+			const row = (await store.pending("900", "2026-09-06"))[0];
+			await store.defer(row.id);
+			assert.equal(await store.claim(row.id), false);
+			const first = (await client.query("SELECT attempts, EXTRACT(EPOCH FROM (next_attempt_at - updated_at))::int AS delay FROM discord.birthday_deliveries WHERE id = $1", [row.id])).rows[0];
+			assert.deepEqual(first, { attempts: 1, delay: 300 });
+			await client.query("UPDATE discord.birthday_deliveries SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [row.id]);
+			await store.defer(row.id);
+			const second = (await client.query("SELECT EXTRACT(EPOCH FROM (next_attempt_at - updated_at))::int AS delay FROM discord.birthday_deliveries WHERE id = $1", [row.id])).rows[0];
+			assert.equal(second.delay, 600);
+			await client.query("UPDATE discord.birthday_deliveries SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [row.id]);
+			assert.equal(await store.claim(row.id), true);
+			await store.releaseUnsent(row.id);
+			assert.equal(await store.claim(row.id), true);
+			await store.uncertain(row.id);
+			assert.equal(await store.claim(row.id), false);
+		});
+
+		await context.test("new birthdays added later today are queued without repeating reserved recipients", async () => {
+			const { createBirthdayDeliveryStore } = await import("../core/birthdayDeliveryStore.ts");
+			const store = createBirthdayDeliveryStore(applicationPool);
+			await client.query("INSERT INTO discord.birthdays (discord_id, name, dob) VALUES (8999, 'Added later fixture', '2001-09-06')");
+			assert.equal((await store.prepare("900", "901", "2026-09-06")).created, 1);
+			const rows = await store.pending("900", "2026-09-06");
+			assert.equal(rows.length, 1);
+			assert.deepEqual(rows[0].recipient_ids, ["8999"]);
+		});
+
+		await context.test("birthday reservation failure rolls back the announcement batch as well", async () => {
+			const { createBirthdayDeliveryStore } = await import("../core/birthdayDeliveryStore.ts");
+			await client.query(`CREATE FUNCTION discord.fail_recovery_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
+				BEGIN RAISE EXCEPTION 'Injected occurrence failure'; END $$`);
+			await client.query(`CREATE TRIGGER fail_recovery_fixture BEFORE INSERT ON discord.birthday_occurrences
+				FOR EACH ROW WHEN (NEW.guild_id = '990') EXECUTE FUNCTION discord.fail_recovery_fixture()`);
+			const store = createBirthdayDeliveryStore(applicationPool);
+			await assert.rejects(store.prepare("990", "991", "2026-09-06"), /Injected occurrence failure/);
+			assert.equal((await client.query("SELECT id FROM discord.birthday_deliveries WHERE guild_id = '990'")).rows.length, 0);
+			assert.equal((await client.query("SELECT delivery_id FROM discord.birthday_occurrences WHERE guild_id = '990'")).rows.length, 0);
 		});
 	}
 	finally {

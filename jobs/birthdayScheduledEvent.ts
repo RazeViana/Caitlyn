@@ -1,7 +1,7 @@
 /**
  * @file birthdayScheduledEvent.ts
- * @description Schedules birthday reminders for 9 AM in the host's local timezone.
- * Prevents overlapping runs, scopes failure logs to the configured server, and drains on shutdown.
+ * @description Checks for due birthday reminders on startup and every five minutes.
+ * Prevents overlapping recovery runs, scopes failure logs, and stops new sends during shutdown.
  *
  * @module birthdayScheduledEvent
  */
@@ -10,10 +10,11 @@ import cron, { type ScheduledTask } from "node-cron";
 import { birthdayReminderMessage } from "../messages/birthdayReminderMessage.js";
 import logger from "../core/logger.js";
 import { withLogGuild } from "../core/logContext.js";
+import { birthdayTimezone } from "../core/birthdayClock.js";
 import type { Client } from "discord.js";
 
 export interface BirthdayScheduledEventDependencies {
-	birthdayReminderMessage: (client: Client) => Promise<void>;
+	birthdayReminderMessage: (client: Client, stopped: () => boolean) => Promise<void>;
 	info: (...args: unknown[]) => void;
 	schedule: (expression: string, callback: () => Promise<void>, options: { noOverlap: boolean }) => Pick<ScheduledTask, "destroy"> | undefined;
 }
@@ -24,21 +25,21 @@ const defaultBirthdayScheduledEventDependencies: BirthdayScheduledEventDependenc
 	schedule: (expression, callback, options) => cron.schedule(expression, callback, options),
 };
 
-// Start the cron job to run every day at 9 AM
+// The reminder itself enforces 9 AM and the same-day window in its configured timezone.
 function startBirthdayScheduledEvent(
 	client: Client,
 	dependencies: BirthdayScheduledEventDependencies = defaultBirthdayScheduledEventDependencies,
 ): () => Promise<void> {
 	let active: Promise<void> | undefined;
 	let stopped = false;
-	const task = dependencies.schedule("0 9 * * *", async () => {
+	const run = async (): Promise<void> => {
 		if (stopped || active) return;
 		active = withLogGuild(process.env.GUILD_ID, async () => {
 			try {
-				await dependencies.birthdayReminderMessage(client);
+				await dependencies.birthdayReminderMessage(client, () => stopped);
 			}
 			catch (error) {
-				logger.error("Birthday reminder failed:", error);
+				logger.error("Birthday recovery check failed; will retry on the next five-minute check:", error);
 				throw error;
 			}
 		});
@@ -48,12 +49,14 @@ function startBirthdayScheduledEvent(
 		finally {
 			active = undefined;
 		}
-	}, { noOverlap: true });
+	};
+	const task = dependencies.schedule("*/5 * * * *", run, { noOverlap: true });
 
 	// Log the scheduled event
-	dependencies.info(
-		"Birthday scheduled event started, running every day at 9 AM.",
-	);
+	withLogGuild(process.env.GUILD_ID, () => dependencies.info(
+		`Birthday recovery started: checking on startup and every five minutes; due after 9 AM (${birthdayTimezone()})`,
+	));
+	void run().catch(() => undefined);
 	return async () => {
 		stopped = true;
 		await task?.destroy();

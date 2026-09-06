@@ -102,6 +102,8 @@ Failure-handling contracts, migration requirements, and remaining rollout work a
 
 For private channel setup, owner-only `/logs levels`, delivery limits, and command publication, see [Discord logging](discord-logging.md). Preserve `withLogGuild` context when adding background work, but forward records only to the main-server destination. Operator-only logging controls must not be included in global command publication. Discord type filtering is independent of console `LOG_LEVEL`.
 
+[Birthday recovery](birthday-recovery.md) adds migration `013`, startup/five-minute checks, unique occurrence reservations, and conservative delivery reconciliation. Test sends must use injected Discord substitutes, not the live bot. The PostgreSQL suite checks batching, concurrent reservations/claims, persisted backoff, rollback, and migration replay without modifying stored birthday dates. Keep its delivery bookkeeping and short database transactions separate from Discord requests.
+
 Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 
 ## Branch base

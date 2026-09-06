@@ -1,10 +1,22 @@
 # Caitlyn 2.0 modernization handoff
 
-Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`, merged into local `caitlyn-2.0`. Current feature branch: `features/discord-logging`.
+Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`, merged into local `caitlyn-2.0`. Current feature branch: `features/birthday-recovery`.
 
-The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. The modernization continuation below was committed as `8ea6f5e`, and the resilience/documentation changes as `b998543`. The Discord logging implementation and verification are complete; its local integration target is `caitlyn-2.0`.
+The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, and private Discord logging are committed and integrated locally. Birthday recovery is the current uncommitted feature.
 
-## Latest continuation: Discord logging
+## Latest continuation: birthday recovery
+
+After approving same-day catch-up and duplicate prevention, the owner also requested use of the existing logging. Implemented startup/five-minute checks with a 9 AM-to-midnight delivery window and optional `BIRTHDAY_TIMEZONE` (host timezone by default; currently Europe/Brussels locally). Date matching uses PostgreSQL calendar dates, including February 29 only in leap years, without modifying stored birthdays.
+
+Migration `013_birthday_delivery_tracking.sql` adds grouped delivery records and unique server/person/date reservations. Short transactions reserve recipients, conditional claims coordinate concurrent workers, and persisted backoff delays failures before sending. Messages stay grouped in batches of at most 25. A timed-out/failed send or failed acknowledgement remains claimed; bounded Discord history reconciliation can confirm the original message but cannot authorize a blind resend. Late send success is observed. Unknown delivery stays held and is logged for review. See [birthday recovery](birthday-recovery.md) for exact state, snapshot, retention, cancellation, and delivery-limit contracts.
+
+All logs use the existing guild-scoped logger and private channel filters: DEBUG checks, INFO attempts, SUCCESS deliveries/reconciliation, WARN delays/uncertainty, and ERROR failures. `/logs levels types:info,success,warning,error` includes successful deliveries; no new slash-command publication is needed.
+
+Verification: `npm run check` passed typechecking, lint, a clean build, and 128 tests with one opt-in database test skipped. The separately enabled disposable PostgreSQL suite passed all 14 tests, including real concurrent claims, rollback, backoff, calendar matching, and migration replay. It removed only its own synthetic test database. Migration `013` was then applied to verified local `127.0.0.1:5432/caitlyn_test` in a transaction: all ten birthday rows match their pre-migration fingerprint, and both recovery tables are empty. AI remains disabled locally; no live Discord process was started.
+
+The feature is not committed, merged, pushed, or deployed. Before the first deployment, stop the legacy bot and apply only missing migrations. Start before 9 AM on a day not already announced by the legacy bot, or wait for the next such day: old sends have no tracking and cannot be inferred safely. Never run old and new reminder workers together. Homeserver migration and live verification remain separately authorized release work.
+
+## Previous continuation: Discord logging
 
 The owner requested a checkpoint commit and merge before starting server-configurable Discord logging. After reopening 1Password, signing succeeded: `b998543 feat: harden bot failure handling and organize documentation`. `caitlyn-2.0` was fast-forwarded to that commit, and `features/discord-logging` starts from the same base. No push or change to `main` was made.
 
@@ -14,7 +26,7 @@ No log-channel/server IDs are hard-coded. Legacy server-scope rows are ignored, 
 
 `npm run check` passed typechecking, lint, a clean build, and 112 tests with one opt-in database test skipped. The separately enabled disposable PostgreSQL suite passed all nine tests and cleaned up its own database. Migrations `011` and `012` are applied to verified local `127.0.0.1:5432/caitlyn_test`; the settings table contains zero configurations. Migration `012` adds level selection and reserves one main server even while forwarding is disabled. Existing application records and the homeserver are unchanged. AI remains disabled locally.
 
-The owner requested a local checkpoint and merge into `caitlyn-2.0`; use Git history for the resulting integration commit. Nothing has been pushed or deployed. No live Discord login, slash-command publication, or channel messages were sent. Remaining release steps require separate authorization: apply migrations `011`/`012` to the intended deployment database, publish guild commands only to the main server, and verify `/setup logs` followed by `/logs levels` inside the private channel. See [private logging and setup](discord-logging.md) for commands, ownership, privacy, delivery limits, and remaining legacy multi-server constraints. The next feature candidate is durable birthday reminder catch-up and deduplication after outages, pending the owner's choice.
+Private logging was signed as `7ad30ed` and fast-forwarded into local `caitlyn-2.0`. Nothing has been pushed or deployed. No live Discord login, slash-command publication, or channel messages were sent. Remaining release steps require separate authorization: apply missing migrations to the intended deployment database, publish guild commands only to the main server, and verify `/setup logs` followed by `/logs levels` inside the private channel. See [private logging and setup](discord-logging.md) for commands, ownership, privacy, delivery limits, and remaining legacy multi-server constraints.
 
 ## Completed file conventions and documentation
 
@@ -65,7 +77,7 @@ Historical snapshot cleanup is out of scope at the owner's request and has been 
 
 1. Verify the Docker image on a host with Docker installed. `command -v docker` exited with status 1 on this Mac; no local image build was possible. Run `docker build --tag caitlyn:2.0-integration .` on a Docker-enabled host.
 2. Choose the license. `package.json` still says ISC and README still says MIT; there is no project license file. The choice remains with the owner.
-3. Add durable birthday reminder catch-up and deduplication after outages; see the follow-ups in `docs/resilience.md`.
+3. Review/commit birthday recovery, then handle its first deployment and private logging publication in a separately authorized release; see [birthday rollout](birthday-recovery.md#rollout-and-verification).
 
 No push, command registration against Discord, image publication, workflow trigger, or homeserver update was performed during this continuation. Publishing or promoting the branch remains a separate release decision. Future feature branches use `caitlyn-2.0` as their base.
 

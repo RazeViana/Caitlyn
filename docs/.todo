@@ -42,7 +42,9 @@
     ✔ Keep logging controls out of global publication and remove public logging onboarding
     ✔ Bound log delivery, redact credentials, and test settings persistence and failure handling
     ☐ Publish updated commands and verify logging in a private Discord channel during an authorized release
-    ☐ Add durable birthday reminder catch-up and deduplication after outages
+    ✔ Commit private Discord logging and merge it into local caitlyn-2.0 (7ad30ed)
+    ✔ Add durable same-day birthday catch-up, duplicate prevention, timezone configuration, and recovery logging
+    ☐ Deploy birthday recovery with migration 013 and verify live delivery during an authorized release
 
 ☐ Add personality to the bot
     ☐ Commissioned banner

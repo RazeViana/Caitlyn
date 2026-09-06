@@ -8,6 +8,7 @@
 
 declare namespace NodeJS {
 	interface ProcessEnv {
+		BIRTHDAY_TIMEZONE?: string;
 		CLIENT_ID: string;
 		CONTEXT_RECENT_COUNT?: string;
 		CONTEXT_SIMILAR_COUNT?: string;
