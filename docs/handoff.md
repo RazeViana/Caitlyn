@@ -1,8 +1,12 @@
-# Caitlyn 2.0 modernization handoff
+# Caitlyn development handoff
 
-Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`, merged into local `caitlyn-2.0`. Current feature branch: `features/birthday-recovery`.
+Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`. Signed birthday recovery checkpoint: `3bfb0dd`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`).
 
-The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, and private Discord logging are committed and integrated locally. Birthday recovery is the current uncommitted feature.
+The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, private Discord logging, and birthday recovery are committed and integrated locally.
+
+## Integration branch rename
+
+At the owner's request, birthday recovery was signed as `3bfb0dd` and fast-forwarded from `features/birthday-recovery` into local `caitlyn-2.0`. The integration branch was then renamed to `caitlyn-3.0` both locally and on GitHub. GitHub's branch still points to `c468729`; renaming it did not publish the newer local commits. Future feature branches start from `caitlyn-3.0`, and the old names in historical plans/checkpoints describe their original context. `main`, package versions, deployment configuration, and the homeserver are unchanged.
 
 ## Latest continuation: birthday recovery
 
@@ -14,7 +18,7 @@ All logs use the existing guild-scoped logger and private channel filters: DEBUG
 
 Verification: `npm run check` passed typechecking, lint, a clean build, and 128 tests with one opt-in database test skipped. The separately enabled disposable PostgreSQL suite passed all 14 tests, including real concurrent claims, rollback, backoff, calendar matching, and migration replay. It removed only its own synthetic test database. Migration `013` was then applied to verified local `127.0.0.1:5432/caitlyn_test` in a transaction: all ten birthday rows match their pre-migration fingerprint, and both recovery tables are empty. AI remains disabled locally; no live Discord process was started.
 
-The feature is not committed, merged, pushed, or deployed. Before the first deployment, stop the legacy bot and apply only missing migrations. Start before 9 AM on a day not already announced by the legacy bot, or wait for the next such day: old sends have no tracking and cannot be inferred safely. Never run old and new reminder workers together. Homeserver migration and live verification remain separately authorized release work.
+The feature is committed as `3bfb0dd` and merged locally, but is not pushed or deployed. Before the first deployment, stop the legacy bot and apply only missing migrations. Start before 9 AM on a day not already announced by the legacy bot, or wait for the next such day: old sends have no tracking and cannot be inferred safely. Never run old and new reminder workers together. Homeserver migration and live verification remain separately authorized release work.
 
 ## Previous continuation: Discord logging
 
@@ -77,9 +81,9 @@ Historical snapshot cleanup is out of scope at the owner's request and has been 
 
 1. Verify the Docker image on a host with Docker installed. `command -v docker` exited with status 1 on this Mac; no local image build was possible. Run `docker build --tag caitlyn:2.0-integration .` on a Docker-enabled host.
 2. Choose the license. `package.json` still says ISC and README still says MIT; there is no project license file. The choice remains with the owner.
-3. Review/commit birthday recovery, then handle its first deployment and private logging publication in a separately authorized release; see [birthday rollout](birthday-recovery.md#rollout-and-verification).
+3. Handle birthday recovery's first deployment and private logging publication in a separately authorized release; see [birthday rollout](birthday-recovery.md#rollout-and-verification).
 
-No push, command registration against Discord, image publication, workflow trigger, or homeserver update was performed during this continuation. Publishing or promoting the branch remains a separate release decision. Future feature branches use `caitlyn-2.0` as their base.
+No push, command registration against Discord, image publication, workflow trigger, or homeserver update was performed during this continuation. Publishing or promoting the branch remains a separate release decision. Future feature branches use `caitlyn-3.0` as their base.
 
 ## Local database snapshot
 

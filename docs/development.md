@@ -108,7 +108,7 @@ Keep database dumps and private environment snapshots under `backups/`. Both Git
 
 ## Branch base
 
-Until Caitlyn 2.0 is promoted, create feature branches from `caitlyn-2.0`.
+Create future feature branches from `caitlyn-3.0`. The integration branch was renamed from `caitlyn-2.0` locally and on GitHub on 2026-09-06; historical integration plans retain the former name.
 Do not target or update `main` without an explicit release decision because pushes to `main` deploy to the homeserver.
 
-Keep `caitlyn-2.0` local unless a separate release instruction explicitly authorizes publishing it. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development.
+Keep new commits on `caitlyn-3.0` local unless a separate instruction explicitly authorizes publishing them. Renaming the GitHub branch did not push the local feature commits. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. This branch rename does not change package versions or deployment targets.
