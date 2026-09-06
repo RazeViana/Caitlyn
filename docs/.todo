@@ -20,6 +20,24 @@
     ✔ Make tests independent of ambient LOG_LEVEL and filesystem enumeration order
     ☐ Choose a project license and align README/package metadata
 
+☐ Features and improvements
+    ✔ Exclude local database backups and private environment snapshots from Docker builds
+    ✔ Add the missing birthday table migration for fresh databases
+    ✔ Verify all migrations and birthday replay safety against a disposable local PostgreSQL database
+    ✔ Audit application failure paths and document reproducible edge cases
+    ✔ Disable AI in local configuration and test the default-off behavior
+    ✔ Handle database startup failures, idle-pool errors, and service timeouts
+    ✔ Await Discord login and contain failures at event/interaction boundaries
+    ✔ Make activity writes atomic and voice-completion retries safe
+    ✔ Preserve original messages and working commands when replacements fail
+    ✔ Fix missing interaction acknowledgements, error replies, and cooldown persistence
+    ✔ Fix birthday calendar/date edge cases and concurrent writes
+    ✔ Harden AI/API failure responses, output validation, and memory degradation
+    ✔ Drain jobs/connections on shutdown and use persisted voice sessions
+    ✔ Separate command publication from runtime startup and preserve global commands
+    ✔ Consolidate supporting documentation under docs, keep README at the root, and align file headers with the existing pattern
+    ☐ Add durable birthday reminder catch-up and deduplication after outages
+
 ☐ Add personality to the bot
     ☐ Commissioned banner
 

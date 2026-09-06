@@ -1,3 +1,11 @@
+/**
+ * @file testMemory.ts
+ * @description Clears stored messages for an explicitly supplied channel and prints manual memory-test steps.
+ * This operational diagnostic deletes data in the configured database when run.
+ *
+ * @module testMemory
+ */
+
 import "dotenv/config";
 
 import { pathToFileURL } from "node:url";

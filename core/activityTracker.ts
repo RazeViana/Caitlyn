@@ -1,150 +1,82 @@
 /**
  * @file activityTracker.ts
- * @description Service for tracking user activity in Discord servers.
- * Tracks message counts, voice channel joins, server leaves, and time spent in voice.
+ * @description Stores message and voice activity atomically and retrieves activity rankings.
+ * Uses persisted voice sessions and per-user transactions to prevent duplicate completion totals.
  *
  * @module activityTracker
  */
 
-import type { ActivityRow, VoiceSession } from "../types/models.js";
 import { pool } from "./createPGPool.js";
 import logger from "./logger.js";
-
-interface ActivityQueryResult {
-	rows: unknown[];
-}
+import { withTransaction, type Query } from "./transaction.js";
+import type { ActivityRow } from "../types/models.js";
 
 export interface ActivityTrackerDependencies {
 	now: () => number;
-	query: (text: string, values: unknown[]) => Promise<ActivityQueryResult>;
-	sessions: Map<string, VoiceSession>;
+	transaction: typeof withTransaction;
 }
-
-// Map to track active voice sessions: key = `${guildId}-${userId}`, value = { joinedAt, channelId }
-const activeVoiceSessions = new Map<string, VoiceSession>();
 
 const defaultActivityTrackerDependencies: ActivityTrackerDependencies = {
 	now: Date.now,
-	query: async (text, values) => pool.query(text, values),
-	sessions: activeVoiceSessions,
+	transaction: withTransaction,
 };
 
-/** Track a message from a user. */
-async function trackMessage(
-	guildId: string,
-	userId: string,
-	username: string,
-	dependencies: ActivityTrackerDependencies = defaultActivityTrackerDependencies,
-): Promise<void> {
-	try {
-		// Increment message count
-		await dependencies.query(
-			"SELECT discord.increment_message_count($1, $2, $3)",
-			[guildId, userId, username],
-		);
+async function lockUser(query: Query, guildId: string, userId: string): Promise<void> {
+	await query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`activity:${guildId}:${userId}`]);
+}
 
-		// Record daily activity for streak tracking
-		await dependencies.query(
-			"SELECT discord.record_daily_activity($1, $2, $3)",
-			[guildId, userId, username],
-		);
-
-		logger.debug(`Tracked message from ${username} in guild ${guildId}`);
-	}
-	catch (error) {
-		logger.error("Error tracking message:", error);
+async function finishSession(query: Query, guildId: string, userId: string, username: string, at: Date, channelId?: string): Promise<void> {
+	const result = await query(`
+		UPDATE discord.voice_sessions
+		SET left_at = $3, duration_seconds = GREATEST(0, FLOOR(EXTRACT(EPOCH FROM ($3::timestamptz - joined_at))))::bigint
+		WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL
+			AND ($4::varchar IS NULL OR channel_id = $4)
+		RETURNING duration_seconds
+	`, [guildId, userId, at, channelId ?? null]);
+	// Do not guess how to merge ambiguous legacy open sessions.
+	if (result.rows.length > 1) throw new Error("Multiple open voice sessions need reconciliation");
+	for (const row of result.rows) {
+		const seconds = Number(row.duration_seconds);
+		await query("SELECT discord.add_voice_time($1, $2, $3, $4)", [guildId, userId, username, seconds]);
+		await query("SELECT discord.record_daily_voice_time($1, $2, $3, $4)", [guildId, userId, username, seconds]);
 	}
 }
 
-/** Track a user joining a voice channel. */
+async function trackMessage(guildId: string, userId: string, username: string, dependencies = defaultActivityTrackerDependencies): Promise<void> {
+	await dependencies.transaction(async (query) => {
+		await lockUser(query, guildId, userId);
+		await query("SELECT discord.increment_message_count($1, $2, $3)", [guildId, userId, username]);
+		await query("SELECT discord.record_daily_activity($1, $2, $3)", [guildId, userId, username]);
+	});
+}
+
 async function trackVoiceJoin(
-	guildId: string,
-	userId: string,
-	username: string,
-	channelId: string,
-	channelName: string,
-	dependencies: ActivityTrackerDependencies = defaultActivityTrackerDependencies,
+	guildId: string, userId: string, username: string, channelId: string, channelName: string,
+	dependencies = defaultActivityTrackerDependencies,
 ): Promise<void> {
-	try {
-		// Increment voice join counter
-		await dependencies.query(
-			"SELECT discord.increment_voice_join_count($1, $2, $3)",
-			[guildId, userId, username],
-		);
-
-		// Create voice session record
-		const result = await dependencies.query(
-			`INSERT INTO discord.voice_sessions
+	const at = new Date(dependencies.now());
+	await dependencies.transaction(async (query) => {
+		await lockUser(query, guildId, userId);
+		const open = await query("SELECT channel_id FROM discord.voice_sessions WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL FOR UPDATE", [guildId, userId]);
+		if (open.rows.length > 1) throw new Error("Multiple open voice sessions need reconciliation");
+		if (open.rows[0]?.channel_id === channelId) return;
+		await finishSession(query, guildId, userId, username, at);
+		await query("SELECT discord.increment_voice_join_count($1, $2, $3)", [guildId, userId, username]);
+		await query(`INSERT INTO discord.voice_sessions
 			(guild_id, user_id, username, channel_id, channel_name, joined_at)
-			VALUES ($1, $2, $3, $4, $5, NOW())
-			RETURNING id`,
-			[guildId, userId, username, channelId, channelName],
-		);
-
-		// Store session in memory for duration tracking
-		const sessionKey = `${guildId}-${userId}`;
-		const sessionRow = result.rows[0] as { id: number };
-		dependencies.sessions.set(sessionKey, {
-			sessionId: sessionRow.id,
-			joinedAt: dependencies.now(),
-			channelId,
-		});
-
-		logger.debug(`Tracked voice join for ${username} in channel ${channelName}`);
-	}
-	catch (error) {
-		logger.error("Error tracking voice join:", error);
-	}
+			VALUES ($1, $2, $3, $4, $5, $6)`, [guildId, userId, username, channelId, channelName, at]);
+	});
 }
 
-/** Track a user leaving a voice channel. */
 async function trackVoiceLeave(
-	guildId: string,
-	userId: string,
-	username: string,
-	dependencies: ActivityTrackerDependencies = defaultActivityTrackerDependencies,
+	guildId: string, userId: string, username: string,
+	dependencies = defaultActivityTrackerDependencies, channelId?: string,
 ): Promise<void> {
-	try {
-		const sessionKey = `${guildId}-${userId}`;
-		const session = dependencies.sessions.get(sessionKey);
-
-		if (!session) {
-			logger.warn(`No active voice session found for ${username}`);
-			return;
-		}
-
-		// Calculate duration
-		const durationMs = dependencies.now() - session.joinedAt;
-		const durationSeconds = Math.floor(durationMs / 1000);
-
-		// Update voice session record
-		await dependencies.query(
-			`UPDATE discord.voice_sessions
-			SET left_at = NOW(), duration_seconds = $1
-			WHERE id = $2`,
-			[durationSeconds, session.sessionId],
-		);
-
-		// Add duration to user's total voice time
-		await dependencies.query(
-			"SELECT discord.add_voice_time($1, $2, $3, $4)",
-			[guildId, userId, username, durationSeconds],
-		);
-
-		// Record daily voice time for streak tracking
-		await dependencies.query(
-			"SELECT discord.record_daily_voice_time($1, $2, $3, $4)",
-			[guildId, userId, username, durationSeconds],
-		);
-
-		// Remove from active sessions
-		dependencies.sessions.delete(sessionKey);
-
-		logger.debug(`Tracked voice leave for ${username} (${durationSeconds}s)`);
-	}
-	catch (error) {
-		logger.error("Error tracking voice leave:", error);
-	}
+	const at = new Date(dependencies.now());
+	await dependencies.transaction(async (query) => {
+		await lockUser(query, guildId, userId);
+		await finishSession(query, guildId, userId, username, at, channelId);
+	});
 }
 
 /** Get activity stats for a user. */
@@ -163,7 +95,7 @@ async function getUserActivity(guildId: string, userId: string): Promise<Activit
 	}
 	catch (error) {
 		logger.error("Error getting user activity:", error);
-		return null;
+		throw error;
 	}
 }
 
@@ -179,7 +111,7 @@ async function getTopActiveUsers(guildId: string, limit = 10): Promise<ActivityR
 	}
 	catch (error) {
 		logger.error("Error getting top active users:", error);
-		return [];
+		throw error;
 	}
 }
 
@@ -195,7 +127,7 @@ async function getTopStreakUsers(guildId: string, limit = 10): Promise<ActivityR
 	}
 	catch (error) {
 		logger.error("Error getting top streak users:", error);
-		return [];
+		throw error;
 	}
 }
 

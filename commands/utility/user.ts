@@ -1,5 +1,5 @@
 /**
- * @file user.js
+ * @file user.ts
  * @description This module defines a Discord slash command that provides information about the user who invoked it.
  * The command displays the username of the user and the date they joined the server.
  *

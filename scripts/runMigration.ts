@@ -1,3 +1,11 @@
+/**
+ * @file runMigration.ts
+ * @description Runs a selected SQL migration from the repository's migrations directory.
+ * Uses the configured PostgreSQL connection without tracking migration history.
+ *
+ * @module runMigration
+ */
+
 import "dotenv/config";
 
 import fs from "node:fs";

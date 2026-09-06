@@ -1,3 +1,11 @@
+/**
+ * @file loaders.test.js
+ * @description Tests command and event discovery from temporary module fixtures.
+ * Checks runtime extensions and rejects malformed modules without registering them.
+ *
+ * @module loaders.test
+ */
+
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -1,6 +1,7 @@
 /**
  * @file logger.ts
  * @description Simple, colorful logging utility for the Caitlyn Discord bot
+ *
  * @module logger
  */
 

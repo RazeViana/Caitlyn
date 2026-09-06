@@ -1,6 +1,8 @@
 /**
  * @file deployCommands.ts
- * @description Loads and deploys the bot's slash commands to a Discord guild.
+ * @description Validates configuration, discovers slash commands, and publishes them to the configured guild.
+ * Leaves global registrations unchanged and keeps publication separate from runtime startup.
+ *
  * @module deployCommands
  */
 
@@ -90,12 +92,6 @@ export async function deployCommands(
 
 	logger.info(
 		`Started refreshing ${commands.length} application (/) commands.`,
-	);
-
-	// This clears all global commands before refreshing the guild command set.
-	await rest.put(
-		Routes.applicationCommands(configuration.clientId),
-		{ body: [] },
 	);
 
 	const data = await rest.put(

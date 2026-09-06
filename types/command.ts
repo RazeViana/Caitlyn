@@ -1,3 +1,10 @@
+/**
+ * @file command.ts
+ * @description Defines the shared slash-command contract and its runtime module guard.
+ *
+ * @module command
+ */
+
 import type {
 	AutocompleteInteraction,
 	ChatInputCommandInteraction,

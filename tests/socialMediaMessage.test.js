@@ -1,3 +1,11 @@
+/**
+ * @file socialMediaMessage.test.js
+ * @description Tests social-link replacement and preservation of original content.
+ * Checks supported domains, trailing text, and failed delivery using synthetic messages.
+ *
+ * @module socialMediaMessage.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -36,8 +44,8 @@ test("supported social URLs are replaced and unsupported messages remain untouch
 		const { message, readCalls } = createMessage(content);
 		await socialMediaMessage(message);
 		assert.deepEqual(readCalls(), [
-			["delete"],
 			["send", expectedMessage],
+			["delete"],
 		]);
 	}
 
@@ -51,7 +59,7 @@ test("supported social URLs are replaced and unsupported messages remain untouch
 	}
 });
 
-test("social URL replacement silently handles delete and send failures", async () => {
+test("social URL replacement retains the original if sending fails", async () => {
 	const content = "https://x.com/alice/status/1";
 	const expectedMessage = "[x.com](https://twitterez.com/alice/status/1)";
 	const deleteFailure = createMessage(content, {
@@ -59,14 +67,19 @@ test("social URL replacement silently handles delete and send failures", async (
 	});
 
 	await assert.doesNotReject(() => socialMediaMessage(deleteFailure.message));
-	assert.deepEqual(deleteFailure.readCalls(), [["delete"]]);
+	assert.deepEqual(deleteFailure.readCalls(), [["send", expectedMessage], ["delete"]]);
 
 	const sendFailure = createMessage(content, {
 		send: new Error("send failed"),
 	});
 	await assert.doesNotReject(() => socialMediaMessage(sendFailure.message));
 	assert.deepEqual(sendFailure.readCalls(), [
-		["delete"],
 		["send", expectedMessage],
 	]);
+});
+
+test("link replacement preserves text following the original URL", async () => {
+	const { message, readCalls } = createMessage("https://x.com/alice/status/1 Important context");
+	await socialMediaMessage(message);
+	assert.deepEqual(readCalls(), [["send", "[x.com](https://twitterez.com/alice/status/1) Important context"], ["delete"]]);
 });

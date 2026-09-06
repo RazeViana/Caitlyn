@@ -30,13 +30,14 @@ export interface VoiceStateDependencies {
 		guildId: string,
 		userId: string,
 		username: string,
+		channelId?: string,
 	) => Promise<void>;
 }
 
 const defaultVoiceStateDependencies: VoiceStateDependencies = {
 	logger,
 	trackVoiceJoin,
-	trackVoiceLeave,
+	trackVoiceLeave: (guildId, userId, username, channelId) => trackVoiceLeave(guildId, userId, username, undefined, channelId),
 };
 
 export async function execute(
@@ -46,7 +47,8 @@ export async function execute(
 ): Promise<void> {
 	try {
 		const { guild } = newState;
-		const member = newState.member!;
+		const member = newState.member;
+		if (!member) return;
 
 		// Ignore bot users
 		if (member.user.bot) return;
@@ -68,13 +70,13 @@ export async function execute(
 		// User left a voice channel
 		else if (oldChannel && !newChannel) {
 			dependencies.logger.debug(`${member.user.username} left voice channel ${oldChannel.name}`);
-			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username);
+			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username, oldChannel.id);
 		}
 		// User moved between voice channels
 		else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
 			dependencies.logger.debug(`${member.user.username} moved from ${oldChannel.name} to ${newChannel.name}`);
 			// Track as leave from old channel
-			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username);
+			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username, oldChannel.id);
 			// Track as join to new channel
 			await dependencies.trackVoiceJoin(
 				guild.id,

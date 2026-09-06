@@ -1,179 +1,81 @@
+/**
+ * @file activityTracker.test.js
+ * @description Tests transactional activity writes, persisted voice sessions, and activity queries.
+ * Checks retry safety and failure propagation without connecting to PostgreSQL.
+ *
+ * @module activityTracker.test
+ */
+
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-
 const activityTracker = await import("../core/activityTracker.ts");
 const { pool } = await import("../core/createPGPool.ts");
-const { default: logger } = await import("../core/logger.ts");
-
 const originalPoolQuery = pool.query;
+afterEach(() => { pool.query = originalPoolQuery; });
 
-afterEach(() => {
-	pool.query = originalPoolQuery;
-});
-
-test("message activity records count and daily activity in order", async () => {
-	const queries = [];
-	const sessions = new Map();
-	const dependencies = {
+test("message tracking groups both counter writes inside one transaction", async () => {
+	const calls = [];
+	let transactions = 0;
+	await activityTracker.trackMessage("guild", "user", "Fixture", {
 		now: () => 1_000,
-		query: async (text, values) => {
-			queries.push({ text, values });
-			return { rows: [] };
-		},
-		sessions,
-	};
-
-	await activityTracker.trackMessage("guild-id", "user-id", "Alice", dependencies);
-
-	assert.deepEqual(queries, [
-		{
-			text: "SELECT discord.increment_message_count($1, $2, $3)",
-			values: ["guild-id", "user-id", "Alice"],
-		},
-		{
-			text: "SELECT discord.record_daily_activity($1, $2, $3)",
-			values: ["guild-id", "user-id", "Alice"],
-		},
-	]);
-	assert.equal(sessions.size, 0);
-});
-
-test("voice join stores the returned session and voice leave records elapsed seconds", async () => {
-	const queries = [];
-	const sessions = new Map();
-	let currentTime = 10_000;
-	const dependencies = {
-		now: () => currentTime,
-		query: async (text, values) => {
-			queries.push({ text, values });
-			return text.includes("RETURNING id") ? { rows: [{ id: 42 }] } : { rows: [] };
-		},
-		sessions,
-	};
-
-	await activityTracker.trackVoiceJoin(
-		"guild-id",
-		"user-id",
-		"Alice",
-		"channel-id",
-		"General",
-		dependencies,
-	);
-
-	assert.deepEqual(sessions.get("guild-id-user-id"), {
-		channelId: "channel-id",
-		joinedAt: 10_000,
-		sessionId: 42,
-	});
-	assert.deepEqual(queries, [
-		{
-			text: "SELECT discord.increment_voice_join_count($1, $2, $3)",
-			values: ["guild-id", "user-id", "Alice"],
-		},
-		{
-			text: `INSERT INTO discord.voice_sessions
-			(guild_id, user_id, username, channel_id, channel_name, joined_at)
-			VALUES ($1, $2, $3, $4, $5, NOW())
-			RETURNING id`,
-			values: ["guild-id", "user-id", "Alice", "channel-id", "General"],
-		},
-	]);
-
-	currentTime = 15_999;
-	await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", dependencies);
-
-	assert.deepEqual(queries.slice(2), [
-		{
-			text: `UPDATE discord.voice_sessions
-			SET left_at = NOW(), duration_seconds = $1
-			WHERE id = $2`,
-			values: [5, 42],
-		},
-		{
-			text: "SELECT discord.add_voice_time($1, $2, $3, $4)",
-			values: ["guild-id", "user-id", "Alice", 5],
-		},
-		{
-			text: "SELECT discord.record_daily_voice_time($1, $2, $3, $4)",
-			values: ["guild-id", "user-id", "Alice", 5],
-		},
-	]);
-	assert.equal(sessions.has("guild-id-user-id"), false);
-});
-
-test("voice leave retains its session after each failed write until a complete retry succeeds", async (t) => {
-	const originalConsoleError = console.error;
-	console.error = () => undefined;
-
-	try {
-		for (const failedWrite of [0, 1, 2]) {
-			await t.test(`write ${failedWrite + 1} fails`, async () => {
-				const sessionKey = "guild-id-user-id";
-				const sessions = new Map([[sessionKey, {
-					channelId: "channel-id",
-					joinedAt: 10_000,
-					sessionId: 42,
-				}]]);
-				let callIndex = 0;
-				let injectedFailure = true;
-				const dependencies = {
-					now: () => 15_999,
-					query: async () => {
-						const currentCall = callIndex;
-						callIndex += 1;
-						if (injectedFailure && currentCall === failedWrite) {
-							throw new Error(`write ${failedWrite + 1} failed`);
-						}
-						return { rows: [] };
-					},
-					sessions,
-				};
-
-				await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", dependencies);
-
-				assert.equal(callIndex, failedWrite + 1);
-				assert.deepEqual(sessions.get(sessionKey), {
-					channelId: "channel-id",
-					joinedAt: 10_000,
-					sessionId: 42,
-				});
-
-				callIndex = 0;
-				injectedFailure = false;
-				await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", dependencies);
-
-				assert.equal(callIndex, 3);
-				assert.equal(sessions.has(sessionKey), false);
+		transaction: async (operation) => {
+			transactions++;
+			return operation(async (sql, values) => {
+				calls.push({ sql, values });
+				return { rows: [] };
 			});
-		}
-	}
-	finally {
-		console.error = originalConsoleError;
-	}
-});
-
-test("missing voice sessions keep the existing warning behavior", async (context) => {
-	const warnings = [];
-	const queries = [];
-	context.mock.method(logger, "warn", (...args) => {
-		warnings.push(args.join(" "));
-	});
-
-	await activityTracker.trackVoiceLeave("guild-id", "user-id", "Alice", {
-		now: () => 20_000,
-		query: async (text, values) => {
-			queries.push({ text, values });
-			return { rows: [] };
 		},
-		sessions: new Map(),
 	});
-
-	assert.deepEqual(queries, []);
-	assert.equal(warnings.length, 1);
-	assert.match(warnings[0], /No active voice session found for Alice/);
+	assert.equal(transactions, 1);
+	assert.match(calls[0].sql, /pg_advisory_xact_lock/);
+	assert.match(calls[1].sql, /increment_message_count/);
+	assert.match(calls[2].sql, /record_daily_activity/);
 });
 
-test("activity reads preserve SQL, defaults, and error fallbacks", async () => {
+test("voice leave only increments totals for a newly finalized persisted session", async () => {
+	const calls = [];
+	const dependencies = {
+		now: () => 15_000,
+		transaction: async (operation) => operation(async (sql, values) => {
+			calls.push({ sql, values });
+			return { rows: sql.includes("RETURNING duration_seconds") ? [{ duration_seconds: "5" }] : [] };
+		}),
+	};
+	await activityTracker.trackVoiceLeave("guild", "user", "Fixture", dependencies, "channel");
+	assert.match(calls[1].sql, /left_at IS NULL/);
+	assert.equal(calls[1].values[3], "channel");
+	assert.equal(calls[2].values[3], 5);
+	assert.equal(calls[3].values[3], 5);
+	calls.length = 0;
+	dependencies.transaction = async (operation) => operation(async (sql) => {
+		calls.push(sql);
+		return { rows: [] };
+	});
+	await activityTracker.trackVoiceLeave("guild", "user", "Fixture", dependencies);
+	assert.equal(calls.length, 2);
+});
+
+test("voice joins reuse persisted same-channel sessions after a restart", async () => {
+	const calls = [];
+	await activityTracker.trackVoiceJoin("guild", "user", "Fixture", "channel", "Room", {
+		now: () => 15_000,
+		transaction: async (operation) => operation(async (sql) => {
+			calls.push(sql);
+			return { rows: sql.startsWith("SELECT channel_id") ? [{ channel_id: "channel" }] : [] };
+		}),
+	});
+	assert.equal(calls.length, 2);
+	assert.ok(calls.every((sql) => !sql.includes("INSERT")));
+});
+
+test("tracking write failures propagate so callers cannot continue a failed channel move", async () => {
+	await assert.rejects(activityTracker.trackMessage("guild", "user", "Fixture", {
+		now: () => 0,
+		transaction: async () => { throw new Error("write failed"); },
+	}), /write failed/);
+});
+
+test("activity reads distinguish unavailable services from empty results", async () => {
 	const queries = [];
 	const expectedUser = { user_id: "user-id", username: "Alice" };
 	const expectedLeaders = [{ user_id: "leader-id", username: "Bob" }];
@@ -213,9 +115,9 @@ test("activity reads preserve SQL, defaults, and error fallbacks", async () => {
 	};
 
 	try {
-		assert.equal(await activityTracker.getUserActivity("guild-id", "user-id"), null);
-		assert.deepEqual(await activityTracker.getTopActiveUsers("guild-id"), []);
-		assert.deepEqual(await activityTracker.getTopStreakUsers("guild-id"), []);
+		await assert.rejects(activityTracker.getUserActivity("guild-id", "user-id"), /database unavailable/);
+		await assert.rejects(activityTracker.getTopActiveUsers("guild-id"), /database unavailable/);
+		await assert.rejects(activityTracker.getTopStreakUsers("guild-id"), /database unavailable/);
 	}
 	finally {
 		console.error = originalConsoleError;
@@ -225,36 +127,6 @@ test("activity reads preserve SQL, defaults, and error fallbacks", async () => {
 	assert.match(errors[0], /Error getting user activity:.*database unavailable/s);
 	assert.match(errors[1], /Error getting top active users:.*database unavailable/s);
 	assert.match(errors[2], /Error getting top streak users:.*database unavailable/s);
-});
-
-test("tracking database errors are logged and swallowed", async () => {
-	const errors = [];
-	const originalConsoleError = console.error;
-	console.error = (...args) => {
-		errors.push(args.join(" "));
-	};
-	const dependencies = {
-		now: () => 10_000,
-		query: async () => {
-			throw new Error("write failed");
-		},
-		sessions: new Map(),
-	};
-
-	try {
-		await assert.doesNotReject(() => activityTracker.trackMessage(
-			"guild-id",
-			"user-id",
-			"Alice",
-			dependencies,
-		));
-	}
-	finally {
-		console.error = originalConsoleError;
-	}
-
-	assert.equal(errors.length, 1);
-	assert.match(errors[0], /Error tracking message:.*write failed/s);
 });
 
 test("formatDuration preserves hour, minute, second formatting", () => {

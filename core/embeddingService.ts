@@ -1,7 +1,7 @@
 /**
  * @file embeddingService.ts
- * @description Service for generating text embeddings using a local embedding model.
- * Connects to a local embedding endpoint (Ollama or similar) to convert text into vector embeddings.
+ * @description Generates text embeddings through the configured embedding endpoint.
+ * Bounds HTTP requests and validates finite, nonzero 768-dimensional vectors before storage.
  *
  * @module embeddingService
  */
@@ -37,6 +37,7 @@ async function generateEmbedding(
 		);
 
 		const response = await dependencies.fetch(EMBEDDING_ENDPOINT, {
+			signal: AbortSignal.timeout(10_000),
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -48,19 +49,19 @@ async function generateEmbedding(
 		});
 
 		if (!response.ok) {
-			const errorText = await response.text();
-			throw new Error(
-				`Embedding API returned ${response.status}: ${errorText}`,
-			);
+			await response.body?.cancel();
+			throw new Error(`Embedding API returned ${response.status}`);
 		}
 
 		const data = await response.json() as EmbeddingResponse;
 
 		// Extract embedding from response
 		// Format depends on the embedding service
-		const embedding = data.embedding;
+		const embedding = data?.embedding;
 
-		if (!embedding || !Array.isArray(embedding)) {
+		if (!Array.isArray(embedding) || embedding.length !== 768
+			|| !embedding.every((value) => typeof value === "number" && Number.isFinite(value))
+			|| !embedding.some((value) => value !== 0)) {
 			throw new Error("Invalid embedding response format");
 		}
 

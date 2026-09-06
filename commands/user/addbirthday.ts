@@ -1,12 +1,9 @@
 /**
- * @file addBirthday.js
- * @description This module defines a Discord slash command for setting a birthday reminder for a specified user.
- * It allows users to input a day, month, and year to store a birthday in a PostgreSQL database.
- * The command checks if a birthday is already set for the user and prevents duplicate entries.
+ * @file addbirthday.ts
+ * @description Validates and saves a user's date-only birthday through an atomic PostgreSQL upsert.
+ * Acknowledges before database work and confirms success or delivers a safe error response.
  *
- * If successful, the birthday is stored in the database for future reminders.
- *
- * @module addBirthday
+ * @module addbirthday
  */
 
 import {
@@ -17,6 +14,8 @@ import {
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
 import logger from "../../core/logger.js";
+import { respondWithError } from "../../core/interactionResponse.js";
+import { birthdayDate } from "../../core/birthdayDate.js";
 
 interface BirthdayQueryResult {
 	rows: Array<Record<string, unknown>>;
@@ -77,87 +76,25 @@ export async function execute(
 	interaction: ChatInputCommandInteraction,
 	dependencies: AddBirthdayDependencies = defaultAddBirthdayDependencies,
 ): Promise<void> {
-	// Get the user for whom the birthday is being set
-	const displayName = interaction.options.getUser("user")!.username;
-	const userId = interaction.options.getUser("user")!.id;
-
-	// Get the birthday details from the interaction options
-	const day = interaction.options.getInteger("day")!;
-	const month = interaction.options.getString("month")!;
-	const year = interaction.options.getInteger("year")!;
-	const birthdayDate = new Date(`${year}-${month}-${day}`);
-	const birthday = new Date(`${year}-${month}-${day + 1}`)
-		.toISOString()
-		.split("T")[0];
-
-	// Check if the birthday is valid
-	if (year < 1900 || year > new Date().getFullYear() + 1) {
-		await interaction.reply({
-			content: "Please provide a valid year.",
-			flags: MessageFlags.Ephemeral,
-		});
+	const user = interaction.options.getUser("user", true);
+	const day = interaction.options.getInteger("day", true);
+	const month = Number(interaction.options.getString("month", true));
+	const year = interaction.options.getInteger("year", true);
+	const dob = birthdayDate(year, month, day);
+	if (!dob) {
+		await respondWithError(interaction, "Please provide a valid birthday date (1900 through the current year).");
 		return;
 	}
-
-	if (
-		isNaN(birthdayDate.getTime()) ||
-			birthdayDate.getDate() !== day ||
-			birthdayDate.getMonth() + 1 !== parseInt(month) ||
-			birthdayDate.getFullYear() !== year
-	) {
-		// If the birthday is invalid, return an error message
-		await interaction.reply({
-			content: "Please provide a valid date.",
-			flags: MessageFlags.Ephemeral,
-		});
-		return;
-	}
-
-	let updated = false;
 	try {
-		// Check if the user already has a birthday set
-		const res = await dependencies.query(
-			`SELECT * FROM discord.birthdays WHERE discord_id = ${userId}`,
-		);
-
-		// If the user already has a birthday set, update the birthday
-		if (res.rows[0]) {
-			await dependencies.query(
-				"UPDATE discord.birthdays SET dob = $1, name = $2 WHERE discord_id = $3",
-				[birthday, displayName, userId],
-			);
-			updated = true;
-		}
-	}
-	catch (error) {
-		// If there was an error checking the database, log it and return a message
-		logger.error("Error checking existing birthday:", error);
-		return;
-	}
-
-	if (updated) {
-		// If the birthday was updated successfully, return a message
-		await interaction.reply({
-			content: `Birthday updated for ${userMention(userId)}!`,
-			flags: MessageFlags.Ephemeral,
-		});
-		return;
-	}
-
-	try {
-		// Insert the birthday into the database
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		await dependencies.query(
-			"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3)",
-			[userId, displayName, birthday],
+			"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3) ON CONFLICT (discord_id) DO UPDATE SET name = EXCLUDED.name, dob = EXCLUDED.dob",
+			[user.id, user.username, dob],
 		);
+		await interaction.editReply({ content: `Birthday saved for ${userMention(user.id)}!` });
 	}
 	catch (error) {
-		// If there was an error inserting the birthday, log it and return a message
-		logger.error("Error inserting birthday:", error);
-		await interaction.reply({
-			content: "There was an error setting the birthday reminder.",
-			flags: MessageFlags.Ephemeral,
-		});
-		return;
+		logger.error("Could not save birthday:", error);
+		await respondWithError(interaction, "Could not save the birthday. Please try again shortly.");
 	}
 }

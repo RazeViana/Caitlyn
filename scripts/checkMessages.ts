@@ -1,3 +1,11 @@
+/**
+ * @file checkMessages.ts
+ * @description Prints stored-message counts, embedding coverage, and recent message previews.
+ * Queries the configured database only when explicitly invoked.
+ *
+ * @module checkMessages
+ */
+
 import "dotenv/config";
 
 import { pathToFileURL } from "node:url";

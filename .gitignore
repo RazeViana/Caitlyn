@@ -7,6 +7,7 @@ npm-debug.log*
 
 # Local database copies
 /backups/
+/docs/local-database.md
 
 # Logs
 logs/

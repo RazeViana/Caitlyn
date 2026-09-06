@@ -1,202 +1,92 @@
+/**
+ * @file birthdayBehavior.test.js
+ * @description Tests birthday validation, calendar rendering, mutations, and daily scheduling.
+ * Uses controlled database, Discord, HTTP, and scheduling dependencies.
+ *
+ * @module birthdayBehavior.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MessageFlags } from "discord.js";
-
+import { birthdayDate, nextBirthday } from "../core/birthdayDate.ts";
 const addBirthdayCommand = await import("../commands/user/addbirthday.ts");
 const removeBirthdayCommand = await import("../commands/user/removebirthday.ts");
 const showBirthdaysCommand = await import("../commands/user/showbirthdays.ts");
 const { startBirthdayScheduledEvent } = await import("../jobs/birthdayScheduledEvent.ts");
 
-function birthdayInteraction({ day = 28, month = "5", userId = "1234", username = "Alice", year = 1997 } = {}) {
+function birthdayInteraction(day = 31) {
 	const replies = [];
-	const user = { id: userId, username };
 	return {
-		interaction: {
-			options: {
-				getInteger: (name) => name === "day" ? day : year,
-				getString: () => month,
-				getUser: () => user,
-			},
-			reply: async (response) => {
-				replies.push(response);
-			},
-		},
 		replies,
+		deferred: false,
+		options: { getUser: () => ({ id: "1234", username: "Fixture" }), getInteger: (name) => name === "day" ? day : 1997, getString: () => "5" },
+		async deferReply(options) { this.deferred = true; replies.push(["defer", options]); },
+		async editReply(response) { replies.push(["edit", response]); },
+		async reply(response) { replies.push(["reply", response]); },
 	};
 }
 
-test("addbirthday preserves insert and duplicate-update SQL paths", async (context) => {
+test("birthday upsert acknowledges first, preserves calendar date, and confirms success", async () => {
+	const interaction = birthdayInteraction();
+	const queries = [];
+	await addBirthdayCommand.execute(interaction, { query: async (...args) => {
+		assert.equal(interaction.deferred, true);
+		queries.push(args);
+		return { rows: [] };
+	} });
+	assert.equal(queries.length, 1);
+	assert.match(queries[0][0], /ON CONFLICT \(discord_id\) DO UPDATE/);
+	assert.deepEqual(queries[0][1], ["1234", "Fixture", "1997-05-31"]);
+	assert.deepEqual(interaction.replies, [
+		["defer", { flags: MessageFlags.Ephemeral }],
+		["edit", { content: "Birthday saved for <@1234>!" }],
+	]);
+});
+
+test("date-only validation handles month ends, leap days, invalid days, and timezones", () => {
 	const originalTimezone = process.env.TZ;
-	process.env.TZ = "Europe/Amsterdam";
-	context.mock.timers.enable({
-		apis: ["Date"],
-		now: new Date(2026, 8, 4, 0, 0, 0),
-	});
-
 	try {
-		const insertCalls = [];
-		const insert = birthdayInteraction();
-		await addBirthdayCommand.execute(insert.interaction, {
-			query: async (...args) => {
-				insertCalls.push(args);
-				return { rows: [] };
-			},
-		});
-
-		assert.equal(addBirthdayCommand.cooldown, 5);
-		assert.equal(addBirthdayCommand.category, "user");
-		assert.deepEqual(insertCalls, [
-			["SELECT * FROM discord.birthdays WHERE discord_id = 1234"],
-			[
-				"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3)",
-				["1234", "Alice", "1997-05-28"],
-			],
-		]);
-		assert.deepEqual(insert.replies, []);
-
-		const updateCalls = [];
-		const update = birthdayInteraction({ userId: "5678", username: "Bob" });
-		await addBirthdayCommand.execute(update.interaction, {
-			query: async (...args) => {
-				updateCalls.push(args);
-				return { rows: args[0].startsWith("SELECT") ? [{ discord_id: "5678" }] : [] };
-			},
-		});
-
-		assert.deepEqual(updateCalls, [
-			["SELECT * FROM discord.birthdays WHERE discord_id = 5678"],
-			[
-				"UPDATE discord.birthdays SET dob = $1, name = $2 WHERE discord_id = $3",
-				["1997-05-28", "Bob", "5678"],
-			],
-		]);
-		assert.deepEqual(update.replies, [{
-			content: "Birthday updated for <@5678>!",
-			flags: MessageFlags.Ephemeral,
-		}]);
+		for (const zone of ["UTC", "Europe/Brussels", "America/Los_Angeles"]) {
+			process.env.TZ = zone;
+			assert.equal(birthdayDate(1997, 5, 31), "1997-05-31");
+			assert.equal(birthdayDate(2000, 2, 29), "2000-02-29");
+			for (const [year, month, day] of [[1997, 2, 29], [1997, 4, 31], [1997, 5, 0], [1997, 13, 1], [1997, 5, 1.5], [1800, 1, 1]]) {
+				assert.equal(birthdayDate(year, month, day), null);
+			}
+			const today = new Date(2026, 8, 5, 12);
+			assert.equal(nextBirthday(new Date(1997, 8, 5), today).getFullYear(), 2026);
+			assert.equal(nextBirthday(new Date(2000, 1, 29), today).getFullYear(), 2028);
+		}
 	}
 	finally {
-		context.mock.timers.reset();
 		if (originalTimezone === undefined) delete process.env.TZ;
 		else process.env.TZ = originalTimezone;
 	}
 });
 
-test("addbirthday preserves year and calendar-date validation", async (context) => {
-	const originalTimezone = process.env.TZ;
-	process.env.TZ = "Europe/Amsterdam";
-	context.mock.timers.enable({
-		apis: ["Date"],
-		now: new Date(2026, 8, 4, 0, 0, 0),
-	});
-
-	try {
-		let queryCount = 0;
-		const invalidYear = birthdayInteraction({ year: 2028 });
-		await addBirthdayCommand.execute(invalidYear.interaction, {
-			query: async () => {
-				queryCount += 1;
-				return { rows: [] };
-			},
-		});
-		assert.deepEqual(invalidYear.replies, [{
-			content: "Please provide a valid year.",
-			flags: MessageFlags.Ephemeral,
-		}]);
-
-		const invalidDate = birthdayInteraction({ day: 29, month: "2", year: 2026 });
-		await addBirthdayCommand.execute(invalidDate.interaction, {
-			query: async () => {
-				queryCount += 1;
-				return { rows: [] };
-			},
-		});
-		assert.deepEqual(invalidDate.replies, [{
-			content: "Please provide a valid date.",
-			flags: MessageFlags.Ephemeral,
-		}]);
-		assert.equal(queryCount, 0);
-	}
-	finally {
-		context.mock.timers.reset();
-		if (originalTimezone === undefined) delete process.env.TZ;
-		else process.env.TZ = originalTimezone;
+test("birthday mutations report database errors and tolerate expired error responses", async (context) => {
+	const { default: logger } = await import("../core/logger.ts");
+	context.mock.method(logger, "error", () => undefined);
+	context.mock.method(logger, "warn", () => undefined);
+	for (const command of [addBirthdayCommand, removeBirthdayCommand]) {
+		const interaction = birthdayInteraction();
+		await command.execute(interaction, { query: async () => { throw new Error("DB down"); } });
+		assert.match(interaction.replies[1][1].content, /Could not/);
+		interaction.editReply = async () => { throw new Error("expired"); };
+		await assert.doesNotReject(command.execute(interaction, { query: async () => { throw new Error("DB down"); } }));
 	}
 });
 
-test("removebirthday preserves delete and missing-birthday SQL paths", async () => {
-	const deleteCalls = [];
-	const existing = birthdayInteraction({ userId: "9012", username: "Carol" });
-	await removeBirthdayCommand.execute(existing.interaction, {
-		query: async (...args) => {
-			deleteCalls.push(args);
-			return { rows: args[0].startsWith("SELECT") ? [{ discord_id: "9012" }] : [] };
-		},
-	});
-
-	assert.equal(removeBirthdayCommand.cooldown, 5);
-	assert.equal(removeBirthdayCommand.category, "user");
-	assert.deepEqual(deleteCalls, [
-		["SELECT * FROM discord.birthdays WHERE discord_id = 9012"],
-		["DELETE FROM discord.birthdays WHERE discord_id = 9012"],
-	]);
-	assert.deepEqual(existing.replies, [{
-		content: "Birthday reminder for <@9012> has been deleted.",
-		flags: MessageFlags.Ephemeral,
-	}]);
-
-	const missingCalls = [];
-	const missing = birthdayInteraction({ userId: "3456", username: "Dana" });
-	await removeBirthdayCommand.execute(missing.interaction, {
-		query: async (...args) => {
-			missingCalls.push(args);
-			return { rows: [] };
-		},
-	});
-
-	assert.deepEqual(missingCalls, [
-		["SELECT * FROM discord.birthdays WHERE discord_id = 3456"],
-	]);
-	assert.deepEqual(missing.replies, [{
-		content: "<@3456> does not have a birthday set.",
-		flags: MessageFlags.Ephemeral,
-	}]);
-});
-
-test("birthday database success does not swallow Discord reply failures", async () => {
-	const originalConsoleError = console.error;
-	const loggedErrors = [];
-	console.error = (...args) => {
-		loggedErrors.push(args);
-	};
-
-	try {
-		const replyError = new Error("reply failed");
-		const add = birthdayInteraction();
-		add.interaction.reply = async () => {
-			throw replyError;
-		};
-		await assert.rejects(
-			addBirthdayCommand.execute(add.interaction, {
-				query: async () => ({ rows: [{ discord_id: "1234" }] }),
-			}),
-			replyError,
-		);
-
-		const remove = birthdayInteraction();
-		remove.interaction.reply = async () => {
-			throw replyError;
-		};
-		await assert.rejects(
-			removeBirthdayCommand.execute(remove.interaction, {
-				query: async () => ({ rows: [] }),
-			}),
-			replyError,
-		);
-		assert.deepEqual(loggedErrors, []);
-	}
-	finally {
-		console.error = originalConsoleError;
+test("birthday removal uses parameterized delete and reports existing versus missing", async () => {
+	for (const exists of [true, false]) {
+		const interaction = birthdayInteraction();
+		await removeBirthdayCommand.execute(interaction, { query: async (sql, values) => {
+			assert.match(sql, /DELETE.*\$1 RETURNING/);
+			assert.deepEqual(values, ["1234"]);
+			return { rows: exists ? [{ discord_id: "1234" }] : [] };
+		} });
+		assert.match(interaction.replies[1][1].content, exists ? /deleted/ : /does not have/);
 	}
 });
 
@@ -263,7 +153,7 @@ test("showbirthdays preserves deferred reply and deterministic embed grouping", 
 		assert.equal(giphyURL.origin, "https://api.giphy.com");
 		assert.equal(giphyURL.pathname, "/v1/gifs/random");
 		assert.equal(giphyURL.searchParams.get("tag"), "birthday");
-		assert.deepEqual(queryCalls, [["SELECT * FROM discord.birthdays"]]);
+		assert.deepEqual(queryCalls, [["SELECT discord_id, name, dob::text FROM discord.birthdays"]]);
 		assert.deepEqual(fetchedMembers, ["later-id", "today-id", "missing-id"]);
 		assert.equal(events[0], "defer");
 		const embed = events[1].embeds[0].toJSON();

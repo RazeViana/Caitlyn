@@ -1,3 +1,11 @@
+/**
+ * @file caitlynAI.test.js
+ * @description Tests disabled AI, conversation context, reply delivery, and memory storage.
+ * Uses deterministic service substitutes for successful replies and error fallbacks.
+ *
+ * @module caitlynAI.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -163,7 +171,7 @@ test("AI replies use vector context and store both user and assistant messages",
 			{ role: "user", content: "Alice: Where did we leave off?" },
 		],
 	}]);
-	assert.deepEqual(sentMessages, ["Here is the answer."]);
+	assert.deepEqual(sentMessages, [{ content: "Here is the answer.", allowedMentions: { parse: [] } }]);
 	assert.deepEqual(storedMessages, [
 		{
 			channelId: "channel-id",
@@ -187,13 +195,11 @@ test("AI replies use vector context and store both user and assistant messages",
 test("AI errors send the existing user-facing fallback", async () => {
 	const sentMessages = [];
 	const loggedErrors = [];
-	const failure = new Error("context unavailable");
+	const failure = new Error("chat unavailable");
 
 	await caitlynAI(createMessage(sentMessages), {
-		chat: async () => "Unexpected reply",
-		getConversationContext: async () => {
-			throw failure;
-		},
+		chat: async () => { throw failure; },
+		getConversationContext: async () => [],
 		isAIEnabled: () => true,
 		logger: {
 			debug: () => undefined,

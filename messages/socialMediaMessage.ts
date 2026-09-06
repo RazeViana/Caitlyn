@@ -4,7 +4,7 @@
  * It identifies URLs from supported social media platforms (e.g., Instagram, Reddit, TikTok, Twitter),
  * replaces their domains with alternative "ez" domains, and sends the modified URL back to the channel.
  *
- * If a valid URL is found, the original message is deleted, and the updated URL is sent as a new message.
+ * If a valid URL is found, its replacement is sent before the original is deleted.
  * This functionality is useful for redirecting users to alternative versions of social media links.
  *
  * Supported platforms include:
@@ -17,6 +17,7 @@
  */
 
 import type { Message, SendableChannels } from "discord.js";
+import logger from "../core/logger.js";
 
 async function socialMediaMessage(message: Message): Promise<void> {
 	// Extract the URL if it’s the first thing in the message
@@ -47,13 +48,14 @@ async function socialMediaMessage(message: Message): Promise<void> {
 	// Build the new URL
 	const ezUrl = originalUrl.replace(domain, replacement);
 
-	// Delete the original message and send the new URL
+	// Preserve the original if sending fails; retain any text following the URL.
 	try {
+		const suffix = message.content.slice(originalUrl.length);
+		await (message.channel as SendableChannels).send(`[${domain}](${ezUrl})${suffix}`);
 		await message.delete();
-		await (message.channel as SendableChannels).send(`[${domain}](${ezUrl})`);
 	}
-	catch {
-		// Silently fail - message might have been deleted or permissions issue
+	catch (error) {
+		logger.warn("Could not complete social link replacement:", error);
 	}
 }
 

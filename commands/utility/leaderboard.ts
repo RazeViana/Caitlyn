@@ -13,6 +13,8 @@ import {
 } from "discord.js";
 import { formatDuration, getTopActiveUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import { respondWithError } from "../../core/interactionResponse.js";
+import { truncate } from "../../core/textLimits.js";
 import type { ActivityRow } from "../../types/models.js";
 
 export interface LeaderboardCommandDependencies {
@@ -42,6 +44,10 @@ export async function execute(
 	dependencies: LeaderboardCommandDependencies = defaultLeaderboardCommandDependencies,
 ): Promise<void> {
 	try {
+		if (!interaction.guild) {
+			await respondWithError(interaction, "Use this command in a server.");
+			return;
+		}
 		const limit = interaction.options.getInteger("limit") || 10;
 		const guildId = interaction.guild!.id;
 
@@ -76,8 +82,8 @@ export async function execute(
 		// Create embed
 		const embed = new EmbedBuilder()
 			.setColor(0xffd700)
-			.setTitle(`🏆 ${interaction.guild!.name} Activity Leaderboard`)
-			.setDescription(leaderboardText)
+			.setTitle(truncate(`🏆 ${interaction.guild!.name} Activity Leaderboard`, 256))
+			.setDescription(truncate(leaderboardText, 4_000))
 			.setFooter({
 				text: "Activity Score = Messages + Voice Joins + (Voice Time / 60)",
 			})
@@ -89,8 +95,6 @@ export async function execute(
 	}
 	catch (error) {
 		logger.error("Error fetching leaderboard:", error);
-		await interaction.editReply({
-			content: "❌ Failed to fetch leaderboard. Please try again later.",
-		});
+		await respondWithError(interaction, "❌ Failed to fetch leaderboard. Please try again later.");
 	}
 }

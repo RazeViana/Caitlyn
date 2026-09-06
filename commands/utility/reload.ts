@@ -1,6 +1,15 @@
+/**
+ * @file reload.ts
+ * @description Reloads a slash command through a cache-busted module import.
+ * Validates the replacement before updating the registry and reports failures safely.
+ *
+ * @module reload
+ */
+
 import {
 	SlashCommandBuilder,
 	MessageFlags,
+	PermissionFlagsBits,
 	type AutocompleteInteraction,
 	type ChatInputCommandInteraction,
 } from "discord.js";
@@ -8,6 +17,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import logger from "../../core/logger.js";
 import { isBotCommand } from "../../types/command.js";
+import { respondWithError } from "../../core/interactionResponse.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +36,7 @@ export const category = "utility";
 export const data = new SlashCommandBuilder()
 	.setName("reload")
 	.setDescription("Reloads a command.")
+	.setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 	.addStringOption((option) =>
 		option
 			.setName("command")
@@ -72,32 +83,19 @@ export async function execute(
 		);
 		const fileUrl = pathToFileURL(commandPath);
 		fileUrl.searchParams.set("update", dependencies.now().toString());
-		let newCommand: unknown;
-		try {
-			newCommand = await dependencies.importModule(fileUrl.href);
-		}
-		catch (error) {
-			// Preserve the current behavior of removing a command when its import fails.
-			interaction.client.commands.delete(loadedCommand.data.name);
-			throw error;
-		}
-		if (!isBotCommand(newCommand)) {
+		const newCommand: unknown = await dependencies.importModule(fileUrl.href);
+		if (!isBotCommand(newCommand) || newCommand.data.name !== loadedCommand.data.name) {
 			throw new Error("Reloaded command is invalid.");
 		}
 		// Set the commands to the client commands collection
-		interaction.client.commands.delete(loadedCommand.data.name);
 		interaction.client.commands.set(newCommand.data.name, newCommand);
 		await interaction.reply(
 			`Command \`/${newCommand.data.name}\` was reloaded!`,
-		);
+		).catch((error: unknown) => logger.warn("Command reloaded, but confirmation could not be sent:", error));
 	}
 	catch (error) {
 		logger.error("Error reloading command:", error);
-		const errorMessage = (error as { message?: unknown }).message;
-		await interaction.reply({
-			content: `There was an error while reloading a command \`/${loadedCommand.data.name}\`:\n\`${errorMessage}\``,
-			flags: MessageFlags.Ephemeral,
-		});
+		await respondWithError(interaction, `Could not reload /${loadedCommand.data.name}. The existing command has been kept.`);
 	}
 }
 

@@ -1,3 +1,11 @@
+/**
+ * @file environment.ts
+ * @description Loads and validates bot configuration before service initialization.
+ * Checks required settings and optional defaults without exposing their values in errors.
+ *
+ * @module environment
+ */
+
 import "dotenv/config";
 
 export type Environment = Record<string, string | undefined>;

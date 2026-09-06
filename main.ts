@@ -1,15 +1,24 @@
+/**
+ * @file main.ts
+ * @description Coordinates validated bot startup, service readiness, and bounded shutdown.
+ * Keeps imports inert and drains accepted work before closing Discord and PostgreSQL.
+ *
+ * @module main
+ */
+
 import "dotenv/config";
 
 import { pathToFileURL } from "node:url";
 import { GatewayIntentBits, type Client } from "discord.js";
 import { createClient } from "./core/createClient.js";
-import { createPGPool } from "./core/createPGPool.js";
+import { createPGPool, pool } from "./core/createPGPool.js";
+import { withTimeout } from "./core/asyncTools.js";
 import { validateEnvironment } from "./core/environment.js";
 import { loginClient } from "./core/loginClient.js";
 import logger from "./core/logger.js";
 import { commandHandler } from "./handlers/commandHandler.js";
 import { startCronJobs } from "./handlers/cronJobHandler.js";
-import { eventHandler } from "./handlers/eventHandler.js";
+import { drainEvents, eventHandler } from "./handlers/eventHandler.js";
 
 interface StartBotLogger {
 	error: (...args: unknown[]) => void;
@@ -17,21 +26,25 @@ interface StartBotLogger {
 }
 
 export interface StartBotDependencies {
+	closeDatabase: () => Promise<void>;
 	commandHandler: (client: Client) => Promise<void>;
 	createClient: (intents: GatewayIntentBits[]) => Client;
 	createPGPool: () => Promise<void>;
 	eventHandler: (client: Client) => Promise<void>;
-	loginClient: (client: Client) => void;
+	drainEvents: (client: Client) => Promise<void>;
+	loginClient: (client: Client) => Promise<void>;
 	logger: StartBotLogger;
-	startCronJobs: (client: Client) => void;
+	startCronJobs: (client: Client) => () => Promise<void>;
 	validateEnvironment: () => void;
 }
 
 const defaultDependencies: StartBotDependencies = {
+	closeDatabase: () => pool.end(),
 	commandHandler,
 	createClient,
 	createPGPool,
 	eventHandler,
+	drainEvents,
 	loginClient,
 	logger,
 	startCronJobs,
@@ -40,13 +53,40 @@ const defaultDependencies: StartBotDependencies = {
 
 export async function startBot(
 	dependencies: StartBotDependencies = defaultDependencies,
-): Promise<void> {
+): Promise<{ stop: () => Promise<void> }> {
+	let client: Client | undefined;
+	let closeJobs: (() => Promise<void>) | undefined;
+	let stopping: Promise<void> | undefined;
+	const stop = (): Promise<void> => {
+		stopping ??= (async () => {
+			if (!client) return;
+			const cleanup = async (label: string, action: () => Promise<unknown>): Promise<void> => {
+				try {
+					await withTimeout(action(), 10_000, label);
+				}
+				catch (error) {
+					dependencies.logger.error(`Failed during ${label}:`, error);
+				}
+			};
+			await cleanup("work drain", async () => {
+				const outcomes = await Promise.allSettled([
+					dependencies.drainEvents(client!),
+					closeJobs?.(),
+				]);
+				const failures = outcomes.filter((outcome) => outcome.status === "rejected");
+				if (failures.length) throw new AggregateError(failures.map((failure) => failure.reason), "Work drain failed");
+			});
+			await cleanup("Discord shutdown", () => client!.destroy());
+			await cleanup("database shutdown", dependencies.closeDatabase);
+		})();
+		return stopping;
+	};
 	try {
 		dependencies.validateEnvironment();
 		dependencies.logger.info("Starting Caitlyn bot...");
 
 		// Create a new client instance
-		const client = dependencies.createClient([
+		client = dependencies.createClient([
 			GatewayIntentBits.Guilds,
 			GatewayIntentBits.GuildMessages,
 			GatewayIntentBits.MessageContent,
@@ -61,46 +101,55 @@ export async function startBot(
 		await dependencies.commandHandler(client);
 		await dependencies.eventHandler(client);
 
-		// Start the cron job handler scheduled event
-		dependencies.logger.info("Starting cron jobs...");
-		dependencies.startCronJobs(client);
-
 		// Log in the client
 		dependencies.logger.info("Logging in to Discord...");
-		dependencies.loginClient(client);
+		await dependencies.loginClient(client);
+
+		dependencies.logger.info("Starting cron jobs...");
+		closeJobs = dependencies.startCronJobs(client);
 		dependencies.logger.info("Bot started successfully");
+		return { stop };
 	}
 	catch (error) {
 		dependencies.logger.error("Failed to start bot:", error);
-		process.exit(1);
+		await stop();
+		throw error;
 	}
 }
 
-function registerProcessHandlers(): void {
+function registerProcessHandlers(shutdown: (code: number) => void): void {
 	// Handle uncaught exceptions
 	process.on("uncaughtException", (error) => {
 		logger.error("Uncaught Exception:", error);
-		process.exit(1);
+		shutdown(1);
 	});
 
 	process.on("unhandledRejection", (reason, promise) => {
 		logger.error("Unhandled Rejection at:", promise, "reason:", reason);
-		process.exit(1);
+		shutdown(1);
 	});
 
 	// Handle graceful shutdown
 	process.on("SIGTERM", () => {
 		logger.info("SIGTERM signal received. Shutting down gracefully...");
-		process.exit(0);
+		shutdown(0);
 	});
 
 	process.on("SIGINT", () => {
 		logger.info("SIGINT signal received. Shutting down gracefully...");
-		process.exit(0);
+		shutdown(0);
 	});
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	registerProcessHandlers();
-	void startBot();
+	const startup = startBot();
+	let stopping = false;
+	registerProcessHandlers((code) => {
+		if (stopping) return;
+		stopping = true;
+		void withTimeout(startup.then((runtime) => runtime.stop()), 15_000, "Shutdown")
+			.catch((error: unknown) => logger.error("Shutdown failed:", error))
+			.finally(() => process.exit(code));
+	});
+	void startup.catch(() => { process.exitCode = 1; });
 }

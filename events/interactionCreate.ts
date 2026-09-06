@@ -9,8 +9,9 @@
  * @module interactionCreate
  */
 
-import { Collection, Events, type Interaction } from "discord.js";
+import { Collection, Events, PermissionFlagsBits, type Interaction } from "discord.js";
 import logger from "../core/logger.js";
+import { respondWithError } from "../core/interactionResponse.js";
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction: Interaction): Promise<unknown> {
@@ -29,17 +30,23 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 
 	// Check if the interaction is a command
 	if (!interaction.isChatInputCommand()) return;
+	if (["reload", "toggleai"].includes(interaction.commandName)
+		&& !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+		await respondWithError(interaction, "Only server administrators can use this command.");
+		return;
+	}
 
 	// Get the command from the client
 	const command = interaction.client.commands.get(interaction.commandName);
 	// Check if the command exists
 	if (!command) {
 		logger.error(`No command matching ${interaction.commandName} was found.`);
+		await respondWithError(interaction, "That command is currently unavailable. Please try again later.");
 		return;
 	}
 
 	// Create the cooldowns collection for the client
-	interaction.client.cooldowns = new Collection();
+	interaction.client.cooldowns ??= new Collection();
 	const cooldowns = interaction.client.cooldowns;
 
 	// Check if the command is in the cooldowns collection
@@ -64,16 +71,16 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 		// If the user is on cooldown, calculate the expiration time
 		if (now < expirationTime) {
 			const expiredTimestamp = Math.round(expirationTime / 1000);
-			return interaction.reply({
-				content: `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`,
-				ephemeral: true,
-			});
+			await respondWithError(interaction, `Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`);
+			return;
 		}
 	}
 
 	// Set the cooldown for the user when they use the command
 	timestamps.set(interaction.user.id, now);
-	setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
+	setTimeout(() => {
+		if (timestamps.get(interaction.user.id) === now) timestamps.delete(interaction.user.id);
+	}, cooldownAmount).unref();
 
 	// Try to execute the command
 	try {
@@ -81,5 +88,6 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 	}
 	catch (error) {
 		logger.error(`Error executing ${interaction.commandName}:`, error);
+		await respondWithError(interaction);
 	}
 }

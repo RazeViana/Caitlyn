@@ -1,3 +1,11 @@
+/**
+ * @file environmentLoading.test.js
+ * @description Verifies direct core imports load configuration from a local environment file.
+ * Runs in an isolated temporary directory with synthetic settings.
+ *
+ * @module environmentLoading.test
+ */
+
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

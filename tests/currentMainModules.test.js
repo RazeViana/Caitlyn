@@ -1,3 +1,11 @@
+/**
+ * @file currentMainModules.test.js
+ * @description Verifies that the integration source retains every expected command and event.
+ * Checks module exports without starting the bot.
+ *
+ * @module currentMainModules.test
+ */
+
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";

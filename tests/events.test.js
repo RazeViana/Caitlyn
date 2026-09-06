@@ -1,3 +1,11 @@
+/**
+ * @file events.test.js
+ * @description Tests Discord event routing, voice-move ordering, and interaction error handling.
+ * Uses synthetic events without a live Discord connection.
+ *
+ * @module events.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Events } from "discord.js";
@@ -49,11 +57,11 @@ test("voice moves record leave before join while bot users are ignored", async (
 	};
 	const operation = voiceStateUpdate.execute(oldState, newState, dependencies);
 
-	assert.deepEqual(calls, [["leave", "guild-id", "user-id", "Alice"]]);
+	assert.deepEqual(calls, [["leave", "guild-id", "user-id", "Alice", "old-channel"]]);
 	leaveGate.resolve();
 	await operation;
 	assert.deepEqual(calls, [
-		["leave", "guild-id", "user-id", "Alice"],
+		["leave", "guild-id", "user-id", "Alice", "old-channel"],
 		["join", "guild-id", "user-id", "Alice", "new-channel", "New room"],
 	]);
 

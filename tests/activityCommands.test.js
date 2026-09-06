@@ -1,3 +1,11 @@
+/**
+ * @file activityCommands.test.js
+ * @description Tests activity, leaderboard, streak, and AI-toggle command responses.
+ * Checks rendering, empty results, permissions metadata, and confirmation failures with substitutes.
+ *
+ * @module activityCommands.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
@@ -25,7 +33,8 @@ test("activity command renders counts, averages, and streak fields", async () =>
 	const interaction = {
 		guild: { id: "guild-id" },
 		options: { getUser: () => target },
-		reply: async (response) => {
+		deferReply: async () => undefined,
+		editReply: async (response) => {
 			replies.push(response);
 		},
 		user: requester,
@@ -100,13 +109,14 @@ test("activity command renders counts, averages, and streak fields", async () =>
 	assert.match(embed.timestamp, /^\d{4}-\d{2}-\d{2}T/);
 });
 
-test("activity command preserves its ephemeral empty state", async () => {
+test("activity command edits its deferred response for an empty result", async () => {
 	const replies = [];
 	const requester = commandUser("requester-id", "Requester");
 	await activityCommand.execute({
 		guild: { id: "guild-id" },
 		options: { getUser: () => null },
-		reply: async (response) => {
+		deferReply: async () => undefined,
+		editReply: async (response) => {
 			replies.push(response);
 		},
 		user: requester,
@@ -116,7 +126,6 @@ test("activity command preserves its ephemeral empty state", async () => {
 
 	assert.deepEqual(replies, [{
 		content: "No activity data found for Requester.",
-		ephemeral: true,
 	}]);
 });
 
@@ -215,7 +224,8 @@ test("leaderboard and streak commands preserve ordering and empty states", async
 	await streaksCommand.execute({
 		guild,
 		options: { getInteger: () => 5 },
-		reply: async (response) => {
+		deferReply: async () => undefined,
+		editReply: async (response) => {
 			streakReplies.push(response);
 		},
 		user: requester,
@@ -277,7 +287,8 @@ test("leaderboard and streak commands preserve ordering and empty states", async
 	await streaksCommand.execute({
 		guild,
 		options: { getInteger: () => null },
-		reply: async (response) => {
+		deferReply: async () => undefined,
+		editReply: async (response) => {
 			streakReplies.push(response);
 		},
 		user: requester,
@@ -286,7 +297,6 @@ test("leaderboard and streak commands preserve ordering and empty states", async
 	});
 	assert.deepEqual(streakReplies, [{
 		content: "No activity streak data found for this server yet.",
-		ephemeral: true,
 	}]);
 });
 
@@ -356,7 +366,7 @@ test("toggleai changes enabled AI to disabled and replies with the disabled ephe
 	}
 });
 
-test("toggleai preserves the existing error reply payload when its success reply fails", async () => {
+test("toggleai reports the actual state when its confirmation fails", async () => {
 	const originalLLMEnabled = process.env.LLM_ENABLED;
 	const originalConsoleError = console.error;
 	const originalConsoleLog = console.log;
@@ -379,8 +389,8 @@ test("toggleai preserves the existing error reply payload when its success reply
 
 		assert.equal(replyAttempts, 2);
 		assert.deepEqual(replies, [{
-			content: "❌ Failed to toggle AI. Check the logs for details.",
-			MessageFlags: MessageFlags.Ephemeral,
+			content: "Could not confirm the change. AI is currently enabled.",
+			flags: MessageFlags.Ephemeral,
 		}]);
 	}
 	finally {

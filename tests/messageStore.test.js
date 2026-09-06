@@ -1,7 +1,17 @@
+/**
+ * @file messageStore.test.js
+ * @description Tests vector-message storage, context ordering, and old-message cleanup.
+ * Checks SQL arguments and failure propagation using database substitutes.
+ *
+ * @module messageStore.test
+ */
+
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
-process.env.EMBEDDING_ENDPOINT = "data:application/json,%7B%22embedding%22%3A%5B0.25%2C-0.5%5D%7D";
+const fixtureEmbedding = Array.from({ length: 768 }, () => 0.25);
+const vectorString = JSON.stringify(fixtureEmbedding);
+process.env.EMBEDDING_ENDPOINT = `data:application/json,${encodeURIComponent(JSON.stringify({ embedding: fixtureEmbedding }))}`;
 process.env.EMBEDDING_MODEL = "dummy-embedding-model";
 process.env.PGDATABASE = "dummy_database";
 process.env.PGHOST = "localhost";
@@ -65,10 +75,10 @@ test("message storage preserves vector SQL and context ordering", async () => {
 		"Raze",
 		"user",
 		"Remember this",
-		"[0.25,-0.5]",
+		vectorString,
 	]);
 	assert.match(calls[2].query, /\$1::vector/);
-	assert.deepEqual(calls[2].values, ["[0.25,-0.5]", "channel-1", 0.75, 2]);
+	assert.deepEqual(calls[2].values, [vectorString, "channel-1", 0.75, 2]);
 	assert.deepEqual(context.map(({ id: messageId, source }) => ({ id: messageId, source })), [
 		{ id: 1, source: "recent" },
 		{ id: 3, source: "similar" },

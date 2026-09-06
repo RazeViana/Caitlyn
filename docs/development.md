@@ -18,7 +18,7 @@ npm start
 
 The build always removes the old `dist/` tree first. Do not commit generated output.
 
-The latest continuation notes and remaining work are in [the modernization handoff](handoff.md). The integration plan under `docs/superpowers/` records the earlier TypeScript migration; its original unchecked steps are historical, not the current task list.
+Start with [the project README](../README.md), [the modernization handoff](handoff.md), and [the current task list](.todo). The integration plan under `docs/superpowers/` records the earlier TypeScript migration; its original unchecked steps are historical, not the current task list.
 
 To check test isolation from local logging settings:
 
@@ -39,6 +39,45 @@ For dependency maintenance, preserve the TypeScript 7 compiler / TypeScript 6 pa
 - Keep tabs, double quotes, semicolons, and Stroustrup braces.
 - Add behavior tests under `tests/` and keep external Discord, PostgreSQL, Open WebUI, embeddings, Giphy, timer, and network calls behind deterministic substitutes.
 
+### File headers
+
+When creating or editing a source file, follow the existing top-of-file JSDoc pattern. Use the exact filename, including its extension and case, a description of the module's responsibility, and its module name. Keep the description accurate when behavior changes; function-level comments supplement this header rather than replacing it.
+
+```typescript
+/**
+ * @file birthdayDate.ts
+ * @description Validates date-only birthdays and calculates their next calendar occurrence.
+ * Handles leap days without shifting stored dates across timezones.
+ *
+ * @module birthdayDate
+ */
+```
+
+Apply the same pattern to runtime modules, operational scripts, tests, shared types, and JavaScript configuration files. Tests use their filename stem as the module name, such as `resilience.test`. Use native comment syntax for other comment-capable formats, such as `--` in new SQL migrations. Do not rewrite applied migrations just to change comments, or add comments to JSON files.
+
+### Folder structure and documentation
+
+Place files by responsibility and follow their neighboring modules. Keep the existing category folders and naming style; do not scatter helpers, tests, or notes alongside unrelated code.
+
+| Location | Contents |
+| --- | --- |
+| `main.ts` | Application entry point and lifecycle orchestration |
+| `core/` | Shared services and helpers, including database, dates, timeouts, and interaction responses |
+| `commands/user/`, `commands/utility/` | Slash commands grouped by their existing category |
+| `events/` | Discord event entry points |
+| `handlers/` | Module discovery and event, command, message, or job routing |
+| `jobs/` | Scheduled tasks |
+| `messages/` | AI, birthday, and social-message flows |
+| `migrations/` | Append-only numbered SQL migrations |
+| `scripts/` | Operational tools and build scripts |
+| `tests/` | Automated tests, separate from runtime modules |
+| `types/` | Shared TypeScript contracts and declarations |
+| `README.md` | GitHub project overview and documentation entry point at the repository root |
+| `docs/` | `.todo`, handoff, development guides, audits, and plans/specifications |
+| `backups/` | Private database archives and environment snapshots, never documentation |
+
+Keep `README.md` at the repository root for GitHub and place all supporting project documentation under `docs/`. Existing plan/specification subfolders may remain nested there. Local restore notes belong in Git-ignored `docs/local-database.md`, not beside database archives; preserve their ignore rule and owner-only permissions. Tool-discovery files such as `CLAUDE.md`, package/build configuration, and workflow files stay in the locations their tools require.
+
 ## Database work
 
 Run SQL migrations in filename order with the source-time migration runner:
@@ -47,7 +86,21 @@ Run SQL migrations in filename order with the source-time migration runner:
 npx tsx scripts/runMigration.ts <migration_file.sql>
 ```
 
-A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. Existing migrations `001` through `008` are documented in the project README.
+A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. Migrations `001` through `010` are documented in the [project README](../README.md#database-migrations). Migration `009` matches the legacy birthday table and is safe when that table already exists. Migration `010` adds the unique Discord-ID index required by upserts and stops rather than deleting duplicate birthdays. Historical migrations `001` through `008` remain unchanged.
+
+The runner does not track applied migrations. Run the full sequence only on a new database; on restored databases, apply only missing migrations. In particular, replaying `002` replaces the embedding column and its data.
+
+To verify the migration sequence using local PostgreSQL with pgvector installed:
+
+```bash
+CAITLYN_TEST_POSTGRES=1 node --import tsx --test tests/databaseMigrations.test.js
+```
+
+This opt-in test creates a uniquely named `caitlyn_migrations_*` database from `template0`, applies all migrations, checks birthday storage and repeat-application safety, and drops only its own database in cleanup. It also injects activity-write failures and concurrent voice retries using the application's transaction helper. Connections use only explicit test configuration: `127.0.0.1`, port `5432`, and the current OS user by default. Application imports may load `.env`, but its connection values never select the test target. The local role needs permission to create databases and install pgvector. Override the port, role, or password with `CAITLYN_TEST_PGPORT`, `CAITLYN_TEST_PGUSER`, and `CAITLYN_TEST_PGPASSWORD` if needed. The test is skipped during ordinary `npm test` unless explicitly enabled.
+
+Failure-handling contracts, migration requirements, and remaining rollout work are documented in [resilience and rollout](resilience.md). Never test outages by stopping production services or logging a test process into the real Discord bot.
+
+Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 
 ## Branch base
 

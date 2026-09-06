@@ -1,3 +1,11 @@
+/**
+ * @file startup.test.js
+ * @description Tests startup ordering, required intents, and deployment configuration validation.
+ * Checks malformed settings and optional defaults before any real service is contacted.
+ *
+ * @module startup.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GatewayIntentBits } from "discord.js";
@@ -29,10 +37,12 @@ test("startup preserves initialization order and required Discord intents", asyn
 	try {
 		const { startBot } = await import("../main.ts");
 		const calls = [];
-		const client = {};
+		const client = { destroy: async () => undefined };
 		let receivedIntents;
 
 		await startBot({
+			closeDatabase: async () => undefined,
+			drainEvents: async () => undefined,
 			validateEnvironment: () => {
 				validateEnvironment(validEnvironment);
 				calls.push("validate environment");
@@ -53,7 +63,7 @@ test("startup preserves initialization order and required Discord intents", asyn
 				assert.equal(receivedClient, client);
 				calls.push("load events");
 			},
-			loginClient: (receivedClient) => {
+			loginClient: async (receivedClient) => {
 				assert.equal(receivedClient, client);
 				calls.push("log in");
 			},
@@ -64,6 +74,7 @@ test("startup preserves initialization order and required Discord intents", asyn
 			startCronJobs: (receivedClient) => {
 				assert.equal(receivedClient, client);
 				calls.push("start cron jobs");
+				return async () => undefined;
 			},
 		});
 
@@ -73,8 +84,8 @@ test("startup preserves initialization order and required Discord intents", asyn
 			"initialize PostgreSQL",
 			"load commands",
 			"load events",
-			"start cron jobs",
 			"log in",
+			"start cron jobs",
 		]);
 		assert.deepEqual(receivedIntents, [
 			GatewayIntentBits.Guilds,
@@ -162,14 +173,9 @@ test("startup rejects malformed ports, context counts, IDs, URLs, and switches w
 	});
 });
 
-test("invalid configuration exits before creating clients, connecting, scheduling, or logging in", async (context) => {
+test("invalid configuration rejects before creating clients, connecting, scheduling, or logging in", async () => {
 	const { startBot } = await import("../main.ts");
 	const calls = [];
-	const exitError = new Error("stubbed process exit");
-	context.mock.method(process, "exit", (code) => {
-		assert.equal(code, 1);
-		throw exitError;
-	});
 	const errors = [];
 	const recordCall = () => calls.push("unexpected service call");
 	await assert.rejects(startBot({
@@ -184,7 +190,7 @@ test("invalid configuration exits before creating clients, connecting, schedulin
 		},
 		startCronJobs: recordCall,
 		validateEnvironment: () => validateEnvironment({}),
-	}), exitError);
+	}), /Invalid environment configuration/);
 	assert.deepEqual(calls, []);
 	assert.equal(errors.length, 1);
 	assert.match(errors[0][1].message, /TOKEN is required/);

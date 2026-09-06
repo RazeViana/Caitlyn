@@ -1,7 +1,7 @@
 /**
  * @file ollama.ts
- * @description This module provides a function to interact with Open WebUI API.
- * Supports web search, memory, and persistent chat history features.
+ * @description Sends conversation messages to the configured Open WebUI chat API.
+ * Bounds requests, validates reply content, and propagates service failures to the caller.
  *
  * @module ollama
  */
@@ -36,7 +36,7 @@ async function chat(
 	messages: ChatMessage[],
 	chatId: string | null = null,
 	dependencies: FetchDependencies = { fetch: globalThis.fetch },
-): Promise<string | undefined> {
+): Promise<string> {
 	if (!WEBUI_API_KEY) {
 		logger.error("WEBUI_API_KEY is not set in environment variables");
 		throw new Error("WEBUI_API_KEY is required for Open WebUI integration");
@@ -59,10 +59,12 @@ async function chat(
 		requestBody.chat_id = chatId;
 	}
 
-	logger.debug(`Sending request to Open WebUI ${messages[0].content}`);
+	if (!messages.length) throw new Error("Chat requires at least one message");
+	logger.debug("Sending request to Open WebUI");
 
 	try {
 		const response = await dependencies.fetch(WEBUI_CHAT_ENDPOINT, {
+			signal: AbortSignal.timeout(45_000),
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -72,28 +74,27 @@ async function chat(
 		});
 
 		if (!response.ok) {
-			const errorText = await response.text();
-			logger.error(`Open WebUI API error (${response.status}): ${errorText}`);
-			throw new Error(
-				`Open WebUI API returned ${response.status}: ${errorText}`,
-			);
+			await response.body?.cancel();
+			throw new Error(`Open WebUI API returned ${response.status}`);
 		}
 
 		const data = await response.json() as OpenWebUIResponse;
 
 		// Parse OpenAI-compatible response format
-		if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-			logger.error("Invalid response format from Open WebUI:", data);
+		if (typeof data?.choices?.[0]?.message?.content !== "string"
+			|| !data.choices[0].message.content.trim()) {
 			throw new Error("Invalid response format from Open WebUI API");
 		}
 
-		const reply = data.choices[0].message.content.replace(/^caitlyn:\s*/i, "");
-		logger.debug(`Received response from Open WebUI ${reply}`);
+		const reply = data.choices[0].message.content.replace(/^caitlyn:\s*/i, "").trim();
+		if (!reply) throw new Error("Open WebUI returned an empty reply");
+		logger.debug("Received response from Open WebUI");
 
 		return reply;
 	}
 	catch (error) {
 		logger.error("Error communicating with Open WebUI:", error);
+		throw error;
 	}
 }
 

@@ -1,9 +1,7 @@
 /**
  * @file createPGPool.ts
- * @description This module provides functionality to create and manage a PostgreSQL connection pool
- * using the `pg` library.
- *
- * The pool instance is exported for use in other parts of the application.
+ * @description Configures the shared PostgreSQL pool with connection and query deadlines.
+ * Logs idle-pool errors and retries transient startup probes before propagating failure.
  *
  * @module createPGPool
  */
@@ -12,23 +10,36 @@ import "dotenv/config";
 
 import pg from "pg";
 import logger from "./logger.js";
+import { setTimeout as delay } from "node:timers/promises";
 
 const { Pool } = pg;
 
 // Create a new PostgreSQL connection pool
-const pool = new Pool();
+const pool = new Pool({
+	connectionTimeoutMillis: 5_000,
+	statement_timeout: 10_000,
+	query_timeout: 15_000,
+	idle_in_transaction_session_timeout: 15_000,
+});
+pool.on("error", (error) => {
+	logger.error("PostgreSQL background connection error; failed connection removed:", error);
+});
 
-async function createPGPool(): Promise<void> {
-	try {
-		// Check if the connection is successful by executing a simple query
-		const res = await pool.query("SELECT NOW()");
-		if (res.rows.length) {
+async function createPGPool(wait: (milliseconds: number) => Promise<unknown> = delay): Promise<void> {
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		try {
+			await pool.query("SELECT NOW()");
 			logger.success("Connected to PostgreSQL");
+			return;
 		}
-	}
-	catch (err) {
-		// If the connection fails, log the error and exit the process
-		logger.error("PostgreSQL connection failed:", err);
+		catch (error) {
+			const code = (error as { code?: string }).code ?? "";
+			const transient = ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "57P03"].includes(code)
+				|| code.startsWith("08");
+			if (!transient || attempt === 3) throw error;
+			logger.warn(`PostgreSQL unavailable; retrying startup (${attempt}/3)`);
+			await wait(attempt * 1_000);
+		}
 	}
 }
 

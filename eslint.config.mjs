@@ -1,3 +1,11 @@
+/**
+ * @file eslint.config.mjs
+ * @description Configures TypeScript-aware ESLint checks for source, scripts, and tests.
+ * Preserves the project's ESM, indentation, and comment conventions.
+ *
+ * @module eslint.config
+ */
+
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 

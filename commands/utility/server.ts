@@ -1,5 +1,5 @@
 /**
- * @file server.js
+ * @file server.ts
  * @description This module defines a Discord slash command that provides information about the server where the command is executed.
  * It uses the Discord.js library to create a command that displays the server's name and member count.
  *

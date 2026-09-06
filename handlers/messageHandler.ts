@@ -1,11 +1,7 @@
 /**
  * @file messageHandler.ts
- * @description This module handles incoming messages for a Discord.js bot.
- * It processes messages to filter out bot messages and empty content,
- * and utilizes message functions to handle specific message content.
- *
- * The primary function ensures that only valid user messages are processed
- * and delegates further processing to the message functions.
+ * @description Filters bot messages, tracks guild activity, and routes AI and social-message work.
+ * Contains activity failures and awaits independently settled message processors.
  *
  * @module messageHandler
  */
@@ -14,6 +10,7 @@ import type { Message } from "discord.js";
 import { trackMessage } from "../core/activityTracker.js";
 import { caitlynAI } from "../messages/caitlynAI.js";
 import { socialMediaMessage } from "../messages/socialMediaMessage.js";
+import logger from "../core/logger.js";
 
 export interface MessageHandlerDependencies {
 	caitlynAI: (message: Message) => Promise<void>;
@@ -37,17 +34,21 @@ async function messageHandler(
 ): Promise<void> {
 	// Track message for activity statistics
 	if (message.guild) {
-		await dependencies.trackMessage(
-			message.guild.id,
-			message.author.id,
-			message.author.username,
-		);
+		try {
+			await dependencies.trackMessage(message.guild.id, message.author.id, message.author.username);
+		}
+		catch (error) {
+			logger.error("Could not track message activity:", error);
+		}
 	}
 
 	// Start AI and social-media processing in their observed order
 	const aiOperation = dependencies.caitlynAI(message);
 	const socialOperation = dependencies.socialMediaMessage(message);
-	await Promise.all([aiOperation, socialOperation]);
+	const outcomes = await Promise.allSettled([aiOperation, socialOperation]);
+	for (const outcome of outcomes) {
+		if (outcome.status === "rejected") logger.error("Message processing failed:", outcome.reason);
+	}
 }
 
 export { messageHandler };

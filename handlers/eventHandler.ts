@@ -1,10 +1,7 @@
 /**
  * @file eventHandler.ts
- * @description This module provides a function to dynamically load and register event files for a Discord bot client.
- * It reads event files from a structured directory, validates their structure, and attaches them to the client's event listeners.
- *
- * The event files are expected to export an object containing `name` (event name), `execute` (event logic), and optionally `once` (boolean to indicate one-time execution) properties.
- * If an event file is missing these properties, it will not be registered.
+ * @description Discovers and validates Discord event modules before registering guarded listeners.
+ * Contains event failures and drains accepted work when shutdown stops new events.
  *
  * @module eventHandler
  */
@@ -17,10 +14,21 @@ import logger from "../core/logger.js";
 
 import { isBotEvent } from "../types/event.js";
 
+const eventWork = new WeakMap<Client, { accepting: boolean; pending: Set<Promise<void>> }>();
+
+export async function drainEvents(client: Client): Promise<void> {
+	const state = eventWork.get(client);
+	if (!state) return;
+	state.accepting = false;
+	await Promise.allSettled([...state.pending]);
+}
+
 async function eventHandler(
 	client: Client,
 	eventsRoot = fileURLToPath(new URL("../events", import.meta.url)),
 ): Promise<void> {
+	const state = { accepting: true, pending: new Set<Promise<void>>() };
+	eventWork.set(client, state);
 	// Get the events folder path
 	const eventsPath = eventsRoot;
 	const moduleExtension = path.extname(fileURLToPath(import.meta.url));
@@ -37,12 +45,21 @@ async function eventHandler(
 		const event: unknown = await import(pathToFileURL(filePath).href);
 		// Check if the event has a name and an execute function
 		if (!isBotEvent(event)) continue;
+		const listener = (...args: Parameters<typeof event.execute>): void => {
+			if (!state.accepting) return;
+			const operation = Promise.resolve().then(() => event.execute(...args)).then(
+				() => undefined,
+				(error: unknown) => logger.error(`Error handling Discord event ${event.name}:`, error),
+			);
+			state.pending.add(operation);
+			void operation.then(() => state.pending.delete(operation));
+		};
 
 		if (event.once) {
-			client.once(event.name, (...args) => event.execute(...args));
+			client.once(event.name, listener);
 		}
 		else {
-			client.on(event.name, (...args) => event.execute(...args));
+			client.on(event.name, listener);
 		}
 	}
 	// Log the loaded events

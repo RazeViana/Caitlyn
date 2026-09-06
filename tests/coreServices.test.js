@@ -1,3 +1,11 @@
+/**
+ * @file coreServices.test.js
+ * @description Tests PostgreSQL probing, AI state, Discord login, embeddings, and chat requests.
+ * Uses mocked connections and HTTP responses without contacting external services.
+ *
+ * @module coreServices.test
+ */
+
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
@@ -58,48 +66,35 @@ test("AI state honors LLM_ENABLED and toggles in memory", () => {
 	assert.equal(isAIEnabled(), true);
 });
 
-test("Discord login reads the call-time token and handles rejected logins", async () => {
+test("AI defaults to disabled without LLM_ENABLED and resets to that default", () => {
+	delete process.env.LLM_ENABLED;
+	resetAIState();
+	assert.equal(isAIEnabled(), false);
+	assert.equal(toggleAI(), true);
+	resetAIState();
+	assert.equal(isAIEnabled(), false);
+});
+
+test("Discord login stays pending until completion and propagates rejection", async () => {
 	const originalToken = process.env.TOKEN;
-	const originalConsoleError = console.error;
-	const loginTokens = [];
-	const loggedErrors = [];
-	const unhandledRejections = [];
 	let rejectLogin;
-	const loginPromise = new Promise((_resolve, reject) => {
-		rejectLogin = reject;
-	});
-	const unhandledRejectionHandler = (reason) => {
-		unhandledRejections.push(reason);
-	};
-
+	const promise = new Promise((_resolve, reject) => { rejectLogin = reject; });
 	process.env.TOKEN = "dummy-call-time-token";
-	console.error = (...args) => {
-		loggedErrors.push(args.join(" "));
-	};
-	process.on("unhandledRejection", unhandledRejectionHandler);
-
 	try {
-		const result = loginClient({
-			login(token) {
-				loginTokens.push(token);
-				return loginPromise;
-			},
-		});
-
-		assert.deepEqual(loginTokens, ["dummy-call-time-token"]);
-		assert.equal(result, undefined);
-
-		rejectLogin(new Error("dummy login rejection"));
+		let settled = false;
+		const login = loginClient({ login: (token) => {
+			assert.equal(token, "dummy-call-time-token");
+			return promise;
+		} });
+		const observed = login.finally(() => { settled = true; });
+		const rejection = assert.rejects(observed, /login rejected/);
 		await new Promise((resolve) => setImmediate(resolve));
-
-		assert.equal(loggedErrors.length, 1);
-		assert.match(loggedErrors[0], /Error logging in:.*dummy login rejection/s);
-		assert.deepEqual(unhandledRejections, []);
+		assert.equal(settled, false);
+		rejectLogin(new Error("login rejected"));
+		await rejection;
 	}
 	finally {
 		process.env.TOKEN = originalToken;
-		console.error = originalConsoleError;
-		process.off("unhandledRejection", unhandledRejectionHandler);
 	}
 });
 
@@ -107,7 +102,7 @@ test("embedding requests preserve endpoint, model, and response vector", async (
 	const requests = [];
 	const fakeFetch = async (url, options) => {
 		requests.push({ url, options });
-		return new Response(JSON.stringify({ embedding: [0.125, -0.5, 0.75] }), {
+		return new Response(JSON.stringify({ embedding: Array.from({ length: 768 }, () => 0.125) }), {
 			headers: { "Content-Type": "application/json" },
 			status: 200,
 		});
@@ -115,7 +110,7 @@ test("embedding requests preserve endpoint, model, and response vector", async (
 
 	const embedding = await generateEmbedding("hello embeddings", { fetch: fakeFetch });
 
-	assert.deepEqual(embedding, [0.125, -0.5, 0.75]);
+	assert.deepEqual(embedding, Array.from({ length: 768 }, () => 0.125));
 	assert.equal(requests.length, 1);
 	assert.equal(requests[0].url, "https://embedding.invalid/api/embeddings");
 	assert.equal(requests[0].options.method, "POST");

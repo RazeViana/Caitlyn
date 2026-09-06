@@ -1,3 +1,10 @@
+/**
+ * @file event.ts
+ * @description Defines typed Discord event modules and their runtime validation guard.
+ *
+ * @module event
+ */
+
 import type { ClientEvents } from "discord.js";
 
 export interface BotEvent<K extends keyof ClientEvents = keyof ClientEvents> {

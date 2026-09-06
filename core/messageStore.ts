@@ -1,7 +1,7 @@
 /**
  * @file messageStore.ts
- * @description Handles storage and retrieval of Discord messages with vector embeddings.
- * Provides semantic search capabilities using PostgreSQL pgvector extension.
+ * @description Stores Discord messages with vector embeddings and retrieves recent or semantic context.
+ * Uses PostgreSQL pgvector and skips context services when their requested counts are zero.
  *
  * @module messageStore
  */
@@ -166,15 +166,15 @@ async function getConversationContext({
 }: ContextQuery): Promise<MessageContext[]> {
 	try {
 		// Get recent messages for immediate context
-		const recentMessages = await getRecentMessages(channelId, recentCount);
+		const recentMessages = recentCount > 0 ? await getRecentMessages(channelId, recentCount) : [];
 
 		// Get semantically similar messages for broader context
-		const similarMessages = await searchSimilarMessages({
+		const similarMessages = similarCount > 0 ? await searchSimilarMessages({
 			channelId,
 			query: currentMessage,
 			limit: similarCount,
 			threshold: 0.75,
-		});
+		}) : [];
 
 		// Combine and deduplicate messages
 		const messageMap = new Map<number, MessageContext>();

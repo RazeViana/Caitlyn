@@ -13,6 +13,8 @@ import {
 } from "discord.js";
 import { getTopStreakUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import { respondWithError } from "../../core/interactionResponse.js";
+import { truncate } from "../../core/textLimits.js";
 import type { ActivityRow } from "../../types/models.js";
 
 export interface StreaksCommandDependencies {
@@ -42,6 +44,11 @@ export async function execute(
 	dependencies: StreaksCommandDependencies = defaultStreaksCommandDependencies,
 ): Promise<void> {
 	try {
+		if (!interaction.guild) {
+			await respondWithError(interaction, "Use this command in a server.");
+			return;
+		}
+		await interaction.deferReply();
 		const limit = interaction.options.getInteger("limit") || 10;
 		const guildId = interaction.guild!.id;
 
@@ -49,9 +56,8 @@ export async function execute(
 		const topUsers = await dependencies.getTopStreakUsers(guildId, limit);
 
 		if (topUsers.length === 0) {
-			await interaction.reply({
+			await interaction.editReply({
 				content: "No activity streak data found for this server yet.",
-				ephemeral: true,
 			});
 			return;
 		}
@@ -72,22 +78,19 @@ export async function execute(
 		const embed = new EmbedBuilder()
 			.setColor(0xff6b35)
 			.setTitle("🔥 Activity Streak Leaderboard")
-			.setDescription(leaderboardText)
+			.setDescription(truncate(leaderboardText, 4_000))
 			.setTimestamp()
 			.setFooter({
 				text: `Requested by ${interaction.user.username}`,
 				iconURL: interaction.user.displayAvatarURL(),
 			});
 
-		await interaction.reply({ embeds: [embed] });
+		await interaction.editReply({ embeds: [embed] });
 
 		logger.debug("Streak leaderboard viewed");
 	}
 	catch (error) {
 		logger.error("Error fetching streak leaderboard:", error);
-		await interaction.reply({
-			content: "❌ Failed to fetch streak leaderboard. Please try again later.",
-			ephemeral: true,
-		});
+		await respondWithError(interaction, "❌ Failed to fetch streak leaderboard. Please try again later.");
 	}
 }

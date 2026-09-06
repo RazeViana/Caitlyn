@@ -1,3 +1,11 @@
+/**
+ * @file utilityCommands.test.js
+ * @description Tests utility-command metadata, responses, and runtime reload behavior.
+ * Checks replacement validation, missing commands, and autocomplete limits.
+ *
+ * @module utilityCommands.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MessageFlags } from "discord.js";
@@ -188,7 +196,7 @@ test("reload rejects an invalid imported namespace without replacing the command
 		assert.equal(commands.get("ping"), oldCommand);
 		assert.deepEqual(mutations, []);
 		assert.deepEqual(replies, [{
-			content: "There was an error while reloading a command `/ping`:\n`Reloaded command is invalid.`",
+			content: "Could not reload /ping. The existing command has been kept.",
 			flags: MessageFlags.Ephemeral,
 		}]);
 		assert.equal(loggedErrors.length, 1);

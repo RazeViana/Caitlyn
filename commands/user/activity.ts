@@ -13,6 +13,7 @@ import {
 } from "discord.js";
 import { formatDuration, getUserActivity } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
+import { respondWithError } from "../../core/interactionResponse.js";
 import type { ActivityRow } from "../../types/models.js";
 
 export interface ActivityCommandDependencies {
@@ -40,6 +41,11 @@ export async function execute(
 	dependencies: ActivityCommandDependencies = defaultActivityCommandDependencies,
 ): Promise<void> {
 	try {
+		if (!interaction.guild) {
+			await respondWithError(interaction, "Use this command in a server.");
+			return;
+		}
+		await interaction.deferReply();
 		const targetUser = interaction.options.getUser("user") || interaction.user;
 		const guildId = interaction.guild!.id;
 
@@ -47,9 +53,8 @@ export async function execute(
 		const activity = await dependencies.getUserActivity(guildId, targetUser.id);
 
 		if (!activity) {
-			await interaction.reply({
+			await interaction.editReply({
 				content: `No activity data found for ${targetUser.username}.`,
-				ephemeral: true,
 			});
 			return;
 		}
@@ -141,15 +146,12 @@ export async function execute(
 				iconURL: interaction.user.displayAvatarURL(),
 			});
 
-		await interaction.reply({ embeds: [embed] });
+		await interaction.editReply({ embeds: [embed] });
 
 		logger.debug(`Activity stats viewed for ${targetUser.username}`);
 	}
 	catch (error) {
 		logger.error("Error fetching activity stats:", error);
-		await interaction.reply({
-			content: "❌ Failed to fetch activity stats. Please try again later.",
-			ephemeral: true,
-		});
+		await respondWithError(interaction, "❌ Failed to fetch activity stats. Please try again later.");
 	}
 }

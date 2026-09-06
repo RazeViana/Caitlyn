@@ -1,3 +1,11 @@
+/**
+ * @file environment.d.ts
+ * @description Declares the bot's required and optional process environment variables.
+ * Runtime configuration checks remain in core/environment.ts.
+ *
+ * @module environment.d
+ */
+
 declare namespace NodeJS {
 	interface ProcessEnv {
 		CLIENT_ID: string;

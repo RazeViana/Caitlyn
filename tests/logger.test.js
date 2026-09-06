@@ -1,3 +1,11 @@
+/**
+ * @file logger.test.js
+ * @description Verifies log formatting and severity filtering in isolated subprocesses.
+ * Checks timestamps, tags, colors, and argument rendering independently of ambient settings.
+ *
+ * @module logger.test
+ */
+
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";

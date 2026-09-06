@@ -1,3 +1,11 @@
+/**
+ * @file messageHandler.test.js
+ * @description Tests activity tracking and overlapping AI/social message processing.
+ * Uses controlled promises to verify ordering and completion in either settlement order.
+ *
+ * @module messageHandler.test
+ */
+
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

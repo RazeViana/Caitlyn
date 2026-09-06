@@ -11,10 +11,10 @@ import {
 	PermissionFlagsBits,
 	SlashCommandBuilder,
 	type ChatInputCommandInteraction,
-	type InteractionReplyOptions,
 } from "discord.js";
 import { isAIEnabled, toggleAI } from "../../core/aiState.js";
 import logger from "../../core/logger.js";
+import { respondWithError } from "../../core/interactionResponse.js";
 
 export const cooldown = 5;
 export const category = "utility";
@@ -42,10 +42,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	}
 	catch (error) {
 		logger.error("Error toggling AI:", error);
-		const failureResponse = {
-			content: "❌ Failed to toggle AI. Check the logs for details.",
-			MessageFlags: MessageFlags.Ephemeral,
-		} as unknown as InteractionReplyOptions;
-		await interaction.reply(failureResponse);
+		await respondWithError(interaction, `Could not confirm the change. AI is currently ${isAIEnabled() ? "enabled" : "disabled"}.`);
 	}
 }

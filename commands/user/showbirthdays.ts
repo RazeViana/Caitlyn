@@ -1,11 +1,7 @@
 /**
- * @file showbirthdays.js
- * @description This module defines a Discord slash command for displaying all saved birthdays grouped by month.
- * It fetches birthday data from a PostgreSQL database, organizes it by month, and displays it in an embed message.
- * The command highlights birthdays happening today and calculates the number of days remaining for upcoming birthdays.
- *
- * Additionally, it fetches a random birthday-themed GIF from the Giphy API to enhance the visual appeal of the embed.
- * If no birthdays are found, it informs the user accordingly.
+ * @file showbirthdays.ts
+ * @description Displays saved birthdays by month with today's birthdays and upcoming calendar dates.
+ * Adds an optional GIF through a bounded request and keeps embed text within Discord limits.
  *
  * @module showbirthdays
  */
@@ -25,6 +21,9 @@ import {
 	differenceInCalendarDays,
 } from "date-fns";
 import logger from "../../core/logger.js";
+import { nextBirthday } from "../../core/birthdayDate.js";
+import { truncate } from "../../core/textLimits.js";
+import { respondWithError } from "../../core/interactionResponse.js";
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
@@ -46,7 +45,7 @@ const monthNames = [
 
 interface BirthdayRow {
 	discord_id: string;
-	dob: Date;
+	dob: Date | string;
 	name: string;
 }
 
@@ -69,6 +68,7 @@ interface FetchResponse {
 interface BirthdayDisplay {
 	day: number;
 	text: string;
+	year: number;
 }
 
 export interface ShowBirthdaysDependencies {
@@ -77,7 +77,7 @@ export interface ShowBirthdaysDependencies {
 }
 
 const defaultShowBirthdaysDependencies: ShowBirthdaysDependencies = {
-	fetch: async (url) => fetch(url),
+	fetch: async (url) => fetch(url, { signal: AbortSignal.timeout(3_000) }),
 	query: (...args) => Reflect.apply(pool.query, pool, args) as Promise<{ rows: BirthdayRow[] }>,
 };
 
@@ -91,6 +91,10 @@ export async function execute(
 	dependencies: ShowBirthdaysDependencies = defaultShowBirthdaysDependencies,
 ): Promise<void> {
 	// Defer the reply to give the bot time to process
+	if (!interaction.guild) {
+		await respondWithError(interaction, "Use this command in a server.");
+		return;
+	}
 	await interaction.deferReply();
 
 	const guild = interaction.guild;
@@ -118,7 +122,7 @@ export async function execute(
 
 	try {
 		// Fetch all birthdays from the database
-		const res = await dependencies.query("SELECT * FROM discord.birthdays");
+		const res = await dependencies.query("SELECT discord_id, name, dob::text FROM discord.birthdays");
 		// If no birthdays are found, return a message
 		if (res.rows.length === 0) {
 			await interaction.editReply("😢 No birthdays found!");
@@ -129,17 +133,9 @@ export async function execute(
 		const months: BirthdayDisplay[][] = Array.from({ length: 12 }, () => []);
 
 		for (const row of res.rows) {
-			const dob = parseISO(row.dob.toISOString());
-			const bdayThisYear = new Date(
-				now.getFullYear(),
-				dob.getMonth(),
-				dob.getDate(),
-			);
-
-			// If birthday already passed this year, move to next
-			if (bdayThisYear < now) {
-				bdayThisYear.setFullYear(now.getFullYear() + 1);
-			}
+			const dob = typeof row.dob === "string" ? parseISO(row.dob) : row.dob;
+			if (!Number.isFinite(dob.getTime())) continue;
+			const bdayThisYear = nextBirthday(dob, now);
 
 			const isToday = isSameDay(bdayThisYear, now);
 			const daysUntil = differenceInCalendarDays(bdayThisYear, now);
@@ -161,6 +157,7 @@ export async function execute(
 			months[getMonth(dob)].push({
 				day: dob.getDate(),
 				text: display,
+				year: bdayThisYear.getFullYear(),
 			});
 		}
 
@@ -181,23 +178,24 @@ export async function execute(
 		const currentMonthIndex = now.getMonth();
 
 		// Loop through months starting from the current month
+		let remainingText = 4_500;
 		for (let offset = 0; offset < 12; offset++) {
 			const monthIndex = (currentMonthIndex + offset) % 12;
 			const birthdays = months[monthIndex];
-			if (birthdays.length === 0) continue;
+			if (birthdays.length === 0 || remainingText <= 0) continue;
 
 			// Sort birthdays within the month by day
 			birthdays.sort((a, b) => a.day - b.day);
 
 			// Determine which year to show
-			const monthYear =
-					monthIndex < currentMonthIndex
-						? now.getFullYear() + 1
-						: now.getFullYear();
+			const years = [...new Set(birthdays.map((birthday) => birthday.year))].sort();
+			const monthYear = years.join(" / ");
 
+			const value = truncate(birthdays.map((b) => b.text).join("\n"), Math.min(1_000, remainingText));
+			remainingText -= value.length;
 			embed.addFields({
 				name: `📆 ${monthNames[monthIndex]} ${monthYear}`,
-				value: birthdays.map((b) => b.text).join("\n"),
+				value,
 				inline: false,
 			});
 		}
@@ -207,6 +205,6 @@ export async function execute(
 	}
 	catch (error) {
 		logger.error("❌ Error fetching birthdays:", error);
-		await interaction.editReply("An error occurred fetching birthdays.");
+		await respondWithError(interaction, "Could not fetch birthdays. Please try again shortly.");
 	}
 }

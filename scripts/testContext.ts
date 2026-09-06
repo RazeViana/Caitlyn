@@ -1,3 +1,11 @@
+/**
+ * @file testContext.ts
+ * @description Inspects recent and semantic conversation context for a fixed diagnostic prompt.
+ * Prints the chat payload using configured services only when explicitly invoked.
+ *
+ * @module testContext
+ */
+
 import "dotenv/config";
 
 import { pathToFileURL } from "node:url";

@@ -2,6 +2,17 @@
 
 Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, pgvector, and Open WebUI. It provides conversational AI with persistent vector memory, activity tracking, birthday reminders, and social-link enhancements.
 
+## Documentation
+
+- [Development and file conventions](docs/development.md)
+- [Current progress and handoff](docs/handoff.md)
+- [Task list](docs/.todo)
+- [Resilience and rollout](docs/resilience.md)
+- [Original error-handling audit](docs/error-handling-audit.md)
+- [Historical integration design](docs/superpowers/specs/2026-09-04-caitlyn-2-integration-design.md) and [plan](docs/superpowers/plans/2026-09-04-caitlyn-2-integration.md)
+
+The README stays at the repository root for GitHub; supporting project documentation lives under `docs/`. Private local restore notes are in Git-ignored `docs/local-database.md`; database dumps and environment snapshots remain in `backups/`. Unless stated otherwise, run commands below from the repository root.
+
 ## Features
 
 - Open WebUI chat integration with a runtime `/toggleai` control.
@@ -38,7 +49,7 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
 
 3. Copy `.env.example` to `.env` and fill in every value used by your deployment.
 
-4. Run migrations `001` through `008` in numeric order:
+4. On a **new, empty database**, run migrations `001` through `010` in numeric order:
 
    ```bash
    npx tsx scripts/runMigration.ts 001_create_messages_table.sql
@@ -49,6 +60,8 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
    npx tsx scripts/runMigration.ts 006_add_activity_streaks.sql
    npx tsx scripts/runMigration.ts 007_fix_streak_calculation.sql
    npx tsx scripts/runMigration.ts 008_fix_daily_activity_tracking.sql
+   npx tsx scripts/runMigration.ts 009_create_birthdays_table.sql
+   npx tsx scripts/runMigration.ts 010_unique_birthday_discord_id.sql
    ```
 
 5. Register the slash commands for the configured guild:
@@ -83,7 +96,9 @@ Start that compiled build:
 npm start
 ```
 
-`npm start` executes `dist/main.js`, so run the build first. Generated `dist/` files are not committed. See [docs/development.md](docs/development.md) for code conventions and the branch/release policy.
+`npm start` executes `dist/main.js`, so run the build first. Generated `dist/` files are not committed. See [development instructions](docs/development.md) for code conventions and the branch/release policy.
+
+The Docker image starts Node directly and does **not** register commands on every restart. Run `npm run deploy:prod` separately after building when publishing command changes. Deployment updates only the configured guild's commands; it no longer clears global registrations. See [failure handling and rollout notes](docs/resilience.md) before updating an existing installation.
 
 ## Configuration
 
@@ -126,6 +141,10 @@ Migrations are append-only and must be applied in filename order:
 6. `006_add_activity_streaks.sql` adds daily activity and streak functions.
 7. `007_fix_streak_calculation.sql` counts only completed weeks and months.
 8. `008_fix_daily_activity_tracking.sql` separates daily message and voice-time accounting.
+9. `009_create_birthdays_table.sql` adds the legacy birthday table for fresh databases; existing birthday tables and data are left untouched.
+10. `010_unique_birthday_discord_id.sql` adds the unique Discord-ID index required by birthday upserts. It stops with an error if duplicates exist and never deletes or rewrites birthdays.
+
+Apply only migrations that the target database has not already received. The runner does not track migration history; do not replay the entire set on a restored database, since historical migrations can replace stored embeddings. See [database verification](docs/development.md#database-work) for an isolated local migration test.
 
 ## Commands
 
@@ -140,7 +159,7 @@ Migrations are append-only and must be applied in filename order:
 
 - `/leaderboard [limit]` — rank members by activity.
 - `/ping` — check bot latency.
-- `/reload <command>` — reload a command at runtime.
+- `/reload <command>` — reload a command at runtime (administrator only).
 - `/server` — show server information.
 - `/streaks [limit]` — rank activity streaks.
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
@@ -164,15 +183,17 @@ npx tsx scripts/testMemory.ts <channel_id>
 Caitlyn/
 ├── commands/       # Slash-command modules
 ├── core/           # PostgreSQL, AI, logging, deployment, and Discord services
+├── docs/           # Task list, handoff, guides, audits, and plans
 ├── events/         # Discord event modules
 ├── handlers/       # Command, event, cron, and message routing
 ├── jobs/           # Scheduled jobs
 ├── messages/       # AI, birthday, and social-message flows
-├── migrations/     # SQL migrations 001-008
+├── migrations/     # Append-only SQL migrations
 ├── scripts/        # TypeScript operational tools and the ESM build cleaner
 ├── tests/          # Node test runner behavior tests
 ├── types/          # Shared TypeScript contracts
-└── main.ts         # Import-safe application entry point
+├── main.ts         # Import-safe application entry point
+└── README.md       # GitHub project overview and documentation entry point
 ```
 
 ## Code style
@@ -182,6 +203,7 @@ Caitlyn/
 - Semicolons.
 - Stroustrup braces.
 - Named ESM exports and `.js` relative import specifiers in TypeScript.
+- A top-of-file `@file`, `@description`, and `@module` comment using the actual filename.
 
 ## License
 

@@ -1,3 +1,11 @@
+/**
+ * @file buildOutput.test.js
+ * @description Verifies the compiled ESM tree, import safety, and runtime module discovery.
+ * Checks startup and deployment failures without credentials or live service access.
+ *
+ * @module buildOutput.test
+ */
+
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -219,16 +227,12 @@ test("compiled handlers and deployment discover every production command and eve
 			{ method: "on", name: "messageCreate" },
 			{ method: "on", name: "voiceStateUpdate" },
 		]);
-		assert.equal(result.restCalls.length, 2);
-		assert.deepEqual(result.restCalls[0], {
-			options: { body: [] },
-			route: "/applications/compiled-client-id/commands",
-		});
+		assert.equal(result.restCalls.length, 1);
 		assert.equal(
-			result.restCalls[1].route,
+			result.restCalls[0].route,
 			"/applications/compiled-client-id/guilds/compiled-guild-id/commands",
 		);
-		const guildPayload = result.restCalls[1].options.body;
+		const guildPayload = result.restCalls[0].options.body;
 		assert.equal(guildPayload.length, 11);
 		assert.equal(guildPayload.every((command) => {
 			return command !== null && typeof command === "object" && !Array.isArray(command);

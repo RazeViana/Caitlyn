@@ -1,3 +1,10 @@
+/**
+ * @file cleanDist.mjs
+ * @description Removes only the repository's generated dist directory before compilation.
+ *
+ * @module cleanDist
+ */
+
 import { rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 

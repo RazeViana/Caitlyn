@@ -1,3 +1,11 @@
+/**
+ * @file operationalScripts.test.js
+ * @description Tests migration path resolution and diagnostic-script import safety.
+ * Verifies memory-script self-help without executing operations against real services.
+ *
+ * @module operationalScripts.test
+ */
+
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";

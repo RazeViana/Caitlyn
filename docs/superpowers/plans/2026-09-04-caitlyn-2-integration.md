@@ -1,5 +1,7 @@
 # Caitlyn 2.0 Integration Implementation Plan
 
+Historical plan: the integration is complete. Use [the handoff](../../handoff.md) and [current task list](../../.todo) for ongoing work. References below to root `.todo` retain its original location; it now lives in `docs/.todo`. `README.md` remains at the repository root for GitHub.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Produce a local `caitlyn-2.0` integration branch that retains every current `main` feature while applying the completed TypeScript, Node.js 24, test, build, Docker, and CI migration.

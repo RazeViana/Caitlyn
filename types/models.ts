@@ -1,3 +1,10 @@
+/**
+ * @file models.ts
+ * @description Defines shared chat, embedding, stored-message, voice-session, and activity data contracts.
+ *
+ * @module models
+ */
+
 export interface ChatMessage {
 	role: "assistant" | "system" | "user";
 	content: string;
