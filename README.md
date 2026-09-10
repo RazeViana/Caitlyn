@@ -9,6 +9,8 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
 - [Task list](docs/.todo)
 - [Resilience and rollout](docs/resilience.md)
 - [Private main-server logging](docs/discord-logging.md)
+- [Social-media replacement progress and feasibility](docs/social-media-replacement.md)
+- [Local isolated media tests](docs/local-media-testing.md)
 - [Original error-handling audit](docs/error-handling-audit.md)
 - [Historical integration design](docs/superpowers/specs/2026-09-04-caitlyn-2-integration-design.md) and [plan](docs/superpowers/plans/2026-09-04-caitlyn-2-integration.md)
 

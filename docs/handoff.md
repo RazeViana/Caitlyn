@@ -1,6 +1,6 @@
 # Caitlyn development handoff
 
-Updated: 2026-09-06. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`. Signed birthday recovery checkpoint: `3bfb0dd`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`).
+Updated: 2026-09-10. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`. Signed birthday recovery checkpoint: `3bfb0dd`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`). Active feature branch: `codex/social-media-replacement`.
 
 The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, private Discord logging, and birthday recovery are committed and integrated locally.
 
@@ -8,7 +8,19 @@ The TypeScript integration was already complete at `c468729` (`docs: record Cait
 
 At the owner's request, birthday recovery was signed as `3bfb0dd` and fast-forwarded from `features/birthday-recovery` into local `caitlyn-2.0`. The integration branch was then renamed to `caitlyn-3.0` both locally and on GitHub. GitHub's branch still points to `c468729`; renaming it did not publish the newer local commits. Future feature branches start from `caitlyn-3.0`, and the old names in historical plans/checkpoints describe their original context. `main`, package versions, deployment configuration, and the homeserver are unchanged.
 
-## Latest continuation: birthday recovery
+## Latest continuation: social-media replacement feasibility
+
+Local-test follow-up: the owner chose this Mac. Installed Colima 0.10.3, Docker CLI 29.8.0, and Lima 2.2.0; created a dedicated no-host-mount profile without changing the default Docker context or enabling autostart. Added a pinned disposable extractor/FFmpeg image, a public-host/IP-filtered Unix gateway, a network-none worker, and a local orchestration script under `scripts/`. Four more offline tests cover the gateway and error categories. See [local media testing](local-media-testing.md) for all limits and repeat instructions.
+
+All live isolation checks passed. X video and quoted clips downloaded with H.264/AAC and decoded; Instagram examples yielded decodable H.264 without audio streams; the long TikTok reached the CDN but exceeded the 32 MiB test cap. Images/text/gallery completeness, quote modeling, Instagram audio, oversized videos, and Reddit approval remain open. `npm run check` now passes 149 tests with one optional database test skipped. All case containers/downloads/IPC volumes were removed and the dedicated VM stopped; installed tools/images remain reusable. No bot, database, homeserver, commit, push, or deployment changed. The paragraphs below retain the preceding metadata-only checkpoint.
+
+The owner approved investigating a full replacement for hosted embed fixers and supplied public X/TikTok/Reddit examples. Created `codex/social-media-replacement` from `caitlyn-3.0`. Added a network-free canonical link parser, shared identities, an explicit bounded official-oEmbed diagnostic using existing logging, and 17 offline tests. The existing social message handler remains unchanged; the replacement is not enabled.
+
+Live official-endpoint checks returned HTTP 200 embed markup for five unique owner-supplied X posts, the TikTok video, and three supplementary public Instagram examples. This does not prove media retrieval, text completeness, galleries, or quoted-post relationships; Instagram returned no author/title/thumbnail fields. Reddit API checks stop at an explicit approval gate. No original media was downloaded and no paid APIs or account cookies were used. Full results, limitations, sample links, invocation, and remaining implementation gates are in [social-media replacement](social-media-replacement.md).
+
+`npm run check` passed typechecking, lint, a clean build, and 145 tests with one opt-in PostgreSQL test skipped. This checkpoint is uncommitted. No dependencies, migrations, database records, Discord configuration, live bot process, or homeserver were changed; nothing was pushed or deployed. Next: agree access methods/paid-API preference and an isolated worker test runtime, then verify actual images/video/audio and quoted media before building and activating delivery. No `yt-dlp`, FFmpeg/ffprobe, or Docker was found on this Mac's PATH.
+
+## Previous continuation: birthday recovery
 
 After approving same-day catch-up and duplicate prevention, the owner also requested use of the existing logging. Implemented startup/five-minute checks with a 9 AM-to-midnight delivery window and optional `BIRTHDAY_TIMEZONE` (host timezone by default; currently Europe/Brussels locally). Date matching uses PostgreSQL calendar dates, including February 29 only in leap years, without modifying stored birthdays.
 

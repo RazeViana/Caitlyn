@@ -1,0 +1,8 @@
+# @file .dockerignore
+# @description Limits the local media image context to its disposable test tools.
+# @module mediaSandboxDockerignore
+*
+!Dockerfile
+!requirements.txt
+!gateway.ts
+!worker.ts
