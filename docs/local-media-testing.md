@@ -1,6 +1,6 @@
 # Local isolated media tests
 
-Verified on 2026-09-10, on this Apple Silicon Mac. This is a disposable feasibility harness, **not the bot's production media worker**. It never logs into Discord or accesses the application database. See [replacement progress](social-media-replacement.md) for source links and remaining feature work.
+Verified on 2026-09-10, on this Apple Silicon Mac. This is a disposable feasibility harness, **not the bot's production media worker**. It never logs into Discord or accesses the application database. The baseline is committed as `03eab46`; the X whole-post continuation is uncommitted. See [replacement progress](social-media-replacement.md#x-adapter-and-renderer-continuation) for the latest X results and remaining feature work.
 
 ## Installed locally
 
@@ -8,9 +8,9 @@ Homebrew installed Colima 0.10.3, Docker CLI 29.8.0, and Colima's Lima 2.2.0 dep
 
 The profile disables Mac directory mounts, SSH-agent forwarding, SSH-config generation, and application port forwarding. The local control socket is used by the host harness only, never mounted in a media container. The homeserver was not contacted or changed.
 
-The image contains Node 24.21.0, yt-dlp 2026.08.19, and FFmpeg/ffprobe 8.1.2. The Node image is pinned by digest and the extractor wheel by version and SHA-256. Alpine system packages are recorded here but are not independently locked to repository snapshots; this is not a bit-for-bit reproducible production image. Last tested image ID: `sha256:0961fb550e3875a56defdca3e0e3c5ec40c62bc29b5ed3c1c52556dc0f3fa995`.
+The image contains Node 24.21.0, Python 3.14.7, yt-dlp 2026.08.19, and FFmpeg/ffprobe 8.1.2. The Node image is pinned by digest and the extractor wheel by version and SHA-256. Exact locations and all 135 Alpine packages are listed in [the installation inventory](media-test-installations.md). No new packages were installed for the X continuation; image inspection confirmed identical dependency layers. Alpine packages are not independently locked to repository snapshots, so this is not a bit-for-bit reproducible production image. Last tested image ID: `sha256:6152cf3f6d96772316f7f8d61118ba614ebeee540860708a9eeda2f48831ec3e`.
 
-Only `scripts/mediaSandbox/` enters the build context; its allowlist includes four files, not the repository, `.env`, or backups. No Python/FFmpeg/extractor installation was made on the Mac itself; those tools live in the container image.
+The harness stages a temporary build directory containing only the explicitly named Dockerfile/ignore file, requirements, gateway/worker sources, X Python bridge, and shared X normalizer. The shared file is copied from `core/`, not maintained as a duplicate. The repository root, `.env`, backups, and `node_modules` never enter the context. The temporary directory is removed in `finally`. Invoke the harness to build; a direct build of `scripts/mediaSandbox/` alone lacks the shared normalizer. No Python/FFmpeg/extractor installation was made on the Mac itself; those tools live in the container image.
 
 ## Isolation and limits
 
@@ -24,9 +24,11 @@ Only `scripts/mediaSandbox/` enters the build context; its allowlist includes fo
 
 Every live case first passed checks for unprivileged execution, absence of credentials and host mounts, inability to connect directly to public/private/host IPs, and gateway rejection of private/loopback targets, Reddit, and non-HTTPS ports. Four offline tests exercise host validation, blocked address ranges, mixed DNS answers, and stable error categories. These checks validate this harness configuration, not a general claim that containers eliminate every security risk.
 
+`--x-post` uses a separate raw-GraphQL bridge and bounded original-media downloader inside the same isolation boundary. Metadata is capped at 1 MiB of serialized output; Python memory and all network traffic remain bounded by container/gateway limits while parsing. Each metadata subprocess has 25 seconds; each download 12 seconds. Images allow 12 MiB and 40 million pixels, exact reported original dimensions, known MIME/codec pairs, and one-frame decode. Videos allow 10 MiB and 15 minutes, H.264 with AAC (audio absence allowed only for GIFs), and a two-second decode. At most four descending video candidates are attempted; only size failures allow fallback. All redirects for direct media downloads are rejected. Authentication/rate-limit failures stop further media for that post. No files or raw provider data leave the worker; the host receives summaries only.
+
 ## Results
 
-Final complete run: 12:03–12:04 UTC on 2026-09-10. Public examples are linked in [the feasibility table](social-media-replacement.md#live-endpoint-checks).
+Baseline video-only run: 12:03–12:04 UTC on 2026-09-10. Its X image/text/quote limitations below are superseded by the [whole-post run at 12:53–12:54 UTC](social-media-replacement.md#x-adapter-and-renderer-continuation); TikTok/Instagram/Reddit status is unchanged. Public examples are linked in [the feasibility table](social-media-replacement.md#live-endpoint-checks).
 
 | Case | Observed result | What remains unproved |
 | --- | --- | --- |
@@ -65,13 +67,17 @@ LOG_LEVEL=DEBUG node --import tsx scripts/testSocialMediaLocal.ts
 
 # Or one named case.
 LOG_LEVEL=DEBUG node --import tsx scripts/testSocialMediaLocal.ts x-video
+
+# Whole-post X metadata, original images, and separately attributed budgeted videos.
+LOG_LEVEL=DEBUG node --import tsx scripts/testSocialMediaLocal.ts --x-post
+LOG_LEVEL=DEBUG node --import tsx scripts/testSocialMediaLocal.ts --x-post x-quote
 ```
 
 Other names: `x-image`, `x-gallery`, `x-text`, `x-quote`, `tiktok-video`, `instagram-post`, `instagram-reel`, `instagram-multi-video`. This intentionally takes fixture names, not arbitrary URLs, cookie files, credentials, or Docker hosts. New samples need reviewed fixture changes.
 
 The harness checks that its Docker context resolves to the dedicated local Unix socket. It does not start/stop Colima itself. INFO reports setup/isolation; SUCCESS reports files passing the bounded decode; WARN reports gaps/limits; DEBUG reports gateway event categories and allowlisted hostnames. It uses Caitlyn's existing logger but does not start Discord log forwarding. No raw provider errors, response bodies, signed URLs, or media files are written into project logs/documents.
 
-Exit `0` means the harness completed its cases, **not that all platforms succeeded**. Check each outcome. A setup/isolation failure exits `1`. Normal cleanup removes only the uniquely named containers/volumes created by that invocation. If the host process is killed abruptly, worker/gateway deadlines bound execution but stopped containers or IPC volumes may need manual review; inspect only resources labeled `dev.caitlyn.media-test=true` in this dedicated context. Do not prune unrelated Docker resources.
+Exit `0` means the harness completed its cases, **not that all platforms succeeded**. Check each outcome. A setup/isolation or cleanup failure exits `1`; cleanup failures are named and no successful-cleanup summary is printed. Normal cleanup removes only the uniquely named containers/volumes created by that invocation. If the host process is killed abruptly, worker/gateway deadlines bound execution but stopped containers or IPC volumes may need manual review; inspect only resources labeled `dev.caitlyn.media-test=true` in this dedicated context. Do not prune unrelated Docker resources.
 
 After testing:
 
@@ -79,6 +85,6 @@ After testing:
 colima stop caitlyn-media-test
 ```
 
-`npm run check` passes typechecking, lint, build, and 149 tests with one optional PostgreSQL test skipped. Ordinary tests never launch Docker or retrieve live media. Bot runtime behavior, database, command registration, and homeserver remain unchanged. Nothing is committed, merged, pushed, or deployed.
+`npm run check` passes typechecking, lint, build, and 173 tests with one optional PostgreSQL test skipped. Ordinary tests never launch Docker or retrieve live media. Bot runtime behavior, database, command registration, and homeserver remain unchanged. The baseline is signed as `03eab46`; new X work remains uncommitted. Nothing was merged, pushed, or deployed.
 
 Tool references: [Colima's official setup](https://github.com/abiosoft/colima), [Docker container controls](https://docs.docker.com/engine/containers/run/), and [yt-dlp's upstream project](https://github.com/yt-dlp/yt-dlp). The final production design still needs per-platform adapters, secure worker integration, Discord delivery limits, retention, and authorization review.

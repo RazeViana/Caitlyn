@@ -51,6 +51,10 @@
     ✔ Probe official X/TikTok/Instagram oEmbed endpoints and record limited metadata evidence in docs/social-media-replacement.md
     ✔ Select local isolated testing and verify a credential-free, network-restricted Colima/Docker harness
     ✔ Download/decode X and Instagram video samples; record TikTok size limits and remaining media gaps
+    ✔ Sign the local social-media feasibility checkpoint as 03eab46 without merging or pushing
+    ✔ Implement/test bounded X full-text, ordered galleries, explicit quote attribution, video candidates, and a safe offline Discord renderer
+    ✔ Verify all five owner-supplied X examples locally, including original images and separate parent/quoted H.264/AAC clips
+    ☐ Connect validated worker files and normalized posts through a production transport, durable delivery state, and opt-in configuration
     ☐ Agree social-media API access/budget and production worker integration
     ☐ Verify original images/galleries, full text, quoted posts, and playable video/audio for the replacement
     ☐ Implement isolated media processing, durable delivery, per-server configuration, and failure handling using existing logging

@@ -79,7 +79,7 @@ export function failureCategory(text: string): string {
 	return "extractor_error";
 }
 
-async function probe(url: string): Promise<void> {
+async function probe(url: string, wholeXPost = false): Promise<void> {
 	// This entry point runs only in the isolated harness, never as a bot message handler.
 	const allowed = /^https:\/\/(?:x\.com\/[a-z0-9_]{1,15}\/status\/[1-9]\d{0,24}|www\.tiktok\.com\/@[a-z0-9_.]{1,32}\/video\/[1-9]\d{0,24}|www\.instagram\.com\/(?:p|reel)\/[a-z0-9_-]{1,64}\/)$/i;
 	if (!allowed.test(url)) throw new Error("invalid_probe_input");
@@ -97,6 +97,11 @@ async function probe(url: string): Promise<void> {
 		relay.listen(3128, "127.0.0.1", resolve);
 	});
 	try {
+		if (wholeXPost) {
+			const worker = await import(new URL("./xPostWorker.ts", import.meta.url).href) as typeof import("./xPostWorker.js");
+			await worker.probeXPost(url);
+			return;
+		}
 		const args = [
 			"--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--no-cookies", "--no-update",
 			"--proxy", "http://127.0.0.1:3128", "--socket-timeout", "8", "--retries", "0", "--extractor-retries", "0", "--fragment-retries", "0",
@@ -154,7 +159,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 		await isolationCheck();
 	}
 	else {
-		await probe(process.argv[2] ?? "").catch(() => {
+		const wholeXPost = process.argv[2] === "--x-post";
+		await probe(process.argv[wholeXPost ? 3 : 2] ?? "", wholeXPost).catch(() => {
 			process.stdout.write(`${JSON.stringify({ outcome: "invalid_probe_input" })}\n`);
 			process.exitCode = 1;
 		});

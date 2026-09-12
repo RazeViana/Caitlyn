@@ -6,3 +6,6 @@
 !requirements.txt
 !gateway.ts
 !worker.ts
+!xPostWorker.ts
+!xMetadata.py
+!socialXPost.ts

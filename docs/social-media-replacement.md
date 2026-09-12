@@ -4,9 +4,35 @@ Checkpoint: 2026-09-10. Branch: `codex/social-media-replacement`, based on `cait
 
 ## Current status
 
-The owner approved investigating a full replacement for hosted embed fixers and supplied public X, TikTok, and Reddit examples. This checkpoint implements offline link recognition and a repeatable official-endpoint diagnostic. **The full replacement is not implemented or enabled.** `messages/socialMediaMessage.ts` still uses the existing rewrite flow and has not been connected to the new parser.
+The owner approved investigating a full replacement for hosted embed fixers and supplied public X, TikTok, and Reddit examples. The local feasibility checkpoint was signed as `03eab46`; the subsequent X adapter/renderer work described below is uncommitted. **The full replacement is not enabled.** `messages/socialMediaMessage.ts` still uses the existing rewrite flow and has not been connected to the new parser or renderer. Nothing was merged, pushed, or deployed.
 
 Working assumptions: public posts only, no paid API usage or account cookies, and eventual uploads to Discord rather than a public preview website. Paid-API preference remains unanswered. The initial endpoint check used no credentials or media downloads. The owner subsequently authorized local isolated media tests, documented below. No database changes, Discord login/messages, deployment, or homeserver changes were involved.
+
+## X adapter and renderer continuation
+
+Implemented `core/socialXPost.ts` with bounded full-text extraction (including long-form notes), original image URLs, ordered galleries/mixed media, separate parent/quote authors and media, and explicit partial/unavailable/restricted outcomes. IDs stay strings and must match the requested post. One quoted-post level and four media items per post are supported; nested quotes, cards/articles, malformed media, and missing text/attribution remain explicit gaps. Protected/sensitive/unavailable posts are not downloaded. CDN URL validation supplements—not replaces—the existing gateway.
+
+`core/socialPostRender.ts` builds a single Discord payload from normalized posts and already validated in-memory media buffers. It does not fetch URLs or send messages. Parent/quote cards retain attribution; images refer to attachments; video files carry source-specific names/descriptions. Mentions are disabled and display text is escaped. Cards use bounded descriptions, with full extracted text attached as a `.txt` when it fits; otherwise the shortened-text notice points to the original. Missing/oversized media is labelled. Callers must provide actual attachment/request budgets; 128 KiB is reserved for bounded UTF-8 payload and multipart overhead. It does not infer server upload limits from a hard-coded guild.
+
+The local `--x-post` mode retrieves raw GraphQL structure through the pinned extractor's public guest route, normalizes it **inside** the worker, and emits only counts, IDs, issue codes, and media validation summaries. It deliberately skips the extractor's legacy conversion and automatic HTTP-429 endpoint fallback. It uses no account login/cookies/paid API. This is an unofficial, changeable access mechanism, not a guaranteed production API contract. No returned card URL is followed.
+
+Final sample run: **12:53:49–12:54:00 UTC, 2026-09-10**. All five isolation checks and normalized metadata outcomes passed; all reported media was downloaded and validated:
+
+| X case | Text and attribution | Original media verified |
+| --- | --- | --- |
+| One picture | 125 characters; author present | One 398,830-byte PNG, 853×580 |
+| Gallery | 145 characters; author present | Two ordered JPEGs: 49,034 bytes at 552×552 and 27,509 bytes at 525×525 |
+| Video | 145 characters; author present | 3,162,626-byte H.264/AAC MP4, 480×270, 141.18 s |
+| Text | 163 characters; author present | No attached media reported |
+| Quoted post | Parent: 91 characters; quote: 57; distinct authors/post IDs | **Two separate videos**: parent 786,568 bytes, 1280×720, 8.68 s; quote 1,857,428 bytes, 1806×1080, 6.94 s; both H.264/AAC |
+
+Text completeness means the provider's full-text/note field was retained within the cap, without an explicit truncation flag or missing note. GraphQL commonly omits the legacy `truncated` field. Text/appearance has not been visually compared against X or Discord. Images passed original-dimension/MIME/codec checks and one-frame decode; videos passed duration/codec/audio checks and first-two-second decode, not full-file or Discord playback testing.
+
+Video candidates are ordered by quality and conservatively filtered using duration/bitrate plus overhead. The worker enforces actual bytes independently: 10 MiB per X video, 12 MiB per image, at most four video attempts (only byte overflow permits a smaller variant), and the existing case-wide time/resource/egress limits. These are local budgets, **not Discord limit assumptions**. No re-encoding is attempted. Missing audio on a regular video stays `audio_unverified`; silent animated GIFs are handled separately.
+
+Added 24 offline tests covering normalization, malformed/restricted responses, quote separation, Unicode bounds, mention safety, rendering/upload budgets, byte-limit fallback, terminal access failures, duration/codec/audio mismatches, image bounds, and decode failures. `npm run check`: **173 passed, one optional PostgreSQL test skipped**, with typecheck/lint/build passing. No new packages were installed; only the cached image's source layer changed. Full pre-existing runtime/dependency inventory: [media-test installations](media-test-installations.md).
+
+Next: design the production worker response/validated-file transport, durable job/delivery state and retry rules, original-message preservation, per-server opt-in controls, and guild-scoped operational logging. Then run injected Discord/DB integration tests and a separately authorized live Discord check. Do not connect the local Docker diagnostic directly to `messageCreate`; it intentionally deletes downloaded files and returns no delivery-ready bytes.
 
 ## Local isolated media checkpoint
 
@@ -82,4 +108,4 @@ Verification: `npm run check` passed typechecking, lint, a clean build, and 145 
 5. **Integrate configuration/logging.** No hard-coded server IDs. Add per-server/channel/platform controls separately from private operator logging. Use `withLogGuild` and existing severity filters; log safe categories/job IDs, not content/cookies/signed URLs. Keep slow media work off the message-event critical path.
 6. **Switch after validation.** Add isolated DB/worker/Discord tests, then separately authorized live checks. Remove the hosted-fixer runtime path only once the replacement preserves originals and fails gracefully. No hosted-fixer fallback is planned for the final replacement. Do not implicitly push, merge, publish commands, migrate production, or deploy.
 
-Initial endpoint checks and local isolated video tests are complete. Full media feasibility and the replacement remain open. Local test hosting is selected; paid-API budget and production worker integration are not decided.
+Initial endpoint checks and the owner's X sample extraction/renderer tests are complete. Broader platform/media coverage and the production replacement remain open. Local test hosting is selected; paid-API budget and production worker integration are not decided.

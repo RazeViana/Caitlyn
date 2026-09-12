@@ -31,6 +31,8 @@ Behavior tests mock logger methods when asserting that a message was requested. 
 
 For dependency maintenance, preserve the TypeScript 7 compiler / TypeScript 6 parser-API arrangement. Runtime HTTP calls use Node.js fetch. `node-cron` v4 includes its own TypeScript declarations, and scheduled callbacks must return their promises so the scheduler can observe completion and failure. See the [node-cron migration guide](https://www.nodecron.com/migrating-from-v3.html).
 
+When installing anything on the owner's machine, report every installed component and dependency with its exact version and location. Distinguish host installations from container-only packages; do not describe a container install as a Mac-wide installation. Reusing existing tools does not require reinstalling them. The local media-test inventory is recorded in [media-test installations](media-test-installations.md).
+
 ## TypeScript and ESM conventions
 
 - Keep runtime source in TypeScript.

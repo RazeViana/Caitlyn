@@ -1,0 +1,187 @@
+/**
+ * @file socialXPost.ts
+ * @description Normalizes untrusted X GraphQL data into bounded text, ordered media, and quotes.
+ * Performs no network requests; URL checks do not replace the isolated worker's egress gate.
+ *
+ * @module socialXPost
+ */
+
+import type { XPost, XPostIssue, XPostMedia, XPostResult, XVideoVariant } from "../types/socialMedia.js";
+
+function record(value: unknown): Record<string, unknown> {
+	return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function at(value: unknown, ...keys: string[]): unknown {
+	return keys.reduce((current, key) => record(current)[key], value);
+}
+
+function identifier(value: unknown): string | undefined {
+	return typeof value === "string" && /^[1-9]\d{0,24}$/.test(value) ? value : undefined;
+}
+
+function positive(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function decodeText(value: string): string {
+	const entities: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", "#39": "'" };
+	return value.replace(/&(amp|lt|gt|quot|apos|#39);/g, (_, entity: string) => entities[entity]);
+}
+
+function boundedText(value: string, limit: number): string {
+	return value.slice(0, limit).replace(/[\uD800-\uDBFF]$/, "");
+}
+
+/** Accept only the expected CDN URL shape, not arbitrary provider-supplied destinations. */
+export function xMediaUrl(value: unknown, kind: "image" | "video"): string | undefined {
+	if (typeof value !== "string" || value.length > 2_048 || /[\s\\%\p{Cc}]/u.test(value)) return undefined;
+	const match = value.match(/^https:\/\/(pbs\.twimg\.com|video\.twimg\.com)(\/[^?#]*)(?:\?[^#]*)?$/);
+	if (!match || /\/(?:\.|\.\.)(?:\/|$)/.test(match[2])) return undefined;
+	const url = new URL(value);
+	if (kind === "image") {
+		if (match[1] !== "pbs.twimg.com" || !/^\/media\/[a-zA-Z0-9_-]+\.(?:jpg|jpeg|png|webp)$/.test(url.pathname)) return undefined;
+		// Use the original image, not a preview selected for a webpage layout.
+		url.search = "";
+		url.searchParams.set("name", "orig");
+	}
+	else if (match[1] !== "video.twimg.com" || !/^\/[a-zA-Z0-9_./-]+\.mp4$/.test(url.pathname)) {
+		return undefined;
+	}
+	return url.href;
+}
+
+function mediaItem(raw: unknown, issues: Set<XPostIssue>): XPostMedia | undefined {
+	const item = record(raw);
+	const id = identifier(item.id_str);
+	if (!id) {
+		issues.add("invalid_media");
+		return;
+	}
+	if (!["photo", "video", "animated_gif"].includes(String(item.type))) {
+		issues.add("unsupported_media");
+		return;
+	}
+	const kind = item.type === "photo" ? "image" : item.type === "video" ? "video" : "gif";
+	const size = record(item.original_info);
+	const imageUrl = kind === "image" ? xMediaUrl(item.media_url_https, "image") : undefined;
+	const video = record(item.video_info);
+	const variants: XVideoVariant[] = [];
+	const rawVariants = Array.isArray(video.variants) ? video.variants : [];
+	if (rawVariants.length > 32) issues.add("media_limit");
+	for (const rawVariant of rawVariants.slice(0, 32)) {
+		const variant = record(rawVariant);
+		if (variant.content_type !== "video/mp4") continue;
+		const url = xMediaUrl(variant.url, "video");
+		if (!url) {
+			issues.add("invalid_media");
+			continue;
+		}
+		const dimensions = new URL(url).pathname.match(/\/(\d{1,5})x(\d{1,5})\//);
+		if (!variants.some((existing) => existing.url === url)) {
+			variants.push({
+				url, bitrate: positive(variant.bitrate) ?? 0,
+				width: dimensions ? Number(dimensions[1]) : undefined, height: dimensions ? Number(dimensions[2]) : undefined,
+			});
+		}
+	}
+	if (kind === "image" ? !imageUrl : variants.length === 0) {
+		issues.add("invalid_media");
+		return;
+	}
+	return {
+		id, kind, imageUrl, variants: variants.sort((a, b) => b.bitrate - a.bitrate),
+		alt: typeof item.ext_alt_text === "string" ? decodeText(boundedText(item.ext_alt_text, 1_024)) : undefined,
+		width: positive(size.width), height: positive(size.height),
+		durationSeconds: positive(video.duration_millis) === undefined ? undefined : Number(video.duration_millis) / 1_000,
+	};
+}
+
+function normalize(raw: unknown, expectedId: string, depth: number): XPostResult {
+	let result = record(raw);
+	if (result.__typename === "TweetWithVisibilityResults") result = record(result.tweet);
+	if (result.__typename === "TweetUnavailable") {
+		return { outcome: ["Protected", "NsfwLoggedOut", "NsfwViewerHasNoStatedAge"].includes(String(result.reason)) ? "restricted" : "unavailable" };
+	}
+	if (result.__typename === "TweetTombstone" || result.tombstone) return { outcome: "unavailable" };
+	if (result.__typename !== "Tweet") return { outcome: "invalid_response" };
+	const legacy = record(result.legacy);
+	const id = identifier(legacy.id_str) ?? identifier(result.rest_id);
+	if (id !== expectedId || (result.rest_id !== undefined && result.rest_id !== id)) return { outcome: "invalid_response" };
+	const user = record(at(result, "core", "user_results", "result"));
+	const userLegacy = record(user.legacy);
+	if (legacy.possibly_sensitive === true || userLegacy.protected === true || user.__typename === "UserUnavailable") return { outcome: "restricted" };
+	const issues = new Set<XPostIssue>();
+	const userCore = record(user.core);
+	const rawHandle = userLegacy.screen_name ?? userCore.screen_name;
+	const handle = typeof rawHandle === "string" && /^[a-zA-Z0-9_]{1,15}$/.test(rawHandle) ? rawHandle : undefined;
+	const rawName = userLegacy.name ?? userCore.name;
+	if (!handle || typeof rawName !== "string" || !rawName.trim()) issues.add("missing_author");
+	const note = at(result, "note_tweet", "note_tweet_results", "result", "text");
+	const sourceText = typeof note === "string" ? note : legacy.full_text;
+	// GraphQL supplies full_text but commonly omits the legacy truncated flag.
+	// An explicit truncation flag or an unresolved note still marks the text incomplete.
+	const textComplete = typeof sourceText === "string" && sourceText.length <= 25_000
+		&& (typeof note === "string" || ((legacy.truncated === false || legacy.truncated === undefined) && !result.note_tweet));
+	if (!textComplete) issues.add("incomplete_text");
+	const rawMedia = at(legacy, "extended_entities", "media");
+	const media: XPostMedia[] = [];
+	if (rawMedia !== undefined && !Array.isArray(rawMedia)) issues.add("invalid_media");
+	if (Array.isArray(rawMedia)) {
+		if (rawMedia.length > 4) issues.add("media_limit");
+		for (const candidate of rawMedia.slice(0, 4)) {
+			const item = mediaItem(candidate, issues);
+			if (item && !media.some((existing) => existing.id === item.id)) media.push(item);
+			else if (item) issues.add("invalid_media");
+		}
+	}
+	else if (at(legacy, "entities", "media") !== undefined) {
+		issues.add("invalid_media");
+	}
+	// Cards/articles and inline long-form media are not silently declared complete.
+	if (result.card || result.article || legacy.retweeted_status_result || at(result, "note_tweet", "note_tweet_results", "result", "media")) issues.add("unsupported_card");
+	const post: XPost = {
+		id, url: `https://x.com/${handle ?? "i"}/status/${id}`,
+		author: { name: typeof rawName === "string" && rawName.trim() ? decodeText(boundedText(rawName, 200)) : "Unknown author", handle },
+		text: typeof sourceText === "string" ? decodeText(boundedText(sourceText, 25_000)) : "", textComplete,
+		media, issues: [],
+	};
+	const quoteId = identifier(legacy.quoted_status_id_str);
+	const quoteResult = at(result, "quoted_status_result", "result");
+	if (quoteId || quoteResult !== undefined || legacy.is_quote_status === true) {
+		if (depth > 0) {
+			issues.add("nested_quote_omitted");
+		}
+		else {
+			const quote = quoteId && quoteId !== id ? normalize(quoteResult, quoteId, depth + 1) : undefined;
+			if (quote && "post" in quote) {
+				post.quote = { state: "available", post: quote.post };
+			}
+			else {
+				post.quote = { state: "unavailable", id: quoteId };
+				issues.add("quote_unavailable");
+			}
+		}
+	}
+	post.issues = [...issues];
+	return { outcome: issues.size || (post.quote?.state === "available" && post.quote.post.issues.length) ? "partial" : "ready", post };
+}
+
+/** Requires the response to match the requested post, not merely the URL's claimed author. */
+export function normalizeXPost(data: unknown, expectedId: string): XPostResult {
+	if (!identifier(expectedId)) return { outcome: "invalid_response" };
+	return normalize(at(data, "tweetResult", "result"), expectedId, 0);
+}
+
+/** Conservative planning only; a worker must still enforce the actual final byte limit. */
+export function xVideoCandidates(media: XPostMedia, byteLimit: number): XVideoVariant[] {
+	if (!Number.isSafeInteger(byteLimit) || byteLimit <= 0 || media.kind === "image") return [];
+	return media.variants.filter((variant) => {
+		if (!media.durationSeconds || !variant.bitrate) return true;
+		return (variant.bitrate + 192_000) * media.durationSeconds / 8 * 1.1 <= byteLimit;
+	}).sort((a, b) => {
+		// Unknown sizes go last; known candidates favor resolution then bitrate.
+		if (!a.bitrate || !b.bitrate) return Number(Boolean(b.bitrate)) - Number(Boolean(a.bitrate));
+		return (b.height ?? 0) - (a.height ?? 0) || b.bitrate - a.bitrate;
+	});
+}
