@@ -6,7 +6,7 @@
  * @module createPGPool
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 
 import pg from "pg";
 import logger from "./logger.js";

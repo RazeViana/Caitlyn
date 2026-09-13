@@ -8,7 +8,7 @@
  * @module loginClient
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 
 import type { Client } from "discord.js";
 import { withTimeout } from "./asyncTools.js";

@@ -1,12 +1,24 @@
 # Social-media replacement
 
-Checkpoint: 2026-09-10. Branch: `codex/social-media-replacement`, based on `caitlyn-3.0`.
+Checkpoint: 2026-09-12. Branch: `codex/social-media-replacement`, based on `caitlyn-3.0`.
+
+Later that day, the owner authorized using the existing bot locally while the homeserver instance is inactive. Migrations `014`/`015` are now applied to the local restored DB, all 14 guild commands are registered, and one local bot/worker is running with process-only social opt-in. The owner configured a test channel and private logs. Debugging fixed competing local command handlers, ambiguous legacy voice sessions, and media request identity: image, video, the exact failing post, and both quoted clips now pass through the real worker/renderer with zero omissions. Actual Discord playback after the repair still needs the owner's retest. See [the current handoff](handoff.md#latest-continuation-authorized-local-discord-test-2026-09-12).
 
 ## Current status
 
-The owner approved investigating a full replacement for hosted embed fixers and supplied public X, TikTok, and Reddit examples. The local feasibility checkpoint was signed as `03eab46`; the subsequent X adapter/renderer work described below is uncommitted. **The full replacement is not enabled.** `messages/socialMediaMessage.ts` still uses the existing rewrite flow and has not been connected to the new parser or renderer. Nothing was merged, pushed, or deployed.
+Latest continuation: added sender-only mentions, copied source captions, and durable deletion of unchanged originals only after all expected previews are complete. Migration `016` is applied locally and does not authorize deletion of old sources. The owner then explicitly removed the extra channel-age check for public sensitive-labelled metadata; protected or X age/login-blocked posts remain unavailable. Current quality gate: 221 tests passed plus one optional PG skip; disposable PG suite: 18 passed. The paragraphs below retain earlier adapter checkpoints; [social delivery](social-delivery.md) defines the current behavior.
 
-Working assumptions: public posts only, no paid API usage or account cookies, and eventual uploads to Discord rather than a public preview website. Paid-API preference remains unanswered. The initial endpoint check used no credentials or media downloads. The owner subsequently authorized local isolated media tests, documented below. No database changes, Discord login/messages, deployment, or homeserver changes were involved.
+The owner approved a full replacement for hosted embed fixers and supplied public X, TikTok, and Reddit examples. The feasibility checkpoint is signed as `03eab46`; the X adapter/renderer checkpoint is signed as `0f3dee4`. Subsequent worker/queue/configuration integration and fixes are implemented but uncommitted. **The replacement remains disabled by default; it is enabled only in the authorized Mac test process and opted-in channel.** `messages/socialMediaMessage.ts` now enqueues opted-in X jobs; hosted-fixer rewrites/deletions are removed from this branch. Other platforms stay as original links until their adapters are ready. Nothing was merged, pushed, or deployed to the homeserver.
+
+Working assumptions: public posts only, no paid API usage or account cookies, and uploads to Discord rather than a public preview website. Paid-API preference remains unanswered. The owner authorized local isolated media tests, worker/delivery implementation, and the current local Discord test. The homeserver remains unchanged.
+
+## Worker and delivery continuation (2026-09-12)
+
+[Social delivery](social-delivery.md) documents the owner-only Unix broker, fresh isolated worker/gateway jobs, validated attachment transport, durable PostgreSQL queue, administrator `/social` channel controls, original-preserving replies, source edit/delete handling, and conservative uncertain-send recovery. Both the master integration switch and new channels default off. Existing private logging and its main-server restriction are preserved.
+
+Latest verification: `npm run check` passes 211 tests with one optional PostgreSQL skip; the disposable PostgreSQL suite passes all 17 tests. Five offline Python request-safety tests also pass. Initial September 12 tests had HTTP 403 media failures; adding an honest application User-Agent resolved the tested requests. No cookies, authentication, browser impersonation, redirects, or alternate-host fallback were added. The current real worker results and reproducible commands are in [social delivery](social-delivery.md#local-verification-and-operator-setup).
+
+No new packages were installed; only the existing image's source layer changed. Test media/containers/volumes/sockets and the disposable database were removed. The dedicated Colima VM is intentionally running for the authorized local bot. Live Discord playback retesting remains open; production deployment requires separate authorization.
 
 ## X adapter and renderer continuation
 
@@ -16,7 +28,7 @@ Implemented `core/socialXPost.ts` with bounded full-text extraction (including l
 
 The local `--x-post` mode retrieves raw GraphQL structure through the pinned extractor's public guest route, normalizes it **inside** the worker, and emits only counts, IDs, issue codes, and media validation summaries. It deliberately skips the extractor's legacy conversion and automatic HTTP-429 endpoint fallback. It uses no account login/cookies/paid API. This is an unofficial, changeable access mechanism, not a guaranteed production API contract. No returned card URL is followed.
 
-Final sample run: **12:53:49–12:54:00 UTC, 2026-09-10**. All five isolation checks and normalized metadata outcomes passed; all reported media was downloaded and validated:
+Historical complete sample run: **12:53:49–12:54:00 UTC, 2026-09-10**. All five isolation checks and normalized metadata outcomes passed; all reported media was downloaded and validated at that time:
 
 | X case | Text and attribution | Original media verified |
 | --- | --- | --- |
@@ -101,11 +113,7 @@ Verification: `npm run check` passed typechecking, lint, a clean build, and 145 
 
 ## Next implementation gates
 
-1. **Complete media feasibility.** Agree access methods and paid-API preference. Verify full text, original images/galleries, video/audio, mixed media, quoted posts, deleted/private/age-restricted posts, and expiring URLs. Restricted/disallowed content stays unavailable; no cookie harvesting or anti-bot bypasses. Owner-supplied Instagram samples remain useful.
-2. **Promote the tested isolation design into a production worker.** Local Colima/Docker testing now exists; yt-dlp/FFmpeg are installed only inside its image. Keep bot/database credentials and home directories out of the worker, and preserve tested egress limits. The existing bot image has not changed. This diagnostic is not a queued production service; homeserver access/changes remain separately authorized.
-3. **Protect all network activity.** Validate HTTPS/ports, DNS/IPs, connection pinning, redirects, manifests, segments, and extractor subrequests. Block private, loopback, link-local, metadata-service, and Tailscale/CGNAT destinations at the worker boundary. Bound bytes, redirects, duration, CPU, disk, concurrency, and total lifetime. Stop on authentication challenges/rate limits.
-4. **Build state and delivery.** Add per-platform adapters, distinct parent/quoted media, and explicit partial/unavailable outcomes. Use PostgreSQL for bounded jobs/retries/deduplication; keep transactions short. Scope deliveries by guild/channel/message/post. Preserve originals, attachments, reply context, and spoilers; prevent unintended mentions. Handle upload/perms failures, ambiguous sends, source edits/deletions, cache expiry, and shutdown.
-5. **Integrate configuration/logging.** No hard-coded server IDs. Add per-server/channel/platform controls separately from private operator logging. Use `withLogGuild` and existing severity filters; log safe categories/job IDs, not content/cookies/signed URLs. Keep slow media work off the message-event critical path.
-6. **Switch after validation.** Add isolated DB/worker/Discord tests, then separately authorized live checks. Remove the hosted-fixer runtime path only once the replacement preserves originals and fails gracefully. No hosted-fixer fallback is planned for the final replacement. Do not implicitly push, merge, publish commands, migrate production, or deploy.
-
-Initial endpoint checks and the owner's X sample extraction/renderer tests are complete. Broader platform/media coverage and the production replacement remain open. Local test hosting is selected; paid-API budget and production worker integration are not decided.
+1. **Finish the authorized local X retest.** The queue/transport/configuration, command registration, local migrations, and worker activation are complete. Media request identity is fixed for the tested posts. Verify native video playback/audio on desktop/mobile, command responses, real permission failures, and edit/delete cleanup. Do not infer complete media support from a text-only partial result.
+2. **Prepare production hosting.** The trusted local broker exists, but a reviewed production image build, service supervision, private socket/UID mapping, resource monitoring, and orphan-cleanup procedure are still needed. The bot image/deployment remains unchanged. Keep bot/database credentials, host directories, and Docker control sockets outside media containers. Homeserver changes require separate authorization.
+3. **Complete the remaining platform adapters.** Agree paid/API access and add Instagram/TikTok/approved Reddit handling with the same media ownership, bounded processing, partial outcomes, and network protections. Existing diagnostic successes are not finished adapters. Review all new manifests/subrequests/redirects; retain private-IP/CGNAT blocking and stop on access restrictions. Owner-supplied Instagram samples remain useful.
+4. **Roll out only after validation.** Hosted-fixer rewrites are gone from this branch, but the new X path stays opt-in and unsupported platforms stay original-only. Broader platform/media coverage and production rollout are unfinished. No hosted-fixer fallback, implicit merge/push, command publication, production migration, or deployment is authorized by this implementation checkpoint.

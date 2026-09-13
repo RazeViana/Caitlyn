@@ -1,7 +1,7 @@
 /**
  * @file worker.ts
- * @description Exercises a pinned extractor inside a network-none, credential-free container.
- * Uses the restricted Unix gateway, validates downloaded media, and emits summaries only.
+ * @description Verifies isolated media from bounded FxEmbed metadata supplied through process input.
+ * Uses the restricted Unix gateway and emits summaries, or explicit no-log delivery payloads.
  *
  * @module worker
  */
@@ -48,7 +48,7 @@ async function gatewayDenies(authority: string): Promise<boolean> {
 	});
 }
 
-async function isolationCheck(): Promise<void> {
+async function isolationCheck(selfHosted = false): Promise<void> {
 	const checks = {
 		unprivileged: process.getuid?.() === 1000,
 		noCredentials: !["TOKEN", "PGPASSWORD", "WEBUI_API_KEY", "SSH_AUTH_SOCK", "AWS_SECRET_ACCESS_KEY"].some((key) => process.env[key]),
@@ -60,6 +60,7 @@ async function isolationCheck(): Promise<void> {
 		gatewayRejectsLoopback: await gatewayDenies("127.0.0.1:443"),
 		gatewayRejectsUnapproved: await gatewayDenies("www.reddit.com:443"),
 		gatewayRejectsPort: await gatewayDenies("x.com:5432"),
+		...(selfHosted ? { gatewayRejectsHostedMetadata: await gatewayDenies("api.vxtwitter.com:443") && await gatewayDenies("api.fxtwitter.com:443") } : {}),
 	};
 	process.stdout.write(`${JSON.stringify({ isolation: checks, passed: Object.values(checks).every(Boolean) })}\n`);
 	if (!Object.values(checks).every(Boolean)) process.exitCode = 1;
@@ -79,10 +80,23 @@ export function failureCategory(text: string): string {
 	return "extractor_error";
 }
 
-async function probe(url: string, wholeXPost = false): Promise<void> {
+/** Decode once after buffering so a chunk boundary cannot corrupt UTF-8 post text. */
+export async function readFxMetadata(chunks: AsyncIterable<Uint8Array>): Promise<unknown> {
+	const parts: Buffer[] = [];
+	let size = 0;
+	for await (const chunk of chunks) {
+		size += chunk.byteLength;
+		if (size > 1024 * 1024) throw new Error("invalid_probe_input");
+		parts.push(Buffer.from(chunk));
+	}
+	return JSON.parse(Buffer.concat(parts).toString("utf8"));
+}
+
+async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, number], allowSensitive = false, provider = "fxembed", metadataOnly = false): Promise<void> {
 	// This entry point runs only in the isolated harness, never as a bot message handler.
 	const allowed = /^https:\/\/(?:x\.com\/[a-z0-9_]{1,15}\/status\/[1-9]\d{0,24}|www\.tiktok\.com\/@[a-z0-9_.]{1,32}\/video\/[1-9]\d{0,24}|www\.instagram\.com\/(?:p|reel)\/[a-z0-9_-]{1,64}\/)$/i;
 	if (!allowed.test(url)) throw new Error("invalid_probe_input");
+	if (provider !== "fxembed") throw new Error("invalid_probe_input");
 	const relay = createServer((client) => {
 		const upstream = connect("/ipc/proxy.sock");
 		client.on("error", () => { upstream.destroy(); });
@@ -97,9 +111,12 @@ async function probe(url: string, wholeXPost = false): Promise<void> {
 		relay.listen(3128, "127.0.0.1", resolve);
 	});
 	try {
-		if (wholeXPost) {
+		if (wholeXPost || deliveryLimits || metadataOnly) {
+			// Metadata-only checks belong to the broker. The verifier never retrieves X metadata.
+			if (!deliveryLimits || wholeXPost || metadataOnly) throw new Error("use_local_fxembed_broker");
+			const payload = await readFxMetadata(process.stdin);
 			const worker = await import(new URL("./xPostWorker.ts", import.meta.url).href) as typeof import("./xPostWorker.js");
-			await worker.probeXPost(url);
+			process.stdout.write(JSON.stringify(await worker.deliverXPost(url, ...deliveryLimits, allowSensitive, payload)) + "\n");
 			return;
 		}
 		const args = [
@@ -156,11 +173,16 @@ async function probe(url: string, wholeXPost = false): Promise<void> {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	if (process.argv[2] === "--isolation-check") {
-		await isolationCheck();
+		await isolationCheck(process.argv[3] === "--self-hosted");
 	}
 	else {
 		const wholeXPost = process.argv[2] === "--x-post";
-		await probe(process.argv[wholeXPost ? 3 : 2] ?? "", wholeXPost).catch(() => {
+		const delivery = process.argv[2] === "--deliver-x";
+		const metadataOnly = process.argv[2] === "--metadata-x";
+		await probe(process.argv[wholeXPost || delivery || metadataOnly ? 3 : 2] ?? "", wholeXPost,
+			delivery ? [Number(process.argv[4]), Number(process.argv[5])] : undefined,
+			metadataOnly ? process.argv[4] === "sensitive" : delivery && process.argv[6] === "sensitive",
+			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly).catch(() => {
 			process.stdout.write(`${JSON.stringify({ outcome: "invalid_probe_input" })}\n`);
 			process.exitCode = 1;
 		});

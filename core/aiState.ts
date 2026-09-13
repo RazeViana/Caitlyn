@@ -6,7 +6,8 @@
  * @module aiState
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
+import { getFeatureConfiguration } from "./environment.js";
 
 // Runtime state override (null means use .env value)
 let aiEnabledOverride: boolean | null = null;
@@ -16,6 +17,7 @@ let aiEnabledOverride: boolean | null = null;
  * @returns {boolean} - True if AI is enabled
  */
 function isAIEnabled(): boolean {
+	if (!getFeatureConfiguration().ai.configured) return false;
 	if (aiEnabledOverride !== null) {
 		return aiEnabledOverride;
 	}
@@ -26,6 +28,7 @@ function isAIEnabled(): boolean {
  * Enable AI
  */
 function enableAI(): boolean {
+	if (!getFeatureConfiguration().ai.configured) return false;
 	aiEnabledOverride = true;
 	return aiEnabledOverride;
 }
@@ -44,8 +47,7 @@ function disableAI(): boolean {
  */
 function toggleAI(): boolean {
 	const currentState = isAIEnabled();
-	aiEnabledOverride = !currentState;
-	return aiEnabledOverride;
+	return currentState ? disableAI() : enableAI();
 }
 
 /**

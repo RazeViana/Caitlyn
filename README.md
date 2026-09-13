@@ -10,6 +10,10 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
 - [Resilience and rollout](docs/resilience.md)
 - [Private main-server logging](docs/discord-logging.md)
 - [Social-media replacement progress and feasibility](docs/social-media-replacement.md)
+- [Opt-in X delivery and worker setup](docs/social-delivery.md)
+- [Self-hosted media API, dependencies, and local build](docs/self-hosted-media-api.md)
+- [Local FxEmbed backend and configuration](docs/fxembed.md)
+- [Exact FxEmbed installation inventory](docs/fxembed-installations.md)
 - [Local isolated media tests](docs/local-media-testing.md)
 - [Original error-handling audit](docs/error-handling-audit.md)
 - [Historical integration design](docs/superpowers/specs/2026-09-04-caitlyn-2-integration-design.md) and [plan](docs/superpowers/plans/2026-09-04-caitlyn-2-integration.md)
@@ -22,7 +26,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 - PostgreSQL and pgvector conversation storage with recent and semantic context.
 - Message, voice, leaderboard, and daily/weekly/monthly streak tracking.
 - Birthday management and scheduled reminders with same-day outage catch-up and persistent duplicate prevention.
-- Twitter/X, Instagram, Reddit, and TikTok link handling.
+- Opt-in X previews with isolated extraction, sender mentions, and safe original-message cleanup after complete delivery (disabled by default; live validation pending). Public sensitive-labelled posts are supported without an extra channel-age check; X access gates are not bypassed.
 - Typed ESM command, event, job, and message modules.
 - Private main-server logging with owner-only channel setup and in-channel level selection.
 - Dynamic loaders that run TypeScript in development and compiled JavaScript in production.
@@ -53,7 +57,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 
 3. Copy `.env.example` to `.env` and fill in every value used by your deployment.
 
-4. On a **new, empty database**, run migrations `001` through `012` in numeric order:
+4. On a **new, empty database**, run migrations `001` through `016` in numeric order:
 
    ```bash
    npx tsx scripts/runMigration.ts 001_create_messages_table.sql
@@ -69,6 +73,9 @@ The README stays at the repository root for GitHub; supporting project documenta
    npx tsx scripts/runMigration.ts 011_create_guild_settings.sql
    npx tsx scripts/runMigration.ts 012_private_logging_levels.sql
    npx tsx scripts/runMigration.ts 013_birthday_delivery_tracking.sql
+   npx tsx scripts/runMigration.ts 014_social_delivery.sql
+   npx tsx scripts/runMigration.ts 015_quarantine_ambiguous_voice_sessions.sql
+   npx tsx scripts/runMigration.ts 016_social_source_replacement.sql
    ```
 
 5. Register the slash commands for the configured guild:
@@ -122,6 +129,8 @@ The application reads these variables from `.env`:
 | `PGHOST`, `PGPORT` | PostgreSQL server address |
 | `PGUSER`, `PGPASSWORD`, `PGDATABASE` | PostgreSQL credentials and database |
 | `LLM_ENABLED` | Initial AI state; use `true` or `false` |
+| `SOCIAL_MEDIA_ENABLED` | Optional X worker integration switch; defaults to `false`; channel opt-in is also required |
+| `SOCIAL_WORKER_SOCKET` | Absolute private local Unix socket path; required only when social integration is enabled |
 | `OLLAMA_MODEL` | Model name sent to Open WebUI |
 | `WEBUI_API_KEY` | Bearer token for Open WebUI |
 | `WEBUI_CHAT_ENDPOINT` | Open WebUI chat-completions URL |
@@ -133,11 +142,17 @@ The application reads these variables from `.env`:
 
 The Open WebUI model configuration owns the system prompt.
 
-Startup validates configuration before creating the Discord client, connecting to PostgreSQL, or scheduling jobs. All variables above are required except `CLIENT_ID` (only required for command deployment), `LLM_ENABLED` (defaults to `false`), `BIRTHDAY_TIMEZONE`, the context counts, and `LOG_LEVEL` (defaults to `INFO`). AI settings are required even when `LLM_ENABLED=false`, since `/toggleai` can enable replies without restarting.
+The separate media broker provides Caitlyn's [self-hosted media API](docs/self-hosted-media-api.md). Its sole provider is now `SOCIAL_X_PROVIDER=fxembed`, using the pinned FxEmbed backend inside this project. Caitlyn calls only the loopback service, never hosted VX/Fx APIs. The bot-facing metadata and verified-media endpoints remain on an owner-only Unix socket. Export broker settings when starting the broker, not the bot.
+
+See [FxEmbed setup and limitations](docs/fxembed.md). No account is connected automatically. Upstream documents that NSFW/restricted posts may require authorized X account credentials; switching backends does not remove that requirement.
+
+Only `TOKEN` is essential for bot startup. Missing or invalid optional settings disable the affected feature and produce startup diagnostics containing variable names, never their values. Without database configuration, basic commands and configured AI chat still work; database commands explain that the feature is disabled. Missing AI settings prevent `/toggleai` from enabling replies; missing embedding/database settings disable memory without disabling chat. Missing Giphy settings skip GIF requests without disabling birthdays. Missing birthday destination settings stop reminders without disabling birthday storage. See the [feature configuration map](docs/feature-configuration.md).
+
+`LLM_ENABLED` and `SOCIAL_MEDIA_ENABLED` default to `false`. Social delivery needs valid database/socket configuration, migrations `014`/`016`, a separately running isolated worker, and administrator channel opt-in; see [setup and limitations](docs/social-delivery.md). Restart after changing `.env`; configured AI can still be toggled in memory.
 
 Birthday reminders are due at 9 AM in the selected timezone, with checks on startup and every five minutes until local midnight. Missed previous days are not replayed. Apply migration `013` before using recovery; the bot needs Read Message History in the birthday channel. See [birthday recovery](docs/birthday-recovery.md) for delivery tracking, uncertainty handling, logging, and the first-deployment precautions.
 
-`GUILD_ID` and `GENERAL_CHAT_ID` must be numeric Discord IDs. `PGPORT` must be an integer from `1` to `65535`; context counts must be nonnegative PostgreSQL integers. Both AI endpoints must be absolute HTTP or HTTPS URLs. Invalid settings are reported together using variable names without their values. Command deployment requires nonempty `TOKEN`, `CLIENT_ID`, and `GUILD_ID`, and exits unsuccessfully on configuration or deployment failure.
+`GUILD_ID` and `GENERAL_CHAT_ID` must be numeric Discord IDs. `PGPORT` must be an integer from `1` to `65535`; context counts must be nonnegative PostgreSQL integers. Both AI endpoints must be absolute HTTP or HTTPS URLs without embedded credentials. Invalid optional values disable only their dependent features; invalid `LOG_LEVEL` falls back to `INFO` with a warning. Command deployment still requires nonempty `TOKEN`, `CLIENT_ID`, and `GUILD_ID`, and exits unsuccessfully on configuration or deployment failure. Configured database connection failures retain the existing bounded startup retry/failure behavior; missing configuration is not a health check.
 
 ## Database migrations
 
@@ -156,6 +171,9 @@ Migrations are append-only and must be applied in filename order:
 11. `011_create_guild_settings.sql` stores each server's logging configuration and permits one owner-controlled console destination.
 12. `012_private_logging_levels.sql` persists the Discord type selection and reserves one main logging server even while forwarding is disabled. Legacy server-scoped destinations are ignored by the application.
 13. `013_birthday_delivery_tracking.sql` stores grouped birthday delivery state and unique server/person/date reservations without modifying existing birthdays.
+14. `014_social_delivery.sql` adds disabled-by-default social channel settings and durable, leased preview jobs.
+15. `015_quarantine_ambiguous_voice_sessions.sql` flags ambiguous historical open sessions without changing their timestamps or totals, and prevents duplicate actively tracked sessions. Required for the updated voice tracker.
+16. `016_social_source_replacement.sql` tracks replacement completeness, sensitivity, and source cleanup. Existing jobs retain their originals; new complete deliveries can remove unchanged source messages safely. Required for social delivery.
 
 Apply only migrations that the target database has not already received. The runner does not track migration history; do not replay the entire set on a restored database, since historical migrations can replace stored embeddings. See [database verification](docs/development.md#database-work) for an isolated local migration test.
 
@@ -177,6 +195,7 @@ Apply only migrations that the target database has not already received. The run
 - `/setup logs|status|disable` — configure the private main-server logging channel (bot owner with administrator permission only).
 - `/logs levels types:info,warning,error` and `/logs status` — select or inspect log types from inside the logging channel (bot owner only); `all` and `none` are also supported.
 - `/streaks [limit]` — rank activity streaks.
+- `/social enable|disable|disable-server|status` — configure opt-in X previews in server text channels (administrator only; requires operator-enabled worker integration).
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
 - `/user` — show information about the user who runs the command.
 
@@ -207,6 +226,7 @@ Caitlyn/
 ├── scripts/        # TypeScript operational tools and the ESM build cleaner
 ├── tests/          # Node test runner behavior tests
 ├── types/          # Shared TypeScript contracts
+├── vendor/         # Pinned third-party FxEmbed source (upstream style retained)
 ├── main.ts         # Import-safe application entry point
 └── README.md       # GitHub project overview and documentation entry point
 ```

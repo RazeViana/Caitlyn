@@ -31,6 +31,11 @@ function escapeText(value: string): string {
 		.replace(/([\\`*_{}[\]()#+.!|~>])/g, "\\$1").replaceAll("<", "‹").replaceAll("@", "@\u200B");
 }
 
+function authorName(value: string): string {
+	// Embed author names are plain text, not Markdown: escapes would appear literally.
+	return value.replace(/[\p{Cc}\u202A-\u202E\u2066-\u2069]/gu, " ").replace(/\s+/g, " ").trim();
+}
+
 function validAttachment(file: SocialMediaAttachment, media: XPostMedia, limit: number): boolean {
 	return Buffer.isBuffer(file.data) && file.data.length > 0 && file.data.length <= limit
 		&& (media.kind === "image" ? ["jpg", "png", "webp"].includes(file.extension) : file.extension === "mp4");
@@ -40,6 +45,7 @@ export function renderXPost(post: XPost, attachments: readonly SocialMediaAttach
 	payload: MessageCreateOptions;
 	omittedMedia: number;
 	textFileAttached: boolean;
+	complete: boolean;
 } {
 	if (!Number.isSafeInteger(limits.attachmentBytes) || limits.attachmentBytes <= 0
 		|| !Number.isSafeInteger(limits.messageBytes) || limits.messageBytes <= PAYLOAD_HEADROOM) throw new Error("invalid_social_render_limits");
@@ -66,9 +72,9 @@ export function renderXPost(post: XPost, attachments: readonly SocialMediaAttach
 		if (item.issues.length) notes.push("This preview is partial; open the original for missing content.");
 		if (item.quote?.state === "unavailable") notes.push("The quoted post is unavailable.");
 		const card: APIEmbed = {
-			title: index ? "Quoted post on X" : "Post on X", url: item.url, color: 0x1d9bf0,
-			author: { name: truncate(escapeText(`${item.author.name}${item.author.handle ? ` (@${item.author.handle})` : ""}`), 240) },
-			description: truncate(escaped, 1_800) || "No text supplied.",
+			title: index ? "Quoted post on X" : "View post on X", url: item.url, color: 0x1d9bf0,
+			author: { name: truncate(authorName(`${item.author.name}${item.author.handle ? ` (@${item.author.handle})` : ""}`), 240) || "Unknown author", url: item.url },
+			description: truncate(escaped, 1_800) || (item.media.length ? undefined : "No text supplied."),
 		};
 		embeds.push(card);
 		let missing = 0;
@@ -89,10 +95,11 @@ export function renderXPost(post: XPost, attachments: readonly SocialMediaAttach
 		}
 		omittedMedia += missing;
 		if (missing) notes.push(`${missing} media item(s) could not be attached; open the original.`);
-		if (notes.length) card.description += `\n\n${notes.join("\n")}`;
+		if (notes.length) card.description = [card.description, notes.join("\n")].filter(Boolean).join("\n\n");
 	}
 	return {
 		payload: { embeds, files, allowedMentions: { parse: [], repliedUser: false } },
 		omittedMedia, textFileAttached,
+		complete: !omittedMedia && posts.every((item) => item.textComplete && !item.issues.length && (escapeText(item.text).length <= 1_800 || textFileAttached)),
 	};
 }

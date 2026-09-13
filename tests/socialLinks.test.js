@@ -1,6 +1,6 @@
 /**
  * @file socialLinks.test.js
- * @description Tests canonical social-link identities, hidden content, and hostile URL input.
+ * @description Tests canonical social links, URL-free preview captions, hidden content, and hostile input.
  * Includes the owner's public examples without retrieving or storing their post contents.
  *
  * @module socialLinks.test
@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { extractSocialLinks, parseSocialLink } from "../core/socialLinks.ts";
+import { extractSocialLinks, parseSocialLink, socialPostCaption } from "../core/socialLinks.ts";
 
 test("the owner's X examples preserve string IDs and collapse media-suffix aliases", () => {
 	const urls = [
@@ -77,6 +77,44 @@ test("ignores inline and fenced code, spoilers, and explicitly suppressed embeds
 	}
 	assert.deepEqual(extractSocialLinks(`||${url}|| visible https://x.com/bob/status/456`).map((link) => link.key), ["x:456"]);
 	assert.deepEqual(extractSocialLinks(`<${url}> ${url}`).map((link) => link.key), ["x:123"]);
+});
+
+test("preview captions remove handled X links and their aliases without empty wrappers", () => {
+	const url = "https://x.com/alice/status/123";
+	for (const content of [url, `${url}?track=1#anchor`, `**${url}**`, `~~${url}~~`, `*${url}*`, `(${url})`, `[${url}]`, `{${url}}`]) {
+		assert.equal(socialPostCaption(content), "", content);
+	}
+	assert.equal(socialPostCaption(`😀 Look at this\n${url}\nhttps://mobile.twitter.com/alice/status/123/video/1?track=1`), "😀 Look at this");
+	assert.equal(socialPostCaption(`Before ${url} after`), "Before after");
+	assert.equal(socialPostCaption(`Before\n  ${url}  \nAfter`), "Before\nAfter");
+	assert.equal(socialPostCaption(`First ${url}\nSecond https://x.com/bob/status/456`), "First \nSecond");
+});
+
+test("preview captions preserve Markdown labels and unrelated caption content", () => {
+	const url = "https://x.com/alice/status/123";
+	assert.equal(socialPostCaption(`Watch [this clip](${url}?share=1)!`), "Watch this clip!");
+	assert.equal(socialPostCaption(`**[this clip](${url})**`), "**this clip**");
+	assert.equal(socialPostCaption(`[clip](${url}) and [another](https://x.com/bob/status/456)`), "clip and another");
+	const kept = "caption @everyone <@555>\n[reference](https://example.com/notes)\nhttps://www.reddit.com/comments/abc/";
+	assert.equal(socialPostCaption(`${kept}\n${url}`), kept);
+	const hidden = `\`${url}\`\n\`\`\`ts\n  ${url}\n\`\`\`\n||${url}||\n<${url}>`;
+	assert.equal(socialPostCaption(`${hidden}\n${url}`), hidden);
+	const hostile = "https://x.com.evil.test/alice/status/123 https://example.com/?next=https://x.com/alice/status/123";
+	assert.equal(socialPostCaption(`${hostile}\n${url}`), hostile);
+	// Keep formats the admission parser does not recognize, rather than silently dropping them.
+	for (const unhandled of [`__${url}__`, `_${url}_`, `[${url}](${url})`]) {
+		assert.equal(socialPostCaption(unhandled), unhandled);
+	}
+});
+
+test("preview captions retain links outside the shared five-link admission limit", () => {
+	const urls = Array.from({ length: 6 }, (_, index) => `https://x.com/alice/status/${index + 1}`);
+	assert.equal(socialPostCaption(urls.join("\n")), urls[5]);
+	assert.equal(socialPostCaption([...urls, urls[0]].join("\n")), urls[5]);
+	const others = Array.from({ length: 5 }, (_, index) => `https://www.reddit.com/comments/a${index}/`).join("\n");
+	assert.equal(socialPostCaption(`${others}\n${urls[0]}`), `${others}\n${urls[0]}`);
+	const oversized = `caption ${"a".repeat(20_000)} ${urls[0]}`;
+	assert.equal(socialPostCaption(oversized), oversized);
 });
 
 test("rejects unsafe authorities, schemes, paths, credentials, and non-post URLs", () => {

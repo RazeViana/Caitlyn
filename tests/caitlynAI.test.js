@@ -85,6 +85,20 @@ test("AI-disabled messages skip context, chat, storage, and replies", async () =
 	assert.deepEqual(sentMessages, []);
 });
 
+test("AI works without configured memory and never calls its database or embedding path", async () => {
+	const sent = [];
+	await caitlynAI(createMessage(sent), {
+		isAIEnabled: () => true, memoryEnabled: () => false, logger: createLogger(),
+		getConversationContext: async () => assert.fail("unconfigured memory was read"),
+		storeMessage: async () => assert.fail("unconfigured memory was written"),
+		chat: async (messages) => {
+			assert.equal(messages.length, 1);
+			return "Here is your reply without memory.";
+		},
+	});
+	assert.deepEqual(sent, [{ content: "Here is your reply without memory.", allowedMentions: { parse: [] } }]);
+});
+
 test("AI context uses numeric defaults when optional counts are absent", async () => {
 	const previousRecentCount = process.env.CONTEXT_RECENT_COUNT;
 	const previousSimilarCount = process.env.CONTEXT_SIMILAR_COUNT;

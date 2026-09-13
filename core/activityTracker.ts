@@ -1,7 +1,7 @@
 /**
  * @file activityTracker.ts
  * @description Stores message and voice activity atomically and retrieves activity rankings.
- * Uses persisted voice sessions and per-user transactions to prevent duplicate completion totals.
+ * Uses persisted voice sessions and per-user transactions; quarantined legacy history is never credited.
  *
  * @module activityTracker
  */
@@ -29,7 +29,7 @@ async function finishSession(query: Query, guildId: string, userId: string, user
 	const result = await query(`
 		UPDATE discord.voice_sessions
 		SET left_at = $3, duration_seconds = GREATEST(0, FLOOR(EXTRACT(EPOCH FROM ($3::timestamptz - joined_at))))::bigint
-		WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL
+		WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL AND NOT needs_reconciliation
 			AND ($4::varchar IS NULL OR channel_id = $4)
 		RETURNING duration_seconds
 	`, [guildId, userId, at, channelId ?? null]);
@@ -57,7 +57,7 @@ async function trackVoiceJoin(
 	const at = new Date(dependencies.now());
 	await dependencies.transaction(async (query) => {
 		await lockUser(query, guildId, userId);
-		const open = await query("SELECT channel_id FROM discord.voice_sessions WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL FOR UPDATE", [guildId, userId]);
+		const open = await query("SELECT channel_id FROM discord.voice_sessions WHERE guild_id = $1 AND user_id = $2 AND left_at IS NULL AND NOT needs_reconciliation FOR UPDATE", [guildId, userId]);
 		if (open.rows.length > 1) throw new Error("Multiple open voice sessions need reconciliation");
 		if (open.rows[0]?.channel_id === channelId) return;
 		await finishSession(query, guildId, userId, username, at);

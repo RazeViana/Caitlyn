@@ -6,20 +6,21 @@
  * @module main
  */
 
-import "dotenv/config";
+import "./core/loadEnvironment.js";
 
 import { pathToFileURL } from "node:url";
 import { GatewayIntentBits, type Client } from "discord.js";
 import { createClient } from "./core/createClient.js";
 import { createPGPool, pool } from "./core/createPGPool.js";
 import { withTimeout } from "./core/asyncTools.js";
-import { validateEnvironment } from "./core/environment.js";
+import { getFeatureConfiguration, logFeatureConfiguration, validateEnvironment } from "./core/environment.js";
 import { loginClient } from "./core/loginClient.js";
 import logger from "./core/logger.js";
 import { createDiscordLogForwarder, logForwarders, type DiscordLogForwarder } from "./core/discordLogForwarder.js";
 import { commandHandler } from "./handlers/commandHandler.js";
 import { startCronJobs } from "./handlers/cronJobHandler.js";
 import { drainEvents, eventHandler } from "./handlers/eventHandler.js";
+import { configuredSocialRuntime, socialRuntimes, type SocialRuntime } from "./core/socialRuntime.js";
 
 interface StartBotLogger {
 	error: (...args: unknown[]) => void;
@@ -27,7 +28,10 @@ interface StartBotLogger {
 }
 
 export interface StartBotDependencies {
-	createLogForwarder?: (client: Client) => DiscordLogForwarder;
+	configuration?: typeof getFeatureConfiguration;
+	createSocialRuntime?: (client: Client) => SocialRuntime | undefined;
+	createLogForwarder?: (client: Client) => DiscordLogForwarder | undefined;
+	reportConfiguration?: () => void;
 	closeDatabase: () => Promise<void>;
 	commandHandler: (client: Client) => Promise<void>;
 	createClient: (intents: GatewayIntentBits[]) => Client;
@@ -41,7 +45,10 @@ export interface StartBotDependencies {
 }
 
 const defaultDependencies: StartBotDependencies = {
+	createSocialRuntime: configuredSocialRuntime,
+	configuration: getFeatureConfiguration,
 	createLogForwarder: createDiscordLogForwarder,
+	reportConfiguration: () => logFeatureConfiguration(logger),
 	closeDatabase: () => pool.end(),
 	commandHandler,
 	createClient,
@@ -61,6 +68,8 @@ export async function startBot(
 	let closeJobs: (() => Promise<void>) | undefined;
 	let stopping: Promise<void> | undefined;
 	let logForwarder: DiscordLogForwarder | undefined;
+	let socialRuntime: SocialRuntime | undefined;
+	let databaseEnabled = true;
 	const stop = (): Promise<void> => {
 		stopping ??= (async () => {
 			if (!client) return;
@@ -76,20 +85,24 @@ export async function startBot(
 				const outcomes = await Promise.allSettled([
 					dependencies.drainEvents(client!),
 					closeJobs?.(),
+					socialRuntime?.stop(),
 				]);
 				const failures = outcomes.filter((outcome) => outcome.status === "rejected");
 				if (failures.length) throw new AggregateError(failures.map((failure) => failure.reason), "Work drain failed");
 			});
 			await cleanup("log forwarding shutdown", async () => { await logForwarder?.stop(); });
 			logForwarders.delete(client);
+			socialRuntimes.delete(client);
 			await cleanup("Discord shutdown", () => client!.destroy());
-			await cleanup("database shutdown", dependencies.closeDatabase);
+			if (databaseEnabled) await cleanup("database shutdown", dependencies.closeDatabase);
 		})();
 		return stopping;
 	};
 	try {
 		dependencies.validateEnvironment();
-		dependencies.logger.info("Starting Caitlyn bot...");
+		const configuration = dependencies.configuration?.();
+		databaseEnabled = configuration?.database.enabled !== false;
+		dependencies.logger.info("Starting Caitlyn bot...", `pid=${process.pid}`);
 
 		// Create a new client instance
 		client = dependencies.createClient([
@@ -99,11 +112,14 @@ export async function startBot(
 			GatewayIntentBits.GuildMembers,
 			GatewayIntentBits.GuildVoiceStates,
 		]);
-		logForwarder = dependencies.createLogForwarder?.(client);
+		if (configuration?.discordLogging.enabled !== false) logForwarder = dependencies.createLogForwarder?.(client);
 		if (logForwarder) logForwarders.set(client, logForwarder);
+		dependencies.reportConfiguration?.();
+		if (configuration?.socialMedia.enabled !== false) socialRuntime = dependencies.createSocialRuntime?.(client);
+		if (socialRuntime) socialRuntimes.set(client, socialRuntime);
 
 		// Create a PostgreSQL connection pool
-		await dependencies.createPGPool();
+		if (databaseEnabled) await dependencies.createPGPool();
 		await logForwarder?.start();
 
 		// Load the command & event handler
@@ -113,9 +129,10 @@ export async function startBot(
 		// Log in the client
 		dependencies.logger.info("Logging in to Discord...");
 		await dependencies.loginClient(client);
+		socialRuntime?.start();
 
 		dependencies.logger.info("Starting cron jobs...");
-		closeJobs = dependencies.startCronJobs(client);
+		if (configuration?.birthdayReminders.enabled !== false) closeJobs = dependencies.startCronJobs(client);
 		dependencies.logger.info("Bot started successfully");
 		return { stop };
 	}

@@ -8,6 +8,8 @@
 
 export type SocialPlatform = "x" | "instagram" | "reddit" | "tiktok";
 
+export type XMetadataProvider = "fxembed";
+
 export interface SocialLink {
 	platform: SocialPlatform;
 	kind: "post" | "share";
@@ -38,6 +40,7 @@ export interface XPostMedia {
 }
 
 export interface XPost {
+	sensitive?: boolean;
 	id: string;
 	url: string;
 	author: { name: string; handle?: string };
@@ -48,5 +51,16 @@ export interface XPost {
 	quote?: { state: "available"; post: XPost } | { state: "unavailable"; id?: string };
 }
 
+/** Closed vocabulary only: provider text, URLs, and arbitrary reason/type strings must never escape. */
+export interface XPostDiagnostic {
+	stage: "metadata";
+	responseType: "Tweet" | "TweetUnavailable" | "TweetTombstone" | "TweetWithVisibilityResults" | "TweetPreviewDisplay" | "FxStatus" | "FxTombstone" | "missing" | "unknown";
+	reason: "login_required" | "age_required" | "protected" | "deleted" | "unavailable" | "subscription_required"
+		| "unknown_tombstone" | "unknown_unavailable" | "unexpected_response" | "identity_mismatch" | "sensitive_disabled" | "author_unavailable";
+	source: "reason_code" | "tombstone_text" | "response_shape" | "policy";
+	hasLegacy: boolean;
+	hasTombstoneText: boolean;
+}
+
 export type XPostResult = { outcome: "ready" | "partial"; post: XPost }
-	| { outcome: "unavailable" | "restricted" | "invalid_response" };
+	| { outcome: "unavailable" | "restricted" | "invalid_response"; diagnostic?: XPostDiagnostic };

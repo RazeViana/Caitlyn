@@ -11,6 +11,7 @@ import { trackMessage } from "../core/activityTracker.js";
 import { caitlynAI } from "../messages/caitlynAI.js";
 import { socialMediaMessage } from "../messages/socialMediaMessage.js";
 import logger from "../core/logger.js";
+import { getFeatureConfiguration } from "../core/environment.js";
 
 export interface MessageHandlerDependencies {
 	caitlynAI: (message: Message) => Promise<void>;
@@ -25,27 +26,28 @@ export interface MessageHandlerDependencies {
 const defaultMessageHandlerDependencies: MessageHandlerDependencies = {
 	caitlynAI,
 	socialMediaMessage,
-	trackMessage,
+	trackMessage: async (...args) => { if (getFeatureConfiguration().database.enabled) await trackMessage(...args); },
 };
 
 async function messageHandler(
 	message: Message,
 	dependencies: MessageHandlerDependencies = defaultMessageHandlerDependencies,
 ): Promise<void> {
-	// Track message for activity statistics
-	if (message.guild) {
+	// Activity storage must not delay independent AI or media admission.
+	const activityOperation = (async () => {
+		if (!message.guild) return;
 		try {
 			await dependencies.trackMessage(message.guild.id, message.author.id, message.author.username);
 		}
 		catch (error) {
 			logger.error("Could not track message activity:", error);
 		}
-	}
+	})();
 
 	// Start AI and social-media processing in their observed order
 	const aiOperation = dependencies.caitlynAI(message);
 	const socialOperation = dependencies.socialMediaMessage(message);
-	const outcomes = await Promise.allSettled([aiOperation, socialOperation]);
+	const outcomes = await Promise.allSettled([activityOperation, aiOperation, socialOperation]);
 	for (const outcome of outcomes) {
 		if (outcome.status === "rejected") logger.error("Message processing failed:", outcome.reason);
 	}

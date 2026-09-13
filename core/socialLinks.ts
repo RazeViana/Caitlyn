@@ -1,7 +1,7 @@
 /**
  * @file socialLinks.ts
  * @description Recognizes and deduplicates social-post links without making network requests.
- * Discards tracking parameters and ignores code, spoilers, and explicitly suppressed embeds.
+ * Discards tracking parameters, preserves hidden content, and removes handled X links from preview captions.
  *
  * @module socialLinks
  */
@@ -112,16 +112,66 @@ function visibleText(content: string): string {
 	return output.join("");
 }
 
-export function extractSocialLinks(content: string): SocialLink[] {
+function socialLinkSpans(content: string): { link: SocialLink; start: number; end: number }[] {
 	if (content.length > MAX_MESSAGE_LENGTH) return [];
 	const visible = visibleText(content);
-	const links = new Map<string, SocialLink>();
+	const spans: { link: SocialLink; start: number; end: number }[] = [];
 	for (const match of visible.matchAll(/https?:\/\/[^\s<>"'`|]+/gi)) {
 		if (match.index > 0 && /[a-z0-9_/@\\]/i.test(visible[match.index - 1])) continue;
 		const candidate = match[0].replace(/[.,!?;:)\]}*~]+$/, "");
 		const link = parseSocialLink(candidate);
-		if (link && !links.has(link.key)) links.set(link.key, link);
+		if (link) spans.push({ link, start: match.index, end: match.index + candidate.length });
+	}
+	return spans;
+}
+
+export function extractSocialLinks(content: string): SocialLink[] {
+	const links = new Map<string, SocialLink>();
+	for (const { link } of socialLinkSpans(content)) {
+		if (!links.has(link.key)) links.set(link.key, link);
 		if (links.size === MAX_LINKS) break;
 	}
 	return [...links.values()];
+}
+
+/** Keep the caption, but let each handled X post's clickable embed carry its source link. */
+export function socialPostCaption(content: string): string {
+	const handled = new Set(extractSocialLinks(content).filter((link) => link.platform === "x" && link.kind === "post").map((link) => link.key));
+	let caption = content;
+	// Edit backwards so offsets stay valid, including emoji (Discord uses UTF-16 offsets).
+	for (const span of socialLinkSpans(content).reverse()) {
+		if (!handled.has(span.link.key)) continue;
+		let { start, end } = span;
+		let replacement = "";
+		const label = caption.slice(0, start).match(/(?<!\\)!?\[([^\n[\]]*)\]\($/);
+		if (label && caption[end] === ")") {
+			start -= label[0].length;
+			end++;
+			// Named Markdown links become plain captions; URL labels need no duplicate link.
+			replacement = handled.has(parseSocialLink(label[1])?.key ?? "") ? "" : label[1];
+		}
+		else {
+			for (const [open, close] of [["**", "**"], ["~~", "~~"], ["*", "*"], ["(", ")"], ["[", "]"], ["{", "}"]]) {
+				if (caption.slice(Math.max(0, start - open.length), start) === open && caption.slice(end, end + close.length) === close) {
+					start -= open.length;
+					end += close.length;
+					break;
+				}
+			}
+		}
+		if (!replacement) {
+			const lineStart = caption.lastIndexOf("\n", start - 1) + 1;
+			const nextLine = caption.indexOf("\n", end);
+			const lineEnd = nextLine === -1 ? caption.length : nextLine;
+			if (!caption.slice(lineStart, start).trim() && !caption.slice(end, lineEnd).trim()) {
+				start = lineStart;
+				end = nextLine === -1 ? lineEnd : nextLine + 1;
+			}
+			else if (/[\t ]/.test(caption[start - 1] ?? "") && /[\t ]/.test(caption[end] ?? "")) {
+				while (/[\t ]/.test(caption[end] ?? "")) end++;
+			}
+		}
+		caption = caption.slice(0, start) + replacement + caption.slice(end);
+	}
+	return caption.trim();
 }

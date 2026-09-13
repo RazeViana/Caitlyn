@@ -1,50 +1,63 @@
 /**
  * @file xPostWorker.ts
  * @description Verifies whole-post X metadata, original images, and budgeted clips inside the media sandbox.
- * Keeps raw provider data inside the worker and emits only bounded, content-free summaries.
+ * Emits content-free probe summaries or explicitly requested bounded delivery bytes with safe diagnostics.
  *
  * @module xPostWorker
  */
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { XPost, XPostMedia, XVideoVariant } from "../../types/socialMedia.js";
+import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import type { XPostMedia, XVideoVariant } from "../../types/socialMedia.js";
+import type { SocialWorkerFailure } from "../../types/socialDelivery.js";
 
 const execute = promisify(execFile);
-const outcomes = new Set(["rate_limited", "login_or_restriction", "access_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified"]);
-
+const outcomes = new Set(["rate_limited", "login_or_restriction", "access_denied", "gateway_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified"]);
 interface VerificationDependencies {
+	byteLimit?: number;
 	retrieve: typeof retrieve;
 	execute: (command: string, args: string[], options: { timeout: number; maxBuffer: number }) => Promise<{ stdout: string }>;
 }
 
-async function retrieve(kind: "metadata" | "image" | "video", value: string): Promise<unknown> {
+async function retrieve(kind: "image" | "video", value: string, byteLimit?: number): Promise<unknown> {
 	try {
-		const result = await execute("/opt/extractor/bin/python", ["/opt/probe/xMetadata.py", kind, value], {
-			timeout: kind === "metadata" ? 25_000 : 12_000, killSignal: "SIGKILL", maxBuffer: 1_100_000,
-		});
+		const args = ["/opt/probe/xMetadata.py", kind, value, ...(byteLimit ? [String(byteLimit)] : [])];
+		const options = {
+			timeout: 12_000, killSignal: "SIGKILL", maxBuffer: 1_100_000,
+		} as const;
+		const result = await execute("/opt/extractor/bin/python", args, options);
 		return JSON.parse(result.stdout);
 	}
 	catch (error) {
 		const failure = error as { killed?: boolean; code?: unknown; stdout?: string };
 		let outcome = failure.killed ? "timeout" : failure.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" ? "output_limit" : "extractor_error";
 		try {
-			const reported = JSON.parse(failure.stdout ?? "{}").failure;
-			if (outcomes.has(reported)) outcome = reported;
+			const reported = JSON.parse(failure.stdout ?? "{}");
+			if (outcomes.has(reported.failure)) outcome = reported.failure;
 		}
 		catch {
 			// Ignore malformed diagnostics, never copy raw output into errors.
 		}
-		throw new Error(outcome, { cause: error });
+		// eslint-disable-next-line preserve-caught-error -- Raw extractor errors can contain untrusted content.
+		throw new Error(outcome);
 	}
+}
+
+function retrievalFailure(error: unknown): SocialWorkerFailure {
+	const reason = error instanceof Error ? error.message : "";
+	return { outcome: reason === "rate_limited" ? "rate_limited" : ["login_or_restriction", "access_denied"].includes(reason) ? "restricted"
+		: reason === "unavailable" ? "unavailable" : reason === "timeout" ? "timeout" : ["invalid_input", "output_limit"].includes(reason) ? "invalid_response" : "worker_unavailable" };
 }
 
 export async function verifyVideo(media: XPostMedia, candidates: XVideoVariant[], dependencies: VerificationDependencies = { retrieve, execute }): Promise<Record<string, unknown>> {
 	if (media.durationSeconds && media.durationSeconds > 900) return { outcome: "duration_limit" };
 	for (const variant of candidates.slice(0, 4)) {
 		try {
-			const download = await dependencies.retrieve("video", variant.url) as { bytes: number };
-			if (!Number.isSafeInteger(download.bytes) || download.bytes <= 0 || download.bytes > 10 * 1_024 * 1_024) throw new Error("size_limit");
+			const limit = dependencies.byteLimit ?? 10 * 1_024 * 1_024;
+			const download = await dependencies.retrieve("video", variant.url, dependencies.byteLimit) as { bytes: number };
+			if (!Number.isSafeInteger(download.bytes) || download.bytes <= 0 || download.bytes > limit) throw new Error("size_limit");
 			const inspected = await dependencies.execute("ffprobe", ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_entries",
 				"stream=codec_type,codec_name,width,height:format=duration", "-of", "json", "/tmp/x-video.mp4"], { timeout: 5_000, maxBuffer: 32_768 });
 			const inspectedMedia = JSON.parse(inspected.stdout);
@@ -71,8 +84,8 @@ export async function verifyVideo(media: XPostMedia, candidates: XVideoVariant[]
 
 export async function verifyImage(media: XPostMedia, dependencies: VerificationDependencies = { retrieve, execute }): Promise<Record<string, unknown>> {
 	try {
-		const download = await dependencies.retrieve("image", media.imageUrl!) as { bytes: number; mime: string };
-		if (!Number.isSafeInteger(download.bytes) || download.bytes <= 0 || download.bytes > 12 * 1_024 * 1_024) throw new Error("size_limit");
+		const download = await dependencies.retrieve("image", media.imageUrl!, dependencies.byteLimit) as { bytes: number; mime: string };
+		if (!Number.isSafeInteger(download.bytes) || download.bytes <= 0 || download.bytes > (dependencies.byteLimit ?? 12 * 1_024 * 1_024)) throw new Error("size_limit");
 		const inspected = await dependencies.execute("ffprobe", ["-v", "error", "-max_alloc", "67108864", "-protocol_whitelist", "file,pipe",
 			"-show_entries", "stream=codec_name,width,height", "-of", "json", "/tmp/x-image.bin"], { timeout: 5_000, maxBuffer: 32_768 });
 		const streams = JSON.parse(inspected.stdout).streams;
@@ -92,44 +105,55 @@ export async function verifyImage(media: XPostMedia, dependencies: VerificationD
 	}
 }
 
-function summary(post: XPost): Record<string, unknown> {
-	return {
-		postId: post.id, attributed: Boolean(post.author.handle), textCharacters: post.text.length, textComplete: post.textComplete,
-		media: post.media.map((media) => ({ id: media.id, kind: media.kind, variants: media.variants.length })), issues: post.issues,
-	};
-}
-
-export async function probeXPost(url: string): Promise<void> {
+/** Delivery mode is invoked only with Docker logging disabled; its output contains content and bytes. */
+export async function deliverXPost(url: string, attachmentBytes: number, totalBytes: number, allowSensitive = false, payload: unknown = undefined): Promise<unknown> {
 	const id = url.match(/^https:\/\/x\.com\/[a-zA-Z0-9_]{1,15}\/status\/([1-9]\d{0,24})$/)?.[1];
-	if (!id) throw new Error("invalid_input");
+	if (!id || !Number.isSafeInteger(attachmentBytes) || attachmentBytes < 1_024 || attachmentBytes > 8 * 1_024 * 1_024
+		|| !Number.isSafeInteger(totalBytes) || totalBytes < attachmentBytes || totalBytes > 20 * 1_024 * 1_024) return { outcome: "invalid_response" };
 	try {
-		// The harness copies this exact shared source into its allowlisted build context.
-		// Dynamic loading lets Node's native TS runner use .ts while production imports stay .js.
 		const adapter = await import(new URL("./socialXPost.ts", import.meta.url).href) as typeof import("../../core/socialXPost.js");
-		const result = adapter.normalizeXPost(await retrieve("metadata", id), id);
-		if (!("post" in result)) {
-			process.stdout.write(`${JSON.stringify(result)}\n`);
-			return;
-		}
+		const { normalizeFxPost } = await import(new URL("./socialFxPost.ts", import.meta.url).href) as typeof import("../../core/socialFxPost.js");
+		const result = normalizeFxPost(payload, id, allowSensitive);
+		if (!("post" in result)) return result;
 		const posts = [result.post, ...(result.post.quote?.state === "available" ? [result.post.quote.post] : [])];
-		const mediaResults: Record<string, unknown>[] = [];
+		const files = [];
+		const mediaFailures: string[] = [];
+		let remaining = totalBytes;
+		let partial = result.outcome === "partial";
 		let halted = false;
-		for (const post of posts) {
-			for (const media of post.media) {
-				const verified = halted ? { outcome: "not_attempted" } : media.kind === "image" ? await verifyImage(media)
-					: await verifyVideo(media, adapter.xVideoCandidates(media, 10 * 1_024 * 1_024));
-				mediaResults.push({ postId: post.id, mediaId: media.id, ...verified });
-				if (["rate_limited", "login_or_restriction", "access_denied"].includes(String(verified.outcome))) halted = true;
+		for (const item of posts) {
+			for (const media of item.media) {
+				const byteLimit = Math.min(attachmentBytes, remaining);
+				if (halted || byteLimit < 1_024) {
+					partial = true;
+					mediaFailures.push(halted ? "not_attempted" : "size_limit");
+					continue;
+				}
+				const candidates = adapter.xVideoCandidates(media, byteLimit);
+				// Estimates are conservative. Probe the smallest variant once if none is predicted to fit.
+				if (!candidates.length && media.variants.length) candidates.push(media.variants.at(-1)!);
+				const verified = media.kind === "image" ? await verifyImage(media, { retrieve, execute, byteLimit })
+					: await verifyVideo(media, candidates, { retrieve, execute, byteLimit });
+				if (!["image_verified", "video_verified"].includes(String(verified.outcome))) {
+					partial = true;
+					mediaFailures.push(String(verified.outcome));
+					halted = ["rate_limited", "login_or_restriction", "access_denied", "gateway_denied"].includes(String(verified.outcome));
+					continue;
+				}
+				const data = await readFile(media.kind === "image" ? "/tmp/x-image.bin" : "/tmp/x-video.mp4");
+				if (data.length > byteLimit) {
+					partial = true;
+					mediaFailures.push("size_limit");
+					continue;
+				}
+				remaining -= data.length;
+				const extension = media.kind !== "image" ? "mp4" : verified.mime === "image/png" ? "png" : verified.mime === "image/webp" ? "webp" : "jpg";
+				files.push({ postId: item.id, mediaId: media.id, extension, base64: data.toString("base64"), sha256: createHash("sha256").update(data).digest("hex") });
 			}
 		}
-		process.stdout.write(`${JSON.stringify({
-			outcome: "x_post_checked", metadataOutcome: result.outcome,
-			post: summary(result.post),
-			quote: result.post.quote?.state === "available" ? { state: "available", ...summary(result.post.quote.post) } : result.post.quote,
-			mediaResults, allMediaVerified: mediaResults.every((item) => ["image_verified", "video_verified"].includes(String(item.outcome))),
-		})}\n`);
+		return { version: 1, outcome: partial ? "partial" : "ready", post: result.post, files, mediaFailures };
 	}
 	catch (error) {
-		process.stdout.write(`${JSON.stringify({ outcome: error instanceof Error && outcomes.has(error.message) ? error.message : "extractor_error" })}\n`);
+		return retrievalFailure(error);
 	}
 }

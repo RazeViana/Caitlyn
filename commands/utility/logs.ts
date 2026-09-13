@@ -11,10 +11,11 @@ import { guildSettings } from "../../core/guildSettings.js";
 import { logForwarders } from "../../core/discordLogForwarder.js";
 import { isBotOperator } from "../../core/operatorAccess.js";
 import { describeLogTypes, parseLogTypes } from "../../core/logLevels.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import logger from "../../core/logger.js";
 
 export const category = "utility";
+export const requiresDatabase = true;
 export const operatorOnly = true;
 export const cooldown = 3;
 export const data = new SlashCommandBuilder()
@@ -33,7 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		return;
 	}
 	try {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		if (!await deferInteraction(interaction, { flags: MessageFlags.Ephemeral })) return;
 		if (!await isBotOperator(interaction.client, interaction.user.id)) {
 			await interaction.editReply("Only the bot application owner (or owning team's owner) can manage private logging.");
 			return;

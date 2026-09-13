@@ -6,7 +6,7 @@
  * @module deployCommands
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 
 import fs from "node:fs";
 import path from "node:path";

@@ -15,6 +15,7 @@ import { chat } from "../core/ollama.js";
 import { messageChunks } from "../core/textLimits.js";
 import type { ContextQuery, StoreMessageInput } from "../core/messageStore.js";
 import type { ChatMessage, MessageContext } from "../types/models.js";
+import { getFeatureConfiguration } from "../core/environment.js";
 
 const CONTEXT_RECENT_COUNT = Number(process.env.CONTEXT_RECENT_COUNT ?? "5");
 const CONTEXT_SIMILAR_COUNT = Number(process.env.CONTEXT_SIMILAR_COUNT ?? "3");
@@ -28,6 +29,7 @@ export interface CaitlynAIDependencies {
 	chat: (messages: ChatMessage[], chatId: string | null) => Promise<string | undefined>;
 	getConversationContext: (query: ContextQuery) => Promise<MessageContext[]>;
 	isAIEnabled: () => boolean;
+	memoryEnabled?: () => boolean;
 	logger: CaitlynAILogger;
 	storeMessage: (message: StoreMessageInput) => Promise<number>;
 }
@@ -35,6 +37,7 @@ export interface CaitlynAIDependencies {
 const defaultCaitlynAIDependencies: CaitlynAIDependencies = {
 	chat,
 	getConversationContext,
+	memoryEnabled: () => getFeatureConfiguration().memory.enabled,
 	isAIEnabled,
 	logger,
 	storeMessage,
@@ -54,15 +57,16 @@ async function caitlynAI(
 	}
 	activeChannels.add(channel.id);
 	let replyAttempted = false;
+	const memoryEnabled = dependencies.memoryEnabled?.() !== false;
 	try {
 		let context: MessageContext[] = [];
 		try {
-			context = await dependencies.getConversationContext({
+			context = memoryEnabled ? await dependencies.getConversationContext({
 				channelId: channel.id,
 				currentMessage: message.content,
 				recentCount: CONTEXT_RECENT_COUNT,
 				similarCount: CONTEXT_SIMILAR_COUNT,
-			});
+			}) : [];
 		}
 		catch (error) {
 			dependencies.logger.error("AI memory unavailable; continuing without stored context:", error);
@@ -80,14 +84,16 @@ async function caitlynAI(
 			await channel.send({ content, allowedMentions: { parse: [] } });
 		}
 		try {
-			await dependencies.storeMessage({
-				channelId: channel.id, messageId: message.id, userId: message.author.id,
-				username: message.author.username, role: "user", content: message.content,
-			});
-			await dependencies.storeMessage({
-				channelId: channel.id, messageId: `${message.id}-reply`, userId: message.client.user.id,
-				username: "Caitlyn", role: "assistant", content: chunks.join(""),
-			});
+			if (memoryEnabled) {
+				await dependencies.storeMessage({
+					channelId: channel.id, messageId: message.id, userId: message.author.id,
+					username: message.author.username, role: "user", content: message.content,
+				});
+				await dependencies.storeMessage({
+					channelId: channel.id, messageId: `${message.id}-reply`, userId: message.client.user.id,
+					username: "Caitlyn", role: "assistant", content: chunks.join(""),
+				});
+			}
 		}
 		catch (error) {
 			dependencies.logger.error("Reply delivered but AI memory could not be saved:", error);

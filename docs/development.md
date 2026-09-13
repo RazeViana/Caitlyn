@@ -16,6 +16,8 @@ npm run build
 npm start
 ```
 
+Run only one bot instance for a Discord token, including VS Code terminals and homeserver services. A second Gateway connection can receive the same commands and cause `40060` (already acknowledged) or `10062` (unknown interaction), regardless of whether the second process uses another database. Startup logs include the PID for diagnosis; the application does not enforce a cross-host singleton. Stop the existing instance before starting another.
+
 The build always removes the old `dist/` tree first. Do not commit generated output.
 
 Start with [the project README](../README.md), [the modernization handoff](handoff.md), and [the current task list](.todo). The integration plan under `docs/superpowers/` records the earlier TypeScript migration; its original unchecked steps are historical, not the current task list.
@@ -105,6 +107,12 @@ Failure-handling contracts, migration requirements, and remaining rollout work a
 For private channel setup, owner-only `/logs levels`, delivery limits, and command publication, see [Discord logging](discord-logging.md). Preserve `withLogGuild` context when adding background work, but forward records only to the main-server destination. Operator-only logging controls must not be included in global command publication. Discord type filtering is independent of console `LOG_LEVEL`.
 
 [Birthday recovery](birthday-recovery.md) adds migration `013`, startup/five-minute checks, unique occurrence reservations, and conservative delivery reconciliation. Test sends must use injected Discord substitutes, not the live bot. The PostgreSQL suite checks batching, concurrent reservations/claims, persisted backoff, rollback, and migration replay without modifying stored birthday dates. Keep its delivery bookkeeping and short database transactions separate from Discord requests.
+
+[Social delivery](social-delivery.md) adds migration `014`, a local Unix worker transport, durable X preview jobs, and administrator channel opt-ins. Both the master switch and new channels default off. The ordinary suite uses synthetic worker/Discord substitutes; the disposable PostgreSQL suite checks settings, replay, concurrency, lease fencing, cancellation, and uncertainty transitions. Local real media checks use the existing dedicated image without logging in to Discord. Broker scripts remain source-time tooling, not part of the compiled bot image.
+
+Apply migration `015` before running the updated voice tracker. It preserves ambiguous open voice history behind `needs_reconciliation` and adds a partial unique index for future active sessions. Never infer historical leave times or credit quarantined durations. The disposable PostgreSQL suite verifies replay, preservation, cross-guild separation, and concurrent new sessions; see [resilience](resilience.md#database-rollout).
+
+Apply `016` before starting the social runtime from this checkout. Existing jobs preserve originals; new complete previews can delete unchanged source messages after all sibling deliveries are confirmed. Never infer self-deletion from memory alone: retain the persisted cleanup marker across gateway events and restarts. The owner explicitly removed the application-imposed channel-age check for public sensitive-labelled posts; runtime worker requests enable them. Actual provider age/login/protection gates remain terminal. Tests mock deletion and use disposable database records; live tests require the owner's new source messages.
 
 Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 

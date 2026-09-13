@@ -14,7 +14,7 @@ import {
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
 import logger from "../../core/logger.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 
 interface BirthdayQueryResult {
 	rows: Array<Record<string, unknown>>;
@@ -30,6 +30,7 @@ const defaultRemoveBirthdayDependencies: RemoveBirthdayDependencies = {
 
 export const cooldown = 5;
 export const category = "user";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("removebirthday")
 	.setDescription("Removes a birthday")
@@ -45,7 +46,7 @@ export async function execute(
 ): Promise<void> {
 	const user = interaction.options.getUser("user", true);
 	try {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		if (!await deferInteraction(interaction, { flags: MessageFlags.Ephemeral })) return;
 		const result = await dependencies.query(
 			"DELETE FROM discord.birthdays WHERE discord_id = $1 RETURNING discord_id", [user.id],
 		);

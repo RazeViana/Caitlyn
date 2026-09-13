@@ -16,6 +16,7 @@ export interface BotCommand {
 	category: string;
 	cooldown?: number;
 	operatorOnly?: boolean;
+	requiresDatabase?: boolean;
 	data: {
 		readonly name: string;
 		toJSON(): ReturnType<SlashCommandBuilder["toJSON"]>;

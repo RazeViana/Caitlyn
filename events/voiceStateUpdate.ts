@@ -9,6 +9,7 @@
 import { Events, type VoiceState } from "discord.js";
 import { trackVoiceJoin, trackVoiceLeave } from "../core/activityTracker.js";
 import logger from "../core/logger.js";
+import { getFeatureConfiguration } from "../core/environment.js";
 
 export const name = Events.VoiceStateUpdate;
 
@@ -36,8 +37,10 @@ export interface VoiceStateDependencies {
 
 const defaultVoiceStateDependencies: VoiceStateDependencies = {
 	logger,
-	trackVoiceJoin,
-	trackVoiceLeave: (guildId, userId, username, channelId) => trackVoiceLeave(guildId, userId, username, undefined, channelId),
+	trackVoiceJoin: async (...args) => { if (getFeatureConfiguration().database.enabled) await trackVoiceJoin(...args); },
+	trackVoiceLeave: async (guildId, userId, username, channelId) => {
+		if (getFeatureConfiguration().database.enabled) await trackVoiceLeave(guildId, userId, username, undefined, channelId);
+	},
 };
 
 export async function execute(

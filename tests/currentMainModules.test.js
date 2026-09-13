@@ -23,11 +23,12 @@ const expectedCommands = [
 	"server",
 	"setup",
 	"showbirthdays",
+	"social",
 	"streaks",
 	"toggleai",
 	"user",
 ];
-const expectedEvents = ["guildCreate", "interactionCreate", "messageCreate", "ready", "voiceStateUpdate"];
+const expectedEvents = ["guildCreate", "interactionCreate", "messageCreate", "messageDelete", "messageDeleteBulk", "messageUpdate", "ready", "voiceStateUpdate"];
 
 async function exportedNames(root) {
 	const files = fs.readdirSync(root).filter((file) => /\.(?:js|ts)$/.test(file));

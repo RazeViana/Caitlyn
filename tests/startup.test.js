@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GatewayIntentBits } from "discord.js";
-import { validateEnvironment } from "../core/environment.ts";
+import { getFeatureConfiguration, logFeatureConfiguration, validateEnvironment } from "../core/environment.ts";
 
 const validEnvironment = {
 	TOKEN: "startup-test-token",
@@ -131,6 +131,7 @@ test("startup accepts documented optional defaults and AI configuration while di
 	assert.doesNotThrow(() => validateEnvironment({
 		...validEnvironment,
 		LLM_ENABLED: "false",
+		SOCIAL_MEDIA_ENABLED: "false",
 		LOG_LEVEL: "warn",
 		CONTEXT_RECENT_COUNT: "0",
 		CONTEXT_SIMILAR_COUNT: "3",
@@ -138,18 +139,25 @@ test("startup accepts documented optional defaults and AI configuration while di
 	}));
 });
 
-test("startup requires every bot setting, including AI settings for runtime toggling", () => {
+test("only TOKEN is fatal; absent optional settings disable their respective feature", () => {
+	const owners = { GUILD_ID: "birthdayReminders", GENERAL_CHAT_ID: "birthdayReminders", GIPHY_API_KEY: "giphy",
+		PGHOST: "database", PGPORT: "database", PGUSER: "database", PGPASSWORD: "database", PGDATABASE: "database",
+		OLLAMA_MODEL: "ai", WEBUI_API_KEY: "ai", WEBUI_CHAT_ENDPOINT: "ai", EMBEDDING_MODEL: "memory", EMBEDDING_ENDPOINT: "memory" };
 	for (const variable of Object.keys(validEnvironment)) {
 		for (const value of [undefined, "", "   "]) {
-			assert.throws(
-				() => validateEnvironment({ ...validEnvironment, LLM_ENABLED: "false", [variable]: value }),
-				new RegExp(`${variable} is required`),
-			);
+			const environment = { ...validEnvironment, [variable]: value };
+			if (variable === "TOKEN") {assert.throws(() => validateEnvironment(environment), /TOKEN is required/);}
+			else {
+				assert.doesNotThrow(() => validateEnvironment(environment));
+				const feature = getFeatureConfiguration(environment)[owners[variable]];
+				assert.equal(feature.enabled, false);
+				assert.ok(feature.problems.includes(`${variable} is missing`));
+			}
 		}
 	}
 });
 
-test("startup rejects malformed ports, context counts, IDs, URLs, and switches without disclosing values", () => {
+test("malformed optional settings disable features and log variable names without values", () => {
 	const invalidValues = {
 		PGPORT: ["0", "65536", "5432junk", "5.5", " 5432", "1e3"],
 		CONTEXT_RECENT_COUNT: ["", "-1", "2.5", "8messages", "2147483648"],
@@ -159,20 +167,53 @@ test("startup rejects malformed ports, context counts, IDs, URLs, and switches w
 		WEBUI_CHAT_ENDPOINT: ["/api/chat/completions", "ftp://example.invalid", "secret-key"],
 		EMBEDDING_ENDPOINT: ["not-a-url", "file:///private/path", "secret-key"],
 		LLM_ENABLED: ["", "TRUE", "yes", "1"],
+		SOCIAL_MEDIA_ENABLED: ["", "TRUE", "yes", "1"],
 		LOG_LEVEL: ["", "verbose", "secret-key"],
 		BIRTHDAY_TIMEZONE: ["", "Europe/Not-A-Zone", "secret-key", " Europe/Brussels "],
 	};
 	for (const [variable, values] of Object.entries(invalidValues)) {
 		for (const value of values) {
-			assert.throws(
-				() => validateEnvironment({ ...validEnvironment, [variable]: value }),
-				(error) => error.message.includes(`${variable} must be`) && !error.message.includes("secret-key"),
-			);
+			const environment = { ...validEnvironment, [variable]: value };
+			assert.doesNotThrow(() => validateEnvironment(environment));
+			const logs = [];
+			logFeatureConfiguration({ info: (...args) => logs.push(args.join(" ")), warn: (...args) => logs.push(args.join(" ")) }, environment);
+			assert.ok(logs.some((line) => line.includes(`${variable} must be`)), variable);
+			assert.ok(!logs.join(" ").includes("secret-key"));
 		}
 	}
-	assert.throws(() => validateEnvironment({}), (error) => {
-		return Object.keys(validEnvironment).every((variable) => error.message.includes(`${variable} is required`));
+	assert.throws(() => validateEnvironment({}), /TOKEN is required/);
+});
+
+test("enabled social worker requires a bounded local socket path", () => {
+	assert.doesNotThrow(() => validateEnvironment({ ...validEnvironment, SOCIAL_MEDIA_ENABLED: "true", SOCIAL_WORKER_SOCKET: "/tmp/worker.sock" }));
+	for (const value of [undefined, "", "relative.sock", "https://example.test", "/".repeat(101), "/tmp/bad\nsock"]) {
+		const configuration = getFeatureConfiguration({ ...validEnvironment, SOCIAL_MEDIA_ENABLED: "true", SOCIAL_WORKER_SOCKET: value });
+		assert.equal(configuration.socialMedia.enabled, false);
+		assert.ok(configuration.socialMedia.problems.some((problem) => problem.startsWith("SOCIAL_WORKER_SOCKET")));
+	}
+});
+
+test("social runtime starts after login and drains before Discord and PostgreSQL close", async () => {
+	const { startBot } = await import("../main.ts");
+	const { socialRuntimes } = await import("../core/socialRuntime.ts");
+	const calls = [];
+	const client = { destroy: async () => { calls.push("destroy"); } };
+	const runtime = {
+		start: () => { calls.push("start social"); },
+		stop: async () => { calls.push("stop social"); },
+	};
+	const bot = await startBot({
+		validateEnvironment: () => undefined, createClient: () => client, createSocialRuntime: () => runtime,
+		createPGPool: async () => undefined, closeDatabase: async () => { calls.push("close database"); },
+		commandHandler: async () => undefined, eventHandler: async () => undefined, drainEvents: async () => undefined,
+		loginClient: async () => { calls.push("login"); }, startCronJobs: () => async () => undefined,
+		logger: { info: () => undefined, error: () => undefined },
 	});
+	assert.equal(socialRuntimes.get(client), runtime);
+	await bot.stop();
+	await bot.stop();
+	assert.equal(socialRuntimes.has(client), false);
+	assert.deepEqual(calls, ["login", "start social", "stop social", "destroy", "close database"]);
 });
 
 test("invalid configuration rejects before creating clients, connecting, scheduling, or logging in", async () => {

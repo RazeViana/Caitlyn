@@ -6,7 +6,7 @@
  * @module checkMessages
  */
 
-import "dotenv/config";
+import "../core/loadEnvironment.js";
 
 import { pathToFileURL } from "node:url";
 import { pool } from "../core/createPGPool.js";

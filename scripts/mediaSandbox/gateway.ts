@@ -116,4 +116,7 @@ export function startGateway(socketPath = "/ipc/proxy.sock") {
 	return server;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) startGateway();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	if (process.argv[2] !== undefined) throw new Error("invalid_gateway_options");
+	startGateway("/ipc/proxy.sock");
+}

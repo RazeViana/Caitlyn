@@ -20,8 +20,18 @@ const expectedFiles = [
 	"dist/main.js",
 	"dist/core/deployCommands.js",
 	"dist/core/environment.js",
+	"dist/core/loadEnvironment.js",
 	"dist/core/discordLogForwarder.js",
 	"dist/core/guildSettings.js",
+	"dist/core/socialRuntime.js",
+	"dist/core/socialProgress.js",
+	"dist/core/socialDeliveryStore.js",
+	"dist/core/socialWorkerClient.js",
+	"dist/messages/socialDelivery.js",
+	"dist/commands/utility/social.js",
+	"dist/events/messageUpdate.js",
+	"dist/events/messageDelete.js",
+	"dist/events/messageDeleteBulk.js",
 	"dist/events/guildCreate.js",
 	"dist/commands/utility/setup.js",
 	"dist/commands/utility/logs.js",
@@ -99,9 +109,8 @@ test("compiled startup imports without secrets and reports missing configuration
 		assert.equal(child.status, 1, child.stderr);
 		assert.equal(child.signal, null);
 		assert.equal(child.stdout, "imported safely\n");
-		for (const variable of ["TOKEN", "PGHOST", "GUILD_ID", "WEBUI_API_KEY", "EMBEDDING_ENDPOINT"]) {
-			assert.match(child.stderr, new RegExp(`${variable} is required`));
-		}
+		assert.match(child.stderr, /TOKEN is required/);
+		assert.doesNotMatch(child.stderr, /PGHOST is required|GUILD_ID is required|WEBUI_API_KEY is required|EMBEDDING_ENDPOINT is required/);
 	}
 	finally {
 		await rm(temporaryDirectory, { force: true, recursive: true });
@@ -224,6 +233,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"server",
 			"setup",
 			"showbirthdays",
+			"social",
 			"streaks",
 			"toggleai",
 			"user",
@@ -233,6 +243,9 @@ test("compiled handlers and deployment discover every production command and eve
 			{ method: "on", name: "guildCreate" },
 			{ method: "on", name: "interactionCreate" },
 			{ method: "on", name: "messageCreate" },
+			{ method: "on", name: "messageDelete" },
+			{ method: "on", name: "messageDeleteBulk" },
+			{ method: "on", name: "messageUpdate" },
 			{ method: "on", name: "voiceStateUpdate" },
 		]);
 		assert.equal(result.restCalls.length, 1);
@@ -241,7 +254,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"/applications/compiled-client-id/guilds/compiled-guild-id/commands",
 		);
 		const guildPayload = result.restCalls[0].options.body;
-		assert.equal(guildPayload.length, 13);
+		assert.equal(guildPayload.length, 14);
 		assert.equal(guildPayload.every((command) => {
 			return command !== null && typeof command === "object" && !Array.isArray(command);
 		}), true);
@@ -256,6 +269,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"server",
 			"setup",
 			"showbirthdays",
+			"social",
 			"streaks",
 			"toggleai",
 			"user",

@@ -23,10 +23,11 @@ import {
 import logger from "../../core/logger.js";
 import { nextBirthday } from "../../core/birthdayDate.js";
 import { truncate } from "../../core/textLimits.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
+import { getFeatureConfiguration } from "../../core/environment.js";
 
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
-const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${GIPHY_API_KEY}&tag=birthday`;
+const GIPHY_ENDPOINT = `https://api.giphy.com/v1/gifs/random?api_key=${encodeURIComponent(GIPHY_API_KEY ?? "")}&tag=birthday`;
 
 const monthNames = [
 	"January",
@@ -72,16 +73,19 @@ interface BirthdayDisplay {
 }
 
 export interface ShowBirthdaysDependencies {
+	giphyEnabled?: () => boolean;
 	fetch: (url: string) => Promise<FetchResponse>;
 	query: (...args: [string, ...unknown[]]) => Promise<{ rows: BirthdayRow[] }>;
 }
 
 const defaultShowBirthdaysDependencies: ShowBirthdaysDependencies = {
+	giphyEnabled: () => getFeatureConfiguration().giphy.enabled,
 	fetch: async (url) => fetch(url, { signal: AbortSignal.timeout(3_000) }),
 	query: (...args) => Reflect.apply(pool.query, pool, args) as Promise<{ rows: BirthdayRow[] }>,
 };
 
 export const category = "user";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("showbirthdays")
 	.setDescription("🎉 View all saved birthdays grouped by month!");
@@ -95,7 +99,7 @@ export async function execute(
 		await respondWithError(interaction, "Use this command in a server.");
 		return;
 	}
-	await interaction.deferReply();
+	if (!await deferInteraction(interaction)) return;
 
 	const guild = interaction.guild;
 	const now = new Date();
@@ -103,21 +107,23 @@ export async function execute(
 
 	try {
 		// Fetch random gif from Giphy API
-		const giphyResponse = await dependencies.fetch(GIPHY_ENDPOINT);
+		if (dependencies.giphyEnabled?.() !== false) {
+			const giphyResponse = await dependencies.fetch(GIPHY_ENDPOINT);
 
-		const giphyData = await giphyResponse.json() as GiphyResponse;
+			const giphyData = await giphyResponse.json() as GiphyResponse;
 
-		if (!giphyResponse.ok) {
-			logger.error(
-				"Failed to fetch GIF from Giphy API:",
-				giphyResponse.statusText,
-			);
+			if (!giphyResponse.ok) {
+				logger.error(
+					"Failed to fetch GIF from Giphy API:",
+					giphyResponse.statusText,
+				);
+			}
+
+			randomGIF = giphyData.data?.images?.original?.url;
 		}
-
-		randomGIF = giphyData.data?.images?.original?.url;
 	}
-	catch (error) {
-		logger.error("Error fetching GIF:", error);
+	catch {
+		logger.warn("Birthday GIF unavailable; continuing without it");
 	}
 
 	try {

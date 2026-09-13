@@ -13,7 +13,7 @@ import {
 } from "discord.js";
 import { formatDuration, getUserActivity } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import type { ActivityRow } from "../../types/models.js";
 
 export interface ActivityCommandDependencies {
@@ -26,6 +26,7 @@ const defaultActivityCommandDependencies: ActivityCommandDependencies = {
 
 export const cooldown = 5;
 export const category = "user";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("activity")
 	.setDescription("View user activity statistics")
@@ -45,7 +46,7 @@ export async function execute(
 			await respondWithError(interaction, "Use this command in a server.");
 			return;
 		}
-		await interaction.deferReply();
+		if (!await deferInteraction(interaction)) return;
 		const targetUser = interaction.options.getUser("user") || interaction.user;
 		const guildId = interaction.guild!.id;
 

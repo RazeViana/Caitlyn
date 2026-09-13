@@ -6,7 +6,7 @@
  * @module embeddingService
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 
 import logger from "./logger.js";
 import type { EmbeddingResponse } from "../types/models.js";

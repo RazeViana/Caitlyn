@@ -6,7 +6,7 @@
  * @module logger
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 import { currentLogGuild } from "./logContext.js";
 import type { LogType } from "./logLevels.js";
 

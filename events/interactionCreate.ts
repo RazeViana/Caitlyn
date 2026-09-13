@@ -11,18 +11,25 @@
 
 import { Collection, Events, PermissionFlagsBits, type Interaction } from "discord.js";
 import logger from "../core/logger.js";
-import { respondWithError } from "../core/interactionResponse.js";
+import { respondWithError, skipUnavailableInteraction } from "../core/interactionResponse.js";
+import { getFeatureConfiguration } from "../core/environment.js";
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction: Interaction): Promise<unknown> {
 	// Check if the interaction is an autocomplete interaction
 	if (interaction.isAutocomplete()) {
+		if (skipUnavailableInteraction(interaction)) return;
 		const command = interaction.client.commands.get(interaction.commandName);
 		if (!command || typeof command.autocomplete !== "function") return;
 		try {
+			if (command.requiresDatabase && !getFeatureConfiguration().database.enabled) {
+				await interaction.respond([]);
+				return;
+			}
 			await command.autocomplete(interaction);
 		}
 		catch (error) {
+			if (skipUnavailableInteraction(interaction, error)) return;
 			logger.error(`Error in autocomplete for ${interaction.commandName}:`, error);
 		}
 		return;
@@ -30,6 +37,7 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 
 	// Check if the interaction is a command
 	if (!interaction.isChatInputCommand()) return;
+	if (skipUnavailableInteraction(interaction)) return;
 	if (["reload", "toggleai", "setup", "logs"].includes(interaction.commandName)
 		&& !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
 		await respondWithError(interaction, "Only server administrators can use this command.");
@@ -42,6 +50,11 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 	if (!command) {
 		logger.error(`No command matching ${interaction.commandName} was found.`);
 		await respondWithError(interaction, "That command is currently unavailable. Please try again later.");
+		return;
+	}
+
+	if (command.requiresDatabase && !getFeatureConfiguration().database.enabled) {
+		await respondWithError(interaction, "This feature is disabled because database configuration is missing or invalid. Ask the operator to check the startup logs.");
 		return;
 	}
 
@@ -87,6 +100,7 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 		await command.execute(interaction);
 	}
 	catch (error) {
+		if (skipUnavailableInteraction(interaction, error)) return;
 		logger.error(`Error executing ${interaction.commandName}:`, error);
 		await respondWithError(interaction);
 	}

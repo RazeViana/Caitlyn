@@ -6,7 +6,7 @@
  * @module createClient
  */
 
-import { Client, Collection, type GatewayIntentBits } from "discord.js";
+import { Client, Collection, Partials, type GatewayIntentBits } from "discord.js";
 import logger from "./logger.js";
 import { withLogGuild } from "./logContext.js";
 
@@ -14,6 +14,7 @@ function createClient(intents: GatewayIntentBits[]): Client {
 	// Create a new client instance
 	const client = new Client({
 		intents: intents,
+		partials: [Partials.Message],
 	});
 	client.cooldowns = new Collection();
 	client.on("error", (error) => withLogGuild(undefined, () => logger.error("Discord client error:", error)));

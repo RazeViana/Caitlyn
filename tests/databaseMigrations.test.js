@@ -58,8 +58,119 @@ test("database migrations bootstrap a fresh local database safely", {
 				"SELECT tablename FROM pg_tables WHERE schemaname = 'discord' ORDER BY tablename",
 			);
 			assert.deepEqual(rows.map((row) => row.tablename), [
-				"birthday_deliveries", "birthday_occurrences", "birthdays", "daily_activity", "guild_settings", "messages", "user_activity", "voice_sessions",
+				"birthday_deliveries", "birthday_occurrences", "birthdays", "daily_activity", "guild_settings", "messages", "social_channels", "social_jobs", "user_activity", "voice_sessions",
 			]);
+		});
+
+		await context.test("social jobs require opt-in, survive replay, and fence concurrent or stale workers", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			const job = { guild_id: "901", channel_id: "902", source_id: "903", author_id: "904", source_hash: "a".repeat(64), post_id: "905", url: "https://x.com/alice/status/905" };
+			assert.equal(await store.enabled("901", "902"), false);
+			assert.equal(await store.enqueue(job), false);
+			await store.configure("901", "902", true);
+			const queued = await Promise.all([store.enqueue(job), store.enqueue(job)]);
+			assert.equal(queued.filter(Boolean).length, 1);
+			await client.query(await readFile(new URL("014_social_delivery.sql", migrationsDirectory), "utf8"));
+			assert.deepEqual(await store.settings("901"), [{ channel_id: "902", enabled: true }]);
+			const claims = (await Promise.all([store.claim(), store.claim()])).filter(Boolean);
+			assert.equal(claims.length, 1);
+			const first = claims[0];
+			assert.equal(first.status, "processing");
+			assert.equal(first.attempts, 1);
+			await client.query("UPDATE discord.social_jobs SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [first.id]);
+			const second = await store.claim();
+			assert.notEqual(first.lease_token, second.lease_token);
+			assert.equal(second.attempts, 2);
+			assert.equal(await store.beginSend(first), false);
+			assert.equal(await store.beginSend(second), true);
+			await store.finish(first, "queued", "stale");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [first.id])).rows[0].status, "sending");
+			await client.query("UPDATE discord.social_jobs SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [first.id]);
+			const uncertain = await store.claim();
+			assert.equal(uncertain.status, "uncertain");
+			assert.equal(uncertain.attempts, 2);
+			assert.equal(await store.beginSend(uncertain), false);
+			await store.finish(uncertain, "queued", "must_not_retry");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [first.id])).rows[0].status, "uncertain");
+			await store.sent(uncertain, "906");
+			await store.finish(uncertain, "uncertain", "lost_sent_ack");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [first.id])).rows[0].status, "sent");
+			const sent = await store.claim();
+			assert.equal(sent.status, "sent");
+			await store.cancelSource("999", "902", "903");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [first.id])).rows[0].status, "sent");
+			await store.cancelSource("901", "902", "903");
+			await store.finish(sent, "sent", "racing_source_check");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [first.id])).rows[0].status, "removing");
+			const removing = await store.claim();
+			await store.finish(removing, "cancelled", "preview_removed");
+			assert.equal(await store.claim(), undefined);
+		});
+
+		await context.test("social disable and deletion cancel unsent jobs without altering another server", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			const job = { guild_id: "911", channel_id: "912", source_id: "913", author_id: "914", source_hash: "b".repeat(64), post_id: "915", url: "https://x.com/alice/status/915" };
+			await store.configure("911", "912", true);
+			await store.configure("921", "922", true);
+			await store.enqueue(job);
+			const first = await store.claim();
+			await store.configure("911", null, false);
+			assert.equal(await store.beginSend(first), false);
+			assert.equal(await store.enabled("921", "922"), true);
+			await store.configure("911", "912", true);
+			await store.enqueue({ ...job, source_id: "916" });
+			const second = await store.claim();
+			await store.beginSend(second);
+			await store.cancelSource("911", "912", "916");
+			await store.sent(second, "917");
+			const removing = await store.claim();
+			assert.equal(removing.status, "removing");
+			await store.finish(removing, "cancelled", "preview_removed");
+			await store.enqueue({ ...job, source_id: "918" });
+			await client.query("UPDATE discord.social_jobs SET expires_at = NOW() - INTERVAL '1 second' WHERE source_id = '918'");
+			assert.equal(await store.claim(), undefined);
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE source_id = '918'")).rows[0].status, "failed");
+		});
+
+		await context.test("source deletion requires all complete siblings and its durable marker survives self-delete events and replay", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			await store.configure("931", "932", true);
+			const input = { guild_id: "931", channel_id: "932", source_id: "933", author_id: "934", source_hash: "c".repeat(64), post_id: "935", url: "https://x.com/alice/status/935" };
+			await store.enqueue(input);
+			const first = await store.claim();
+			assert.equal(first.source_cleanup, "pending");
+			await store.beginSend(first, true, false);
+			await store.sent(first, "940");
+			assert.equal(await store.beginSourceDelete(first, ["935", "936"]), false);
+			await store.finish(first, "sent", "waiting_for_sibling");
+			await store.enqueue({ ...input, post_id: "936", url: "https://x.com/alice/status/936" });
+			const second = await store.claim();
+			assert.equal(second.post_id, "936");
+			await store.beginSend(second, false, true);
+			await store.sent(second, "941");
+			assert.equal(await store.beginSourceDelete(second, ["935", "936"]), false, "partial sibling must preserve source");
+			// Synthetic promotion permits checking the complete-success transition independently.
+			await client.query("UPDATE discord.social_jobs SET replacement_ready = TRUE WHERE id = $1", [second.id]);
+			assert.equal(await store.beginSourceDelete({ ...second, lease_token: first.lease_token }, ["935", "936"]), false);
+			const claims = await Promise.all([store.beginSourceDelete(second, ["935", "936"]), store.beginSourceDelete(second, ["935", "936"])]);
+			assert.equal(claims.filter(Boolean).length, 1);
+			await store.cancelSource("931", "932", "933");
+			await store.finish(first, "removing", "late_source_check");
+			let replacements = await store.sourceReplacements(second);
+			assert.ok(replacements.every((job) => job.status === "sent" && !job.cancel_requested && job.source_cleanup === "deleting"));
+			assert.equal(replacements.find((job) => job.id === second.id).sensitive, true);
+			const sql = await readFile(new URL("016_social_source_replacement.sql", migrationsDirectory), "utf8");
+			await client.query(sql);
+			assert.deepEqual(await store.sourceReplacements(second), replacements);
+			await store.finishSourceDelete(second, "deleted");
+			await store.cancelSource("931", "932", "933");
+			replacements = await store.sourceReplacements(second);
+			assert.ok(replacements.every((job) => job.status === "sent" && !job.cancel_requested && job.source_cleanup === "deleted"));
+			await client.query(sql);
+			assert.deepEqual(await store.sourceReplacements(second), replacements);
 		});
 
 		await context.test("private logging survives replay and reserves one main server even while disabled", async () => {
@@ -196,6 +307,41 @@ test("database migrations bootstrap a fresh local database safely", {
 			await trackVoiceLeave("fixture-guild", "fixture-user", "Fixture", { now: () => joinedAt + 7_000, transaction }, "room");
 			const open = await client.query("SELECT channel_id FROM discord.voice_sessions WHERE user_id = 'fixture-user' AND left_at IS NULL");
 			assert.deepEqual(open.rows, [{ channel_id: "new-room" }]);
+		});
+
+		await context.test("ambiguous voice history is preserved while new sessions track once after migration replay", async () => {
+			const { withTransaction } = await import("../core/transaction.ts");
+			const { trackVoiceJoin, trackVoiceLeave } = await import("../core/activityTracker.ts");
+			// Recreate pre-migration duplicates only in this disposable database.
+			await client.query("DROP INDEX discord.voice_sessions_one_tracked_open");
+			await client.query(`INSERT INTO discord.voice_sessions (guild_id, user_id, username, channel_id, joined_at)
+				VALUES ('legacy-guild', 'legacy-user', 'Fixture', 'old-a', '2020-01-01'),
+				('legacy-guild', 'legacy-user', 'Fixture', 'old-b', '2020-01-02'),
+				('other-guild', 'legacy-user', 'Fixture', 'valid', '2026-09-12'),
+				('legacy-guild', 'missing-time', 'Fixture', 'unknown', NULL)`);
+			const historyQuery = "SELECT id, guild_id, user_id, username, channel_id, joined_at, left_at, duration_seconds FROM discord.voice_sessions ORDER BY id";
+			const before = (await client.query(historyQuery)).rows;
+			const totalsBefore = (await client.query("SELECT * FROM discord.user_activity ORDER BY guild_id, user_id")).rows;
+			const sql = await readFile(new URL("015_quarantine_ambiguous_voice_sessions.sql", migrationsDirectory), "utf8");
+			await client.query(sql);
+			await client.query(sql);
+			assert.deepEqual((await client.query(historyQuery)).rows, before);
+			assert.deepEqual((await client.query("SELECT * FROM discord.user_activity ORDER BY guild_id, user_id")).rows, totalsBefore);
+			assert.equal((await client.query("SELECT COUNT(*)::int AS count FROM discord.voice_sessions WHERE needs_reconciliation")).rows[0].count, 3);
+			assert.equal((await client.query("SELECT needs_reconciliation FROM discord.voice_sessions WHERE guild_id = 'other-guild'")).rows[0].needs_reconciliation, false);
+			const transaction = (operation) => withTransaction(operation, applicationPool);
+			const joinedAt = Date.now();
+			// An unmatched leave must not close or credit any of the legacy records.
+			await trackVoiceLeave("legacy-guild", "legacy-user", "Fixture", { now: () => joinedAt, transaction });
+			assert.deepEqual((await client.query(historyQuery)).rows, before);
+			await Promise.all([1, 2].map(() => trackVoiceJoin("legacy-guild", "legacy-user", "Fixture", "new", "New", { now: () => joinedAt, transaction })));
+			await client.query(sql);
+			await assert.rejects(client.query(`INSERT INTO discord.voice_sessions (guild_id, user_id, username, channel_id, joined_at)
+				VALUES ('legacy-guild', 'legacy-user', 'Fixture', 'duplicate', NOW())`), /voice_sessions_one_tracked_open/);
+			await Promise.all([1, 2].map(() => trackVoiceLeave("legacy-guild", "legacy-user", "Fixture", { now: () => joinedAt + 5_000, transaction }, "new")));
+			const totals = (await client.query("SELECT total_voice_time, voice_join_count FROM discord.user_activity WHERE guild_id = 'legacy-guild' AND user_id = 'legacy-user'")).rows;
+			assert.deepEqual(totals, [{ total_voice_time: "5", voice_join_count: "1" }]);
+			assert.deepEqual((await client.query(historyQuery)).rows.slice(0, before.length), before);
 		});
 
 		await context.test("message counters roll back together when daily tracking fails", async () => {

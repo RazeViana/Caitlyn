@@ -44,13 +44,43 @@ test("X galleries and quotes remain ordered and attributed even when media IDs o
 	const result = renderXPost(input, [...attached(quote), ...attached(input)], limits);
 	assert.equal(result.omittedMedia, 0);
 	assert.equal(result.payload.embeds.length, 8);
-	assert.equal(result.payload.embeds[0].title, "Post on X");
+	assert.equal(result.payload.embeds[0].title, "View post on X");
 	assert.equal(result.payload.embeds[4].title, "Quoted post on X");
 	assert.ok(result.payload.embeds[4].author.name.includes("bob"));
 	assert.deepEqual(result.payload.files.map((file) => file.name), [
 		"x-123-501.jpg", "x-123-502.jpg", "x-123-503.jpg", "x-123-504.jpg",
 		"x-456-501.jpg", "x-456-502.jpg", "x-456-503.jpg", "x-456-504.jpg",
 	]);
+});
+
+test("X embed author names are clean plain text and source URLs live in clickable card fields", () => {
+	const input = post("123", "alice_test");
+	input.author.name = "Alice * Test\n\u202EName";
+	const result = renderXPost(input, attached(input), limits);
+	const card = result.payload.embeds[0];
+	assert.equal(card.author.name, "Alice * Test Name (@alice_test)");
+	assert.equal(card.author.url, input.url);
+	assert.equal(card.url, input.url);
+	assert.equal(result.payload.content, undefined);
+	assert.ok(!card.description.includes(input.url));
+});
+
+test("media-only cards omit empty-text filler without losing partial-media warnings", () => {
+	const input = post();
+	input.text = "";
+	const result = renderXPost(input, attached(input), limits);
+	assert.equal(result.payload.embeds[0].description, undefined);
+	assert.ok(result.payload.embeds[0].image);
+	assert.equal(result.complete, true);
+	const missing = renderXPost(input, [], limits);
+	assert.equal(missing.payload.embeds[0].description, "1 media item(s) could not be attached; open the original.");
+	assert.equal(missing.complete, false);
+	input.media[0].kind = "video";
+	const video = renderXPost(input, [{ ...attached(input)[0], extension: "mp4" }], limits);
+	assert.equal(video.payload.embeds[0].description, undefined);
+	assert.equal(video.payload.embeds[0].video, undefined);
+	assert.equal(video.payload.files[0].name, "x-123-501.mp4");
+	assert.equal(video.complete, true);
 });
 
 test("X long text gets an attributed text attachment while all embed limits remain bounded", () => {

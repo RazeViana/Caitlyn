@@ -13,7 +13,7 @@ import {
 } from "discord.js";
 import { formatDuration, getTopActiveUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { truncate } from "../../core/textLimits.js";
 import type { ActivityRow } from "../../types/models.js";
 
@@ -27,6 +27,7 @@ const defaultLeaderboardCommandDependencies: LeaderboardCommandDependencies = {
 
 export const cooldown = 10;
 export const category = "utility";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("leaderboard")
 	.setDescription("View the server activity leaderboard")
@@ -51,7 +52,7 @@ export async function execute(
 		const limit = interaction.options.getInteger("limit") || 10;
 		const guildId = interaction.guild!.id;
 
-		await interaction.deferReply();
+		if (!await deferInteraction(interaction)) return;
 
 		// Fetch leaderboard data
 		const topUsers = await dependencies.getTopActiveUsers(guildId, limit);

@@ -14,7 +14,7 @@ import {
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
 import logger from "../../core/logger.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { birthdayDate } from "../../core/birthdayDate.js";
 
 interface BirthdayQueryResult {
@@ -31,6 +31,7 @@ const defaultAddBirthdayDependencies: AddBirthdayDependencies = {
 
 export const cooldown = 5;
 export const category = "user";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("addbirthday")
 	.setDescription("Sets a birthday reminder for the specified user")
@@ -86,7 +87,7 @@ export async function execute(
 		return;
 	}
 	try {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		if (!await deferInteraction(interaction, { flags: MessageFlags.Ephemeral })) return;
 		await dependencies.query(
 			"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3) ON CONFLICT (discord_id) DO UPDATE SET name = EXCLUDED.name, dob = EXCLUDED.dob",
 			[user.id, user.username, dob],

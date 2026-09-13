@@ -11,6 +11,9 @@ import { test } from "node:test";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 
 process.env.LLM_ENABLED = "false";
+process.env.OLLAMA_MODEL = "fixture";
+process.env.WEBUI_API_KEY = "fixture";
+process.env.WEBUI_CHAT_ENDPOINT = "https://fixture.invalid/chat";
 
 const activityCommand = await import("../commands/user/activity.ts");
 const leaderboardCommand = await import("../commands/utility/leaderboard.ts");

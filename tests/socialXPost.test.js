@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeXPost, xMediaUrl, xVideoCandidates } from "../core/socialXPost.ts";
+import { normalizeXPost, sanitizeXPostDiagnostic, xMediaUrl, xVideoCandidates } from "../core/socialXPost.ts";
 
 function tweet(id = "123", handle = "alice", media = []) {
 	return {
@@ -35,6 +35,32 @@ function video(id = "502") {
 		] },
 	};
 }
+
+test("public sensitive metadata requires opt-in but actual X age/login/protection gates remain blocked", () => {
+	const result = tweet("123", "alice", [photo()]);
+	result.legacy.possibly_sensitive = true;
+	assert.equal(normalize(result).outcome, "restricted");
+	const allowed = normalizeXPost({ tweetResult: { result } }, "123", true);
+	assert.equal(allowed.outcome, "ready");
+	assert.equal(allowed.post.sensitive, true);
+	assert.equal(allowed.post.media.length, 1);
+	for (const reason of ["Protected", "NsfwLoggedOut", "NsfwViewerHasNoStatedAge"]) {
+		assert.equal(normalizeXPost({ tweetResult: { result: { __typename: "TweetUnavailable", reason } } }, "123", true).outcome, "restricted");
+	}
+	result.core.user_results.result.legacy.protected = true;
+	assert.equal(normalizeXPost({ tweetResult: { result } }, "123", true).outcome, "restricted");
+});
+
+test("sensitive quoted posts carry a separate sensitivity marker", () => {
+	const parent = tweet();
+	parent.legacy.quoted_status_id_str = "456";
+	const quote = tweet("456", "bob", [photo()]);
+	quote.legacy.possibly_sensitive = true;
+	parent.quoted_status_result = { result: quote };
+	assert.equal(normalize(parent).post.quote.state, "unavailable");
+	const allowed = normalizeXPost({ tweetResult: { result: parent } }, "123", true);
+	assert.equal(allowed.post.quote.post.sensitive, true);
+});
 
 test("X text preserves line breaks, entities, author identity, and exact string IDs", () => {
 	const id = "2097877698894770267";
@@ -117,25 +143,140 @@ test("X unavailable and restricted responses do not leak their text or return me
 		[{ __typename: "TweetUnavailable", reason: "Deleted" }, "unavailable"],
 		[{ __typename: "TweetUnavailable", reason: "Protected" }, "restricted"],
 		[{ __typename: "TweetUnavailable", reason: "NsfwLoggedOut" }, "restricted"],
-	]) assert.deepEqual(normalize(input), { outcome });
+	]) {
+		const result = normalize(input);
+		assert.equal(result.outcome, outcome);
+		assert.equal(result.post, undefined);
+		assert.ok(!JSON.stringify(result).includes("private detail"));
+	}
 	const input = tweet();
 	input.legacy.possibly_sensitive = true;
-	assert.deepEqual(normalize(input), { outcome: "restricted" });
+	assert.equal(normalize(input).diagnostic.reason, "sensitive_disabled");
 	input.legacy.possibly_sensitive = false;
 	input.core.user_results.result.legacy.protected = true;
-	assert.deepEqual(normalize(input), { outcome: "restricted" });
+	assert.equal(normalize(input).diagnostic.reason, "protected");
 });
 
 test("X malformed identity and response shapes fail closed instead of attributing the wrong post", () => {
 	for (const input of [null, [], {}, { __typename: "Unknown" }, tweet("999"), { ...tweet(), rest_id: "999" }]) {
-		assert.deepEqual(normalize(input), { outcome: "invalid_response" });
+		assert.equal(normalize(input).outcome, "invalid_response");
 	}
-	assert.deepEqual(normalizeXPost({}, "123"), { outcome: "invalid_response" });
+	assert.equal(normalizeXPost({}, "123").diagnostic.reason, "unexpected_response");
 	assert.deepEqual(normalize(tweet(), "not-an-id"), { outcome: "invalid_response" });
 	const input = tweet();
 	input.legacy.id_str = 123;
 	input.rest_id = 123;
-	assert.deepEqual(normalize(input), { outcome: "invalid_response" });
+	assert.equal(normalize(input).diagnostic.reason, "identity_mismatch");
+});
+
+test("a bare X tombstone remains unknown, not assumed deleted or age-gated", () => {
+	const result = normalize({ __typename: "TweetTombstone" });
+	assert.deepEqual(result, { outcome: "unavailable", diagnostic: {
+		stage: "metadata", responseType: "TweetTombstone", reason: "unknown_tombstone", source: "response_shape",
+		hasLegacy: false, hasTombstoneText: false,
+	} });
+});
+
+test("X reason codes distinguish login, age, protection, and deletion without echoing unknown codes", () => {
+	for (const [reason, expected, outcome] of [
+		["NsfwLoggedOut", "login_required", "restricted"], ["NsfwViewerHasNoStatedAge", "age_required", "restricted"],
+		["Protected", "protected", "restricted"], ["Deleted", "deleted", "unavailable"],
+		["private reason https://example.test?token=secret", "unknown_unavailable", "unavailable"],
+	]) {
+		const result = normalize({ __typename: "TweetUnavailable", reason });
+		assert.equal(result.outcome, outcome);
+		assert.equal(result.diagnostic.reason, expected);
+		assert.equal(result.diagnostic.source, expected === "unknown_unavailable" ? "response_shape" : "reason_code");
+		assert.equal(result.post, undefined);
+		assert.ok(!JSON.stringify(result).includes("secret"));
+	}
+});
+
+test("X tombstone text and richText shapes yield bounded diagnostics, never media", () => {
+	for (const notice of [
+		{ tombstone: { text: { text: "To view this media, you'll need to log in to Twitter." } } },
+		{ tombstone: { richText: { text: "To view this media, you’ll need to log in to X." } } },
+		{ tombstone: { text: "To view this media, you'll need to log in to X." } },
+		{ text: { text: "To view this media, you'll need to log in to X." } },
+		{ richText: { text: "To view this media, you'll need to log in to X." } },
+		{ text: "To view this media, you'll need to log in to X." },
+	]) {
+		const input = { ...tweet("123", "alice", [video()]), __typename: "TweetTombstone", ...notice };
+		const snapshot = structuredClone(input);
+		const result = normalizeXPost({ tweetResult: { result: input } }, "123", true);
+		assert.equal(result.outcome, "restricted");
+		assert.equal(result.diagnostic.reason, "login_required");
+		assert.equal(result.diagnostic.source, "tombstone_text");
+		assert.equal(result.diagnostic.hasLegacy, true);
+		assert.equal(result.diagnostic.hasTombstoneText, true);
+		assert.equal(result.post, undefined);
+		assert.ok(!JSON.stringify(result).includes("twimg.com"));
+		assert.deepEqual(input, snapshot);
+	}
+});
+
+test("X notice wording identifies only recognized restrictions and availability states", () => {
+	for (const [text, reason, outcome] of [
+		["Age-restricted adult content. Learn more", "age_required", "restricted"],
+		["This Post is from a protected account.", "protected", "restricted"],
+		["This Tweet was deleted by the Tweet author. Learn more", "deleted", "unavailable"],
+		["This Post is from an account that no longer exists. Learn more", "author_unavailable", "unavailable"],
+		["This Post is unavailable. Learn more", "unavailable", "unavailable"],
+		["This may be a login or age error, or not", "unknown_tombstone", "unavailable"],
+		["Unbekannter Fehler", "unknown_tombstone", "unavailable"],
+	]) {
+		const result = normalize({ __typename: "TweetTombstone", tombstone: { richText: { text } } });
+		assert.equal(result.outcome, outcome);
+		assert.equal(result.diagnostic.reason, reason);
+		assert.equal(result.diagnostic.source, reason === "unknown_tombstone" ? "response_shape" : "tombstone_text");
+	}
+});
+
+test("structured X reasons take precedence and wrapper tombstones are never discarded", () => {
+	const notice = { text: { text: "This Post was deleted." } };
+	const explicit = normalize({ __typename: "TweetTombstone", reason: "NsfwLoggedOut", tombstone: notice });
+	assert.equal(explicit.diagnostic.reason, "login_required");
+	assert.equal(explicit.diagnostic.source, "reason_code");
+	const wrapper = { __typename: "TweetWithVisibilityResults", tombstone: notice, tweet: tweet() };
+	assert.equal(normalize(wrapper).diagnostic.reason, "deleted");
+	assert.equal(normalize(wrapper).post, undefined);
+	delete wrapper.tombstone;
+	wrapper.tweet = { __typename: "TweetUnavailable", reason: "NsfwViewerHasNoStatedAge" };
+	assert.equal(normalize(wrapper).diagnostic.reason, "age_required");
+});
+
+test("X diagnostics ignore oversized or malformed notices and never scan post content", () => {
+	for (const notice of ["This Post was deleted." + "x".repeat(1_025), 42, {}, [], null]) {
+		const result = normalize({ __typename: "TweetTombstone", tombstone: { text: notice }, legacy: {
+			full_text: "To view this media, you'll need to log in to X.",
+		} });
+		assert.equal(result.diagnostic.reason, "unknown_tombstone");
+		assert.equal(result.diagnostic.hasTombstoneText, false);
+	}
+	const result = normalize({ __typename: "secret\nhttps://example.test", reason: "secret", legacy: {} });
+	assert.equal(result.outcome, "invalid_response");
+	assert.equal(result.diagnostic.responseType, "unknown");
+	assert.ok(!JSON.stringify(result).includes("secret"));
+});
+
+test("newer X privacy flags and subscriber-only preview types remain restricted", () => {
+	const input = tweet();
+	input.core.user_results.result.privacy = { protected: true };
+	assert.equal(normalize(input).outcome, "restricted");
+	assert.equal(normalize(input).diagnostic.reason, "protected");
+	assert.equal(normalize({ __typename: "TweetPreviewDisplay", tweet: tweet() }).diagnostic.reason, "subscription_required");
+});
+
+test("X diagnostic sanitization copies only known enums and booleans", () => {
+	const diagnostic = normalize({ __typename: "TweetTombstone" }).diagnostic;
+	assert.deepEqual(sanitizeXPostDiagnostic({ ...diagnostic, text: "secret", url: "https://example.test" }), diagnostic);
+	for (const field of Object.keys(diagnostic)) {
+		assert.equal(sanitizeXPostDiagnostic({ ...diagnostic, [field]: "secret" }), undefined);
+		const incomplete = { ...diagnostic };
+		delete incomplete[field];
+		assert.equal(sanitizeXPostDiagnostic(incomplete), undefined);
+	}
+	for (const invalid of [null, undefined, [], "secret"]) assert.equal(sanitizeXPostDiagnostic(invalid), undefined);
 });
 
 test("X visibility wrappers and newer user-core identity fields are supported", () => {

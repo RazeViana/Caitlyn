@@ -1,0 +1,1775 @@
+{
+  "commit": "5b5b6207d9fd93bae15a68ab659fbc97cdbf61b5",
+  "files": [
+    {
+      "path": "branding.example.json",
+      "sha256": "068b2331d7f7682b23417ada153a3b75620b64a05a571dd7d38d12f18dadb5ba",
+      "upstreamGitBlob": "0c340f9aa07db5adcac3322451999abaf6851a83",
+      "match": true
+    },
+    {
+      "path": "esbuild.config.mjs",
+      "sha256": "9f495bd035b759542df7acef42617655ab3d9fc3f85e082a85741987fba7f5d5",
+      "upstreamGitBlob": "fd2bc997b568dc96c40955cb321d4c443e40e821",
+      "match": true
+    },
+    {
+      "path": "i18n/af/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/ar/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/ca/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/cs/resources.json",
+      "sha256": "c6210879f831fe19ebde60bd30cc9750fd965599c84bebc7e5d8808a0403c0d1",
+      "upstreamGitBlob": "fdd3991e3f4ef6ff7f3249054ba3ed504032b04b",
+      "match": true
+    },
+    {
+      "path": "i18n/da/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/de/resources.json",
+      "sha256": "0d62a24d118619fb0fec8e7ebeaffe037af2821212c2e742c88eaf678928390c",
+      "upstreamGitBlob": "347834f2cf6737649e8cff8855ef65d8dd81908c",
+      "match": true
+    },
+    {
+      "path": "i18n/el/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/en/resources.json",
+      "sha256": "73ed118cf5678adfe35fc5670d87bc8428b2c9087a0b132bfa2365716efdab94",
+      "upstreamGitBlob": "840dfd0f5673ac87023cdd1d541ebcfe9ccbb789",
+      "match": true
+    },
+    {
+      "path": "i18n/es-ES/resources.json",
+      "sha256": "e8a919f1d9479fa1cb34d4fb05a5692b0e8b100871d9d263926c79888beb554f",
+      "upstreamGitBlob": "f5f12a688fe8f126dc35330a3c6a1956824b2176",
+      "match": true
+    },
+    {
+      "path": "i18n/fi/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/fr/resources.json",
+      "sha256": "2e5a3c68f393d6c47682fe0ab7f2ac0a8886a27ef4213d6cb9005a370c00e87f",
+      "upstreamGitBlob": "49760fe588cc122c8e8e375fbacbe3462de46c89",
+      "match": true
+    },
+    {
+      "path": "i18n/he/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/hu/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/it/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/ja/resources.json",
+      "sha256": "c0bafdfea282cd8f55c3adcbc348ee1ae87b4f289c0154fe87df0532a75ab305",
+      "upstreamGitBlob": "96137008c2eecef29597dbd662356dc89a8b544b",
+      "match": true
+    },
+    {
+      "path": "i18n/ko/resources.json",
+      "sha256": "423e589cac480e940370c850b449679a37e925a72d26acf577474490ea6cd3ee",
+      "upstreamGitBlob": "300950d4f080a479ecf7a9548313d858b2aa3ce8",
+      "match": true
+    },
+    {
+      "path": "i18n/nl/resources.json",
+      "sha256": "06201ac6a926b890f8353395413f2eb2df391f006935172eb234de3511c6a93f",
+      "upstreamGitBlob": "999133a9bd558582aa465a7b5840c3cd5f38ce52",
+      "match": true
+    },
+    {
+      "path": "i18n/no/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/pl/resources.json",
+      "sha256": "cff54a1b477f2146dacff5b9e34a932ad1edae541764856e71b2340fe6bb6eb3",
+      "upstreamGitBlob": "a188c44452d1b9676d5e39d17cce4395cfc63e68",
+      "match": true
+    },
+    {
+      "path": "i18n/pt-PT/resources.json",
+      "sha256": "542d4882b98560d089abdbed45b931b92d54c7f4e75f63ad7643c1a72b888f5f",
+      "upstreamGitBlob": "c1dc304e5d77f0efd55bdd4f86ad7210184aa297",
+      "match": true
+    },
+    {
+      "path": "i18n/resources.js",
+      "sha256": "29494b3f14602885cf8a5ee40f4bc9c461674d9a158e7303ed38e154a2d25fce",
+      "upstreamGitBlob": "c2ab9ce40496a63230ad9555be277ebc9bdcbe83",
+      "match": true
+    },
+    {
+      "path": "i18n/resources.json",
+      "sha256": "a08f1149db79f95059879426ff1fea615ae4bd8ef5d11476a1b1e13caf58b9dd",
+      "upstreamGitBlob": "a123cd6a951737ee10738b1d15eb24203852d9b2",
+      "match": true
+    },
+    {
+      "path": "i18n/ro/resources.json",
+      "sha256": "e32a54d9696cd1a15b869722459cf4205a155ea1fb85fc64ae66d13ceae08bdb",
+      "upstreamGitBlob": "de9d6d41b27d606d5e607675e57f9f78dfad992a",
+      "match": true
+    },
+    {
+      "path": "i18n/ru/resources.json",
+      "sha256": "e21a23f13ab3175d94a1c962ea77af7b217843e61658b72d744ff8c284735af4",
+      "upstreamGitBlob": "9103a22cd16591b30e7e86a73ad79944c3cfb598",
+      "match": true
+    },
+    {
+      "path": "i18n/sr/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/sv-SE/resources.json",
+      "sha256": "491523d7ddb6cb2546a4030d1132a908eb5143166064daf379f3081d7b3266ce",
+      "upstreamGitBlob": "6668a9871429be0fe61c2bb6f53445bfd7e8723f",
+      "match": true
+    },
+    {
+      "path": "i18n/tr/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/uk/resources.json",
+      "sha256": "8c6513f9ec97c1d745bba76f8eb023f4145436b82d7060244cd69b74fa795270",
+      "upstreamGitBlob": "56ce41134d456ba94d3822b02ebac3aa1a945900",
+      "match": true
+    },
+    {
+      "path": "i18n/vi/resources.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "upstreamGitBlob": "0967ef424bce6791893e9a57bb952f80fd536e93",
+      "match": true
+    },
+    {
+      "path": "i18n/zh-CN/resources.json",
+      "sha256": "e099b17520664e15156cc1b204ca72e17ae397b3ba10a24ec115e66d3ec9bf2b",
+      "upstreamGitBlob": "76a219477f2136cf948b3762a9259e7c7ae83104",
+      "match": true
+    },
+    {
+      "path": "i18n/zh-TW/resources.json",
+      "sha256": "a6877bf808277415900d42d205008976c6ad48c3fed8dc049b889f87d582a6cf",
+      "upstreamGitBlob": "f529d7692a4dee36f6cb8f47daf11bf3ed194397",
+      "match": true
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "3d08264eccdaaa6eb254b0aab7a39c79583b97030c20d313e97f8e6f38b27c9f",
+      "upstreamGitBlob": "1696fe9511a91944321e5e1a096a706e60f6bcec",
+      "match": true
+    },
+    {
+      "path": "package.json",
+      "sha256": "54b0e58c28aaa19ac1fcd2f9996ff8675c2db7df9f0d947531c5f02fa287fdfa",
+      "upstreamGitBlob": "fea30d64a7b5a961d7ff344edb7cd95c90d27bf2",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/package.json",
+      "sha256": "29d3bccd40296c29d1b5d25b4a0f402e81304414ddb24b1d732f08ef8159f7c8",
+      "upstreamGitBlob": "5c5a1e2e4016d2eb241dd58bb5259cb128bd6767",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/detokenize.ts",
+      "sha256": "d33ac5c084fa49ef74bd0f1b072c3f831a43db7d2a5c8da6c8375f41ee2d3c0c",
+      "upstreamGitBlob": "40e45f608404c3c55bacd06325d947e0c8431c26",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/format-image-url.ts",
+      "sha256": "d2b8a7f24f8ba4fa5cdb2dea799f3bf56b70768f417189b2930ef40033a3d5ee",
+      "upstreamGitBlob": "2816d6f462f2c04ee861572ef963d2f65b981781",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/format-number.ts",
+      "sha256": "0d7ac8d3eaf4e0f843fc4993e30c29e58ee791e5d9e8e8e7691bcc2d2b8c9d45",
+      "upstreamGitBlob": "13e4297b0843d02dcead17b4026fac29c6ff81f4",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/gif-transcode.ts",
+      "sha256": "1d45d9ecc6deacc904e13f4f7cf0fb74576a0f1a80dd9c3ea7a6555cf7e0372f",
+      "upstreamGitBlob": "9412e62a0392b813bb3be40f1e065dcda0451ce1",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/graphql-twitter.ts",
+      "sha256": "3d92bc6492f42c3e4e0603da39b3eb7e9c51820118a2addfe2aa4f3e01808067",
+      "upstreamGitBlob": "210056f42a160bf509b5b7f864eb9f8701ac1c6c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/index.ts",
+      "sha256": "eb64407f18eac7184b54ccf971654af3fe48670c6b72dd9b73e3b01a136b9159",
+      "upstreamGitBlob": "8a7d33928cee747df83f7993fdd16f2a32068b35",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/language.ts",
+      "sha256": "267ce9c105ccf141c436ec465bd8258d54479aa21a32c39ff2eeea730c575647",
+      "upstreamGitBlob": "b0e7943bddfe09236b41558f179bff3de01d7c70",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/link-fixer.ts",
+      "sha256": "6c3e81f4ae5049258210df5bf7cab8d399a5ae92497b100003eee441f8590236",
+      "upstreamGitBlob": "ded71983ac8d0c9e0f5290fc8d0acce3f332018c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/media.ts",
+      "sha256": "1b29aa77919dacea75bcc77df5df2d5e52cda056a5dd92fd6d2ef831ae57f095",
+      "upstreamGitBlob": "244329dd1e71fe8f02a2037c044033f67e3c5c51",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/mosaic.ts",
+      "sha256": "1df8b88a673736c8bed3682ddf59e1607883d9a4292fa2575e1d2c2371797699",
+      "upstreamGitBlob": "d3f07ca270689dd1fa81e15506d645f105454cf2",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/palette.ts",
+      "sha256": "0dc45ef95ab62e0352cbc20c4a1c42db6b9ece1fdf46d5d62daaa5835dabead5",
+      "upstreamGitBlob": "e1c4cfd31de2d32b36246a04961446582570af79",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/poll-time.ts",
+      "sha256": "c642ebcb4a112fa8fc574f3fbf2a79e74b9dc5a46c288fac2b119c543d154ad9",
+      "upstreamGitBlob": "f5778348eec6d7138e48e577a92a3742366bc8f9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/quote.ts",
+      "sha256": "67d5b414fb6bc0419649b3ca114bb693ded72d025aef34cfe6eee539dd0aacea",
+      "upstreamGitBlob": "07619cbdc779eedfb478a2870daab0799d89c26e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/same-origin-https-fetch.ts",
+      "sha256": "76878adc8865c71c1eb2f04eff9caec3d2245790d6a216c02b630cf0e6775710",
+      "upstreamGitBlob": "f2ea93b2c522bc78486f70d11a407e7913bdedc6",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/snowflake.ts",
+      "sha256": "d44ab1f24661f65f2e543d4afa6c3e3ef55a1746354bdfa23ee1ba90513b15d4",
+      "upstreamGitBlob": "b78047b93cc946b0c6008463090e12e895c14d9f",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/social-proof.ts",
+      "sha256": "f3810513181e65b5be9fdcd6b1a1b29bdfa8e77bd451e1a8ec2b3ca9bc5bd8af",
+      "upstreamGitBlob": "e9033653848017d9cb41ae0a53b205e1e4e54c1a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/tombstone.ts",
+      "sha256": "1e4e55da7d27bc48bd7d667cca1053c0fa33055ccb5f50b13229740b27403e3a",
+      "upstreamGitBlob": "4a83bd54c7c15c813bbbd55433c3473f4a52c488",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/transcode.ts",
+      "sha256": "0c247456a212dac73f5b5cf5941480e3c4f03aad69c21e7ae78000bfde9fffec",
+      "upstreamGitBlob": "b89e9adee5d3b404dfc2301236184ccb2f2abed8",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/translate-grok.ts",
+      "sha256": "33e4d7bb1819b5257b32fd6b4bdea19baddfd58126531a9411edf0d479794a23",
+      "upstreamGitBlob": "a4f9696214a1eeb15c9666be5c24d68785b11b9a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/twitter-text-indices.ts",
+      "sha256": "a016d11a9a337899f3757dcc4da73b1dd9a2747a3f4865c87bcfcbdb4e9f90cb",
+      "upstreamGitBlob": "1f925c87b482c3f821960f1500860189ebe34cb5",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/unescape-text.ts",
+      "sha256": "73dee5c5251ae2aeff2afc4c2a17e1a715cb3c7515b82cd56c8e8870a6b035bc",
+      "upstreamGitBlob": "05910b1610bf98b3db59d53d20ba3c6a0669bd8d",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/unicode-string.ts",
+      "sha256": "b187605f5c6b23d53b57b581df25f2e0bcc76431e5db4e3de08cddb65a03fd16",
+      "upstreamGitBlob": "00532112d349a347caced774715d927ace1543c8",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/user-agent.ts",
+      "sha256": "02824074eb83910d05f7b42bdaeff13bcd8e9315bfbd2c2900f96385a05cbe54",
+      "upstreamGitBlob": "8650f0529d1ebbbc6568066f8cdd4b53c7d8df4c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/helpers/with-timeout.ts",
+      "sha256": "b7d715c5aad4a523dcf5b5e588018744d56e993faab2574fa3e4805a334ce3d6",
+      "upstreamGitBlob": "17541e0468ae1b83616c7ea7daa9d4dcb9a8fa08",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/index.ts",
+      "sha256": "efcfbf6f9d89db2d10fdd77bf3bc6cc3f5c1ad076b85f4444650f4bf8f3dbece",
+      "upstreamGitBlob": "16dee2e617de219a69fa95882c05a26fb3236167",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky-runtime.ts",
+      "sha256": "fbb9b6d8c32951af11087ee303651534d40948f1897a7ec2cdf4c028d490a2e8",
+      "upstreamGitBlob": "61cb85913a99efab0d734a21c039273cebdb0f8c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/client-metadata.ts",
+      "sha256": "1e919bff726ec53562ade460828ec49a28950cb10670032962a712f557e5ebfd",
+      "upstreamGitBlob": "6c965ce0a0775fa34da2f8c2b19e078a2c607bb1",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/dpop.ts",
+      "sha256": "febc8b4ef3e5515792b1edd27b62de3fc045e3e5022c0724649bfe6aaa9a31cc",
+      "upstreamGitBlob": "7c3995633b611414a7b3f14abb8de2592c155a48",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/identity.ts",
+      "sha256": "387fe5dc1ff879f745f38ccaf0f37b8ffcf3278058734928533bd51c253b89ec",
+      "upstreamGitBlob": "e25c923f621454785f66e6f087579e9beecb8bae",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/index.ts",
+      "sha256": "8639d95faf85c5b91c5d39ec7f74ffebec9c43ca97434962a6db4f4baf86a89a",
+      "upstreamGitBlob": "802dc72c2ddc5777c465796d7e6e8ae428e3cd6b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/metadata.ts",
+      "sha256": "8d99993323a18d0ecf32f06185e4d5f8571eab5530ce19535961b76cd836dcb4",
+      "upstreamGitBlob": "edc8d6704fb9d32977e2236f1aa5550163e459e8",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/oauth-client.ts",
+      "sha256": "a5027ddf126099f0e0135c61a5634aa8b1ed89569c6e05547aa837e6f71d7952",
+      "upstreamGitBlob": "e079575bfbae0fe907ace1b33a208ccd6dd280ae",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/oauth-http.ts",
+      "sha256": "e7888782c6568161d221b5ef17788b2a6da9ed839d4438490e54fc761547aa0a",
+      "upstreamGitBlob": "37af29c8ffba3db8fd0aea1f1465208df646a188",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/par.ts",
+      "sha256": "947ddabe311a0f8713b92b869e2b2599577abfb0b8d53807999ddced951052b9",
+      "upstreamGitBlob": "fb3eef32320241f8ae25818017835541929dc1fe",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/pkce.ts",
+      "sha256": "24969b5a587b6e1d55bbe01be4c9792685255d65d5ab6dbb400ab6826358ed88",
+      "upstreamGitBlob": "c9fdf12ac6a3d9a5991ced236182431419ca0044",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/session-auth-provider.ts",
+      "sha256": "865a14f0b730c7cb452f828c4b32764d41222c43190c41490a2c92e72edb7e0b",
+      "upstreamGitBlob": "0338a4c9c3adf74d9e358a343708c5d9afb974f5",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/tokens.ts",
+      "sha256": "13e29dd88d8289c51e6a1e003659406e2b0f693e5a011538016756c6d1360aa6",
+      "upstreamGitBlob": "d6acb4323a8f3f386d3a3871f53519b44ccac2ff",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/types.ts",
+      "sha256": "562867446852becb51a68284c0786ee10657215f8723a8af0bef4544e5dee993",
+      "upstreamGitBlob": "4077e2429450d23115b537e16fe7fc753b72897e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/auth/xrpc-authenticated.ts",
+      "sha256": "abebc19f659c6f5bc8c1388eb0fdaa2a519ee7425cd2996f5b4f2e1c9b9b5cba",
+      "upstreamGitBlob": "4fe68b17f91cf0277e5a74e854faa57f2e52beb9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/build-host.ts",
+      "sha256": "6da7b4d5493378d35fedd3a9a39f3c6b8f5603c1ac0815209b341bfef0c015df",
+      "upstreamGitBlob": "7c46b1217595ac6c4290cd8343d221c04c919f6b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/client.ts",
+      "sha256": "bcb0623c284e85a0e3c70f9a9464265ed865a86872444e4ab7a348a940fdeb57",
+      "upstreamGitBlob": "b74f5d96183f58f19607f7c1eaaed33751297cf6",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/conversation.ts",
+      "sha256": "5ef480cfbd158571e429439a57fd3209ba0ea86b35e3a7b8278b0de8a53f3c4b",
+      "upstreamGitBlob": "baa62363fb163febc8496525607347e1b2494dfc",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/detectDescriptionFacets.ts",
+      "sha256": "d0f5cc1db111a01dba1d77b420a51470b2838535686db8288390bf6fdf927380",
+      "upstreamGitBlob": "70e381412f9e1d7263f50fdc7205e5efb262c261",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/facets.ts",
+      "sha256": "874c0bc607f3432198ccd1d898d64b05c826e979335d3b214405da4d87f3908f",
+      "upstreamGitBlob": "50a46ee6920b8ac7e6afea0b344f0fd593d26753",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/gallery.ts",
+      "sha256": "f9e6ab4220563ca2cc4bc5f31e4f94cd8ba90f2308803268e293cedf6680081c",
+      "upstreamGitBlob": "2463eb8a8d7c7c940f953c1a07fcd770a20388fb",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/home-feed.ts",
+      "sha256": "5d96416c32f346be2e65a33d1583cffe1544c4b5272a9e1703ec9ff91cd9a2f6",
+      "upstreamGitBlob": "85a2ffc8039ae9b3b8116db7b4832c70d3a109da",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/notifications-processor.ts",
+      "sha256": "97a3ae286461ba6904c9da2829519a76e86557c4acb3d57e20981af222455e0d",
+      "upstreamGitBlob": "e8aa5d41007f1bf7e030e20ab48c3aee39ffae87",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/notifications.ts",
+      "sha256": "c006e56c45a14e6d2d2cd21bfb5fdeb361efa0c3ed466508f7951b0e55efad32",
+      "upstreamGitBlob": "08b80c40d01ca2b3c041ab67a440e6bfc104a2f8",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/processor.ts",
+      "sha256": "fa4f85705d9a1e8eb667498634428bfb76e84195526283763d26f389921a82ae",
+      "upstreamGitBlob": "846c4e83eea9ddfc794dded5bf63bddf2d2d4bb4",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/profile.ts",
+      "sha256": "95e1efe877c4bb34f5687bd61d2c0535c27a728eb3bd2d24e532b373f48fb98f",
+      "upstreamGitBlob": "af8308d2acb53ee250137132e55fd2e17ee0614a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/profileFollowers.ts",
+      "sha256": "683e2cf570e8c6396d707a7f913ee247d4d43b27b8ef6ba031eba01b1a1e27ab",
+      "upstreamGitBlob": "fafa8438b595ba342c58f3f91aa4144602c1f2e3",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/profileStatuses.ts",
+      "sha256": "0961d3eded8334e6bfa12b0c67bcf0269427203d3447af8ca148355c86fe99a3",
+      "upstreamGitBlob": "1427da6adc33aa7fd714cdee6fc04128c3d8f65b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/search.ts",
+      "sha256": "fcbcb16e311ab2227d4440bb1b31146b6865bb0c9fb4a76fbfaa3e458dd8ea59",
+      "upstreamGitBlob": "56ab33004c98e9c1c61a0dc87d6df2ed7c9c285c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/session.ts",
+      "sha256": "3e5e3e7f433c8b966550a8cea81252dbad873929db974cac592e54f3b9a7e5b3",
+      "upstreamGitBlob": "f371b0ddb09bdd68c5e30113358cfb88d0acc5b3",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/statusLikes.ts",
+      "sha256": "9b2a830498262b13a3bfec711ea951692f73def52fa6c09e8a5c72a9c93106ae",
+      "upstreamGitBlob": "3f873fb593278319410e4bc6b9076d9fb6615c4a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/statusReposts.ts",
+      "sha256": "339d9a32e5b7c802dec8d7b147bb6d215041a74579dff5777cf8050c3f207ab8",
+      "upstreamGitBlob": "56766432c20419b5f7c04b5867d0b1ab8a4041b1",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/trends.ts",
+      "sha256": "ef0c94dc90b2ebd179b2771ecfdfb23ad0a10aaed234252982b6b87de2038a17",
+      "upstreamGitBlob": "e229f99bf0fa41d5ca283e79a89efec14c68e2b2",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/uris.ts",
+      "sha256": "f7f8eea3507787e8d28a525d10933d1bf1c45b53b7985a7f67a246f309781f2c",
+      "upstreamGitBlob": "0a96e536ef416e2fd099965116bed26038821616",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/bluesky/verification.ts",
+      "sha256": "009f857caa31914aed3b9cc79c7fda6b155aed2f1f2a47ffde83ba8f1191e481",
+      "upstreamGitBlob": "b74e29ed128a44e9c8eb40e2f66ac08f074561c1",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram-runtime.ts",
+      "sha256": "ec300f660c3bdd608c007f74f1909020c0315d63d470e048146b54d83ca62755",
+      "upstreamGitBlob": "000f73b8e854f0a664956fc57ceeac63d0d512e9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/account-proxy.ts",
+      "sha256": "6914dfe560757286f21544d3a50fafea9ecfe663b0a9b05e095f2a535906e8b5",
+      "upstreamGitBlob": "979dea9654e82f40c36295332d87fa360d7f49cc",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/client.ts",
+      "sha256": "a4cefad80fa3d56a4f52434c63afa7f252f479335aa9d8cf1dc8ab5e977305fa",
+      "upstreamGitBlob": "83245ac4913aaf3ee69fe11a82f2ea50410a87dd",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/constants.ts",
+      "sha256": "82807e6b4c38c602a80d4c45de842c59442986fd64506fdfe3cd8d9afafe71e8",
+      "upstreamGitBlob": "d4be226cd88837c0aed85920e9ee1a1c54e1941b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/conversation.ts",
+      "sha256": "f0b31b3286a8d55ea868a478cfd1f5cb83aae171ade87f5b53e4090a0feaafb8",
+      "upstreamGitBlob": "4f1801f60db6c0ccab6f105da011822be2ea2bea",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/cursors.ts",
+      "sha256": "b7741ced7e2da1d36acceb741b9cbcec6d2fe6dcb4683dc0d3a30f3e238a0492",
+      "upstreamGitBlob": "f4c277e970dbecccea6f00f61abb7d040ba8d633",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/extractors.ts",
+      "sha256": "ce78d47194b7d259c69d5b2b9f1bae66a824441821036d7ab3775bff807607aa",
+      "upstreamGitBlob": "4d529e5bcb362c00b195e70d3fcfcb546e6e6e76",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/fetch-shortcode-page.ts",
+      "sha256": "3b7591e6face4747e0ad22655f6b5ba942a4e76ceb53fbfa8cbc812bfb6c58ca",
+      "upstreamGitBlob": "b1a5af950023b9a7337aa2fb68fbd1f47132d184",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/likes.ts",
+      "sha256": "a0bd299066636ee427166a38447423e7140024ee18912ec2210be15e2b4be0b1",
+      "upstreamGitBlob": "2f9d1c5d5d49e7ff32e15661616e06ea15915cb7",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/post.ts",
+      "sha256": "7e50a9819157a60f99fe64250cdf37b63b5e641c04cecc4038162fc2607f6c3c",
+      "upstreamGitBlob": "c488629d0fbf5b6de9762ad342b1858bf1499634",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/private-api.ts",
+      "sha256": "5779859eebe32e666f86422033581864a18990ce48dd2e910ea316cf0588c0f1",
+      "upstreamGitBlob": "a00922b15e73d39ad06984ebb55188ee5f1bb9a6",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/private-processor.ts",
+      "sha256": "9beab318c6993dc1a517b519acfcc975176efd01b7f3b85436e019371845c191",
+      "upstreamGitBlob": "5f4e39bb19b15542c99bc8fd671a858a45503497",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/processor.ts",
+      "sha256": "81451d3ce4195a7b859f1762d466e89cf34d05513ab23ea22f1745a9ff9c0c75",
+      "upstreamGitBlob": "080265dbcdf649e6d40ca9f0568aa8d8aa162681",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/profile.ts",
+      "sha256": "fa7b7b52f0f5963dd1596e474dc99e2205df52433535adab6f3d2e75a8f24f07",
+      "upstreamGitBlob": "c4a3bbb76a464b6589aee048a5a027b908633820",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/relationships.ts",
+      "sha256": "4820a0a2d65f01ab388dc63cd5fade69893c69cbfa9aca7ed61a7d2fd0cfc674",
+      "upstreamGitBlob": "3d4da7806a28b47263767063f354efbd89fe95a9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/resolve-user.ts",
+      "sha256": "7037fbb28206505137124d3a27923b96274a220439738ec3bcadc910ef3dde93",
+      "upstreamGitBlob": "b591cffa9e93a75c49c94b9379e7673395b99d94",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/search.ts",
+      "sha256": "a459fc592c5d52f2af21dfded26112ddbbde879895ee925aa34d24cfdbf3f8e0",
+      "upstreamGitBlob": "c0d42c58e90e5733bdfa92c50f0817d616671570",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/shortcode.ts",
+      "sha256": "0a6c950119fdfb746adbff610fae1d19c348af084bfb3654f570bfc3419434c1",
+      "upstreamGitBlob": "bd84b4dccefaad61299670fdc146c10774980e2c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/stories.ts",
+      "sha256": "af3b3e268bb4eb87d72057e20fc01b54aff63c84fe815b1d0ed0c2ce821a436a",
+      "upstreamGitBlob": "694991a683190b4f0b24c86c57fef225594fc140",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/instagram/tagged.ts",
+      "sha256": "efe107a2f2a4819d49194e4dd306658073d2a56bda5679978f0dd86ea290fe0a",
+      "upstreamGitBlob": "86157d6b23f3eaaaca3641220ea32fa4968a8213",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon-runtime.ts",
+      "sha256": "8b1e6582b39594656fc340210215d417c99fca937fd31daab6b6f0b3deba66ea",
+      "upstreamGitBlob": "c98b5ce452406346ae36324ad12aa3bc9ad46f00",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/build-host.ts",
+      "sha256": "f3dd05e9d0f1c7d32c1e26426f59cc006c2654ea01ebdba6c5e5f14954dc0620",
+      "upstreamGitBlob": "dbb58a0098e151264bc79c487c14f602c8188a6d",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/client.ts",
+      "sha256": "c28818df998959c177b361d1697391f585efd4e67e1d185469d1be2ff0b70dbf",
+      "upstreamGitBlob": "129923398d01c373320f21ca8dfc729a82463d31",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/conversation.ts",
+      "sha256": "1e7164a0e3ce5bbed38596a2863f26abb50aed1ca54324e1255fcdd86b180b96",
+      "upstreamGitBlob": "e9f9dd5a6f020eccc3a7a186a47d5edd9deed3a4",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/processor.ts",
+      "sha256": "5571c78f241c4bc84027fdd7c7b7e8932d9ee20d3bb5d1e6c073eeb7174cd91d",
+      "upstreamGitBlob": "76af10c741764b1e9e9573676f4dc3695a43c5d4",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/profile.ts",
+      "sha256": "a278f1b205ac2c44413b74ff0f07f4e5e8576c62d84fb5d4f9d038bbeb7a58a2",
+      "upstreamGitBlob": "f3b94992a1ca95b7525eb19a529faeaa60b76721",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/profileFollowers.ts",
+      "sha256": "f741892e0e02ae8d1fe664af189a03a0b86371be67d901664da39e95815b5bc7",
+      "upstreamGitBlob": "f9f2d51fba580ae5134b798c71798141cd381117",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/profileStatuses.ts",
+      "sha256": "08afcf278dd13c5eb7f8250eab1da8382aa8c9310a6feda76d1c28f9a333898c",
+      "upstreamGitBlob": "812f70a35b957b6a1c414cf7f72c9805d4e49cb7",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/search.ts",
+      "sha256": "360087bd7edaf143a5371f3cabd4b0d3827c0a77971d8a9bf418e740c595a888",
+      "upstreamGitBlob": "9cc66a5c462b1c93da46c6b992bcd6c6a5b6aea9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/statusLikes.ts",
+      "sha256": "ffeabda40b3070638381a83d5d068bf942947ec95fc7f315fbf2642a0758e2e0",
+      "upstreamGitBlob": "b9c624ea1f22a388fc50faf19aac0f07dfaf892f",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/mastodon/statusReposts.ts",
+      "sha256": "d7e55904d9f24b96a61dcdec35bb9a28ceafb1261989023e01c3a3f0cae927c7",
+      "upstreamGitBlob": "f90e6e4243c678e42f46a43fe86f5116261cae5c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/account-proxy.ts",
+      "sha256": "59e9b2b0fd90bf812cf1859c10879a9e464477570a56a96be02a20fd4d73050d",
+      "upstreamGitBlob": "59db3838528e7f60d86a7b2839cab1ba9bb97c39",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/client.ts",
+      "sha256": "6c1c58b84933cb989d9d24346cdfd90c2b619a5009ef063adc512261fa482e01",
+      "upstreamGitBlob": "cf6b71a74e49816a1339d3bb1e10ae92c7d0c9ea",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/constants.ts",
+      "sha256": "8a6d6114150c85b11c5f3294eb482e74d6707aa1784b1403654522d111de1429",
+      "upstreamGitBlob": "d6474fd7244e448c74e3baf5d7fe0a18d99601ab",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/conversation.ts",
+      "sha256": "d22494d68db0a4b0473ed892d500dc6a90d8c6c7c085117a6b3ebfe424e5f530",
+      "upstreamGitBlob": "68862f45fbf7c792d9e73a5356c0361628e5cf5a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/cursors.ts",
+      "sha256": "aad26c1a8ab0bf68fafeb115f80426ae6d4ababffac6bfec8fd3af50dc6fbe3d",
+      "upstreamGitBlob": "5ce097da3a679d72948e3734d5ceb3d8ca32eb7b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/extractors.ts",
+      "sha256": "c6ab1cfc6509786baa31d67455f7f2afef87d865c04a71061cf91fedc16f8b0e",
+      "upstreamGitBlob": "d73225f5ba3fb6f9a18d9979827a33bedb67eb83",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/likes.ts",
+      "sha256": "3380f10ea7c195f94180255e81a78629a40b4ee9c103905c52c902b408400a14",
+      "upstreamGitBlob": "1d33c37339e425d0087828a88b3ff7f3d72ff117",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/post.ts",
+      "sha256": "153d61d140cea42cb20f9b5720903cf34ecb795d70e4ba09f25c9dba4989f4da",
+      "upstreamGitBlob": "a30495eecc9b40209b1d501f4bd7563d06048ea3",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/private-api.ts",
+      "sha256": "9e4ddc247f3b980764ce305a2d9b23643811e04a74fd1c02b7b9691c08589d60",
+      "upstreamGitBlob": "af2121046f2569a37d13104b84cde1d37796ac68",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/private-processor.ts",
+      "sha256": "751384f0cfc3a187518a6f307d154a713b6c629d53bd77578b7949c8974d8fd1",
+      "upstreamGitBlob": "881efde4ee9308fd1eb5bbbbe4337efe13ee3b46",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/processor.ts",
+      "sha256": "146b655940fb46864da54000cd69a8c32d182f69bdc44e6f7edcbe9d9adc4828",
+      "upstreamGitBlob": "1cefadf9f5215ec5f2c2f73a16bbbac02383619b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/profile-tabs.ts",
+      "sha256": "a2bc45e60febb53fdbbbc013224350ee8bf773ae6236391d5d6a66ac75bac97b",
+      "upstreamGitBlob": "d5563b0a64ddf190deb7b8308ea3b7c42da8a581",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/profile.ts",
+      "sha256": "e89c4544e4b2ed8adb5930408adeec15e97a0d42aff12518ade02a2a7ccff797",
+      "upstreamGitBlob": "97fa31a977200d24ae5e27dfcbb6c28b1f4b065f",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/relationships.ts",
+      "sha256": "3c7cc9aee15055a129fa3f52c17f1b2bbfe8747cee9d63c33f6efe1f3cc6d82a",
+      "upstreamGitBlob": "ab02bdd9af3a3f5b1d54cfd43a4d1bae9bb04e1d",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/resolve-user.ts",
+      "sha256": "f693a9105184d296c3ce5710d947e48da335353db73791bc2ee7c1d6d8c65bde",
+      "upstreamGitBlob": "96b705ea6e00d53818e9c5e6032e6624557e5c16",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/search.ts",
+      "sha256": "505b077a25b9accaf0e5974e3d029ab23d9229d3b0a7a112f467b89fdf57cbae",
+      "upstreamGitBlob": "7b82ef019ab039b37eeaa7ca2343e9a9f94ad5ac",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/shortcode.ts",
+      "sha256": "351cae5d6f40ba0a80c2c3a469998ccc417b723d7c0a4e6b42201a22da2d007b",
+      "upstreamGitBlob": "8e461a069149dcd27e07b02a691d7e6dc14a1fe5",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/threads/trends.ts",
+      "sha256": "b62c216119189151e1600de74294bfc26eed2b7d2ecf3193e24ab65045422afb",
+      "upstreamGitBlob": "0e93b9506ddb8c0af721e0d7ea2e8a02c66c8b45",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/client.ts",
+      "sha256": "933c17753c3de0295f35727d00588c7e5c5ddb8fca6858647e62ca622d255e36",
+      "upstreamGitBlob": "a9baaad9bda18f4fe7907325b3aae05bbdb1197e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/constants.ts",
+      "sha256": "65d6712f5efe9575cfbab5518e200f6245217eb744c00131ed9af669cebfc187",
+      "upstreamGitBlob": "78eb6f84798adc2e2772e6eb9248e438fbb56903",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/conversation.ts",
+      "sha256": "7adf9165e5c96a719b1a69b34fb3319b72f64befa9ed3f0652c54da6727283e8",
+      "upstreamGitBlob": "8f83b67ff7fd308b7ff993156d2e4586e6228e91",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/processor.ts",
+      "sha256": "aba20715751f4185e1b58acf87d519eed5abe0547985f8f50d8919acacd66bc8",
+      "upstreamGitBlob": "774fac33863785e7f98ce5d3046150a4a2b67794",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/profile.ts",
+      "sha256": "9f94f8e33c1bfbe1df930ea12b03246f2d8f7f386afeb1cde02ce92916f972bc",
+      "upstreamGitBlob": "a76355009d4229d5423085522c32b6a9a03638d6",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/tiktok/timelines.ts",
+      "sha256": "59426e6d19153703316bbe05a7ea08b6de30fc4a71f542efe067f37fe3520ed5",
+      "upstreamGitBlob": "924c8a01aebef50d20220ef449bb16cabee93ea4",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter-runtime.ts",
+      "sha256": "2c3409511786d54317db1d247592f0a8efb02f1adb1e0b426a04957ecdf97706",
+      "upstreamGitBlob": "bc5a099b2cf793322a06ef4a3b6c63f0f8389008",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/aboutAccount.ts",
+      "sha256": "1fd84cf6ecfe6df78405d05ca3ab521fcb0ce38d4cc38bcc5f584c63286d4321",
+      "upstreamGitBlob": "14b7165ad21bc4f412a4c442f5e691c492591bdd",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/accountProxy.ts",
+      "sha256": "ce13bd62a3ebf5bc567780890bae8e5386d764f7c0ceef79d275e3049581c49b",
+      "upstreamGitBlob": "6782284505bb2a4e5b76923960cc7c3647cd1bac",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/build-host.ts",
+      "sha256": "400f51a980d19eb5f225cde6072ff0bca5648e090a3b8cbe72e369ee10581d29",
+      "upstreamGitBlob": "d2bf614cada257645b6e53362cf373b753664270",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/card.ts",
+      "sha256": "403dd490bb011ec7645bec3875e42e3b9c6a5b792c612e355b070c8b72f8eec3",
+      "upstreamGitBlob": "99098b53826d6356dfce31342afdb3339f4d1673",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/conversation.ts",
+      "sha256": "a52f29a3d342b111b14f69110403681faf4bc0ed481f9d9296a9531f3883e2bc",
+      "upstreamGitBlob": "ef9ad3500016a524c51cd4dd53b4ceb533c41f9a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/fetch.ts",
+      "sha256": "37071eb26760d46af95215d1e1df7e7be482355bb7f4fc5f545e2175898f3c64",
+      "upstreamGitBlob": "4ba1b7ebbf4ba12fda5fc4ed9e91c5845846b73b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/graphql/features.ts",
+      "sha256": "c2e221924c456a30c5ee4ef14cf0febbae0a09efe4594b7405b28846e34eeb05",
+      "upstreamGitBlob": "19072024e3e35033f43c32c70f50d3e0b22ebd78",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/graphql/orchestrator.ts",
+      "sha256": "c1c9496a5e7495ab8750fbf8201f3bd81940a1dc3b19dfeb972406df5c7013c6",
+      "upstreamGitBlob": "94fd5238e085ff2912dc78d1eae94b77c36d02bd",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/graphql/queries.ts",
+      "sha256": "9359eef002b4d70d5ed5cdd462ec4ec5821757b308331c34cb73a294baca7af9",
+      "upstreamGitBlob": "94cbd13b71663580a4f4c63a00a4fb624023df34",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/graphql/request.ts",
+      "sha256": "6a77814d45cc5c2efa4107bbc2a1c0724355c98d84aab86d673e6ca56881c385",
+      "upstreamGitBlob": "46b2c604d7f9d36e4814067c930e5d5549e9311b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/graphql/validators.ts",
+      "sha256": "1c769d84451da52fa791231c43ef4bef17cb6cb9907ba9dd2cba775e804a826d",
+      "upstreamGitBlob": "ca6a9b3e3854acf6c6e506f28a1f65e90f2a9391",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/processor.ts",
+      "sha256": "c75e664b6d22d1a7af0d3c95064c0140df854fb86d3ebd56664eab7aadeae925",
+      "upstreamGitBlob": "705790457b504049dd0f8c3d3c3ac2e01689621f",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/profile.ts",
+      "sha256": "7e3511d8e80adc7b9470cab94505ed147c36c30565318a051cfecb91d46bbbcf",
+      "upstreamGitBlob": "c7f42cf9ac235ef3b40f748accc7c0d52a451272",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/allowlist.ts",
+      "sha256": "dd4100ef4348d4435d51ff26ab141c92948fae5d6e1080cbc208bf53e07e45fa",
+      "upstreamGitBlob": "0e4ad0349470e16e0ba4ac6d50a5771763e6b370",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/cookies.ts",
+      "sha256": "22b7d46e0bf899bacf613e3f15bcfea90a2e7e28a7f1ab6d7a25065b452a6746",
+      "upstreamGitBlob": "41cf31f7226f0352ab8d4e61e6f389fb69321839",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/discord.ts",
+      "sha256": "28493dd7d013e82b54cb4675f400b2c7d64abb105da4d167ba0e24cf41b623c5",
+      "upstreamGitBlob": "2bf1a4a515e0565e73ba8030c22681fed65aed27",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/errors.ts",
+      "sha256": "8594699c2d140ddcf05c2f690c442c5fb2466a7333e899ff3790c981dcfc4754",
+      "upstreamGitBlob": "fa14ed474eca7c15280300a0686f06230897b05e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/filter.ts",
+      "sha256": "83a2a141647fff84de4692d9067ace1f87581d7a60986272be63bdf3ebd687f0",
+      "upstreamGitBlob": "c3c92c185c9324d040471bce198df6f98f7aaf06",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/handler.ts",
+      "sha256": "04aa08494f53c5fd1ac40e3b02bd3bbb1d488a694ff406f323b1795a97d02940",
+      "upstreamGitBlob": "fe1b3b4295b406477818ac825dc75fb549b4ad72",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/transaction/cubic.ts",
+      "sha256": "bc2e3e4e463579b88037a81e847068f7d8ed3713e44ab6a02af9ffd725b2e7b3",
+      "upstreamGitBlob": "fefda1c1791cfdf073924e89b08fc0c8a2668d45",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/transaction/transaction.ts",
+      "sha256": "389c142d904f53f009eb8e8e692dc1248ec64082c10f0b8ea36197445ed0bc08",
+      "upstreamGitBlob": "e5206e25a3d8cdf601dbb71a87edf21e350cafc5",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/proxy/transaction/utils.ts",
+      "sha256": "9e36408f0a05d4a74729e8910c16af9cf96742aabe9a1c32ddcbdf9c32abf107",
+      "upstreamGitBlob": "fa7d8e28c32a6654b04552319eeda957eb57dafa",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/search.ts",
+      "sha256": "a58dc8ed62a6b3e989038b21f7211c19a92350d3853a5059bf98b581cd09202a",
+      "upstreamGitBlob": "7a2c09249bde202be7f0d67603b1602d0ec5fc7c",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/searchErrors.ts",
+      "sha256": "db20a1ef7691f46dca402e002699eb1080153eadbc0af1e1eba84ae4507abca3",
+      "upstreamGitBlob": "b99326dcdb7c26e83dbd43c5b27d440d9dfc599a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/statusQuotes.ts",
+      "sha256": "8977fa052932f0e1b3f2e05588f89b8765403d8bf780c280fd5528c1458311ae",
+      "upstreamGitBlob": "ab101a0e6b266563f3387fd9da2dc2584e9c0408",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/statusReposts.ts",
+      "sha256": "d188baaf45b69cfbf56aba20f9563508a560b3122c6cddfcabd0637ed1d80c6c",
+      "upstreamGitBlob": "2aa176ddd8a2c654007d8763bf9687e099b5c1e2",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/tcoResolver.ts",
+      "sha256": "3a52aecaadb71ed53fabc8e33169f492e1bb95d01618e9cf18a6e52ffc9e3f21",
+      "upstreamGitBlob": "f12528f4104869629c24a89ce4dacd58b48f6ecc",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/trends.ts",
+      "sha256": "a3e4f14d9a0732ef258961aaa4c28daaa9bed431bfba519852e7fb305b8c2bca",
+      "upstreamGitBlob": "80c2cbfd2e41346e8cf6935367a89b68164ddb85",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/typeahead.ts",
+      "sha256": "6b33356e7f7effc18972fd36b78ff4efd623e25170281086e0ddba207d2c0527",
+      "upstreamGitBlob": "cffbb143dfd4939ba63ee3a0a6b80a8531d28a57",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/providers/twitter/userStatuses.ts",
+      "sha256": "6b5ccbaaa04ee6c8826330ac2d2c97f7d40dc683c7b920648e74c2753f91d7c7",
+      "upstreamGitBlob": "2e8ff3cac7ee3aac1de3911a3fa5f0cdb90c6ca6",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/raw/vendor/bluesky.d.ts",
+      "sha256": "ca90a8bdf7691c1993d9bac36a5d76a33a2e1a34bac5664e20d0fddd4d78d0d2",
+      "upstreamGitBlob": "b07206e9f3cfe429e8849ff2b1c2d08009da974b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/raw/vendor/mastodon.d.ts",
+      "sha256": "67e8021e4b676ec98d4477f993fee5e8dc87cdc69245818698fb91633f9fd0fe",
+      "upstreamGitBlob": "d8730dee4be8aebead74ce0880d6f29970a697f8",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/raw/vendor/tiktok.d.ts",
+      "sha256": "baf46c9295e12c9ba93ecbdf86447065516cc56786d9bf288353dbf1b06d43cc",
+      "upstreamGitBlob": "790c0b25399235ea6c814c074cf13d74f0b151d7",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/raw/vendor/twitter.d.ts",
+      "sha256": "c3ec6d0bf8a22f8a088c2510e8a12d338fc109e16bab4bb5674aa876fa4f4598",
+      "upstreamGitBlob": "4dbb7c49e1e5c1093181fe4cfe468da9c4d69b2f",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/relay/index.ts",
+      "sha256": "5f438571cca511c23e29907223bb79b9579d610f88ad18e6f2aaa7b017ea1592",
+      "upstreamGitBlob": "b5cb2f18c2c6198017e3ffb9face3ecb4c018781",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/relay/proxy-relay.ts",
+      "sha256": "a125b513dfdb0333ed1e32b92b144d7fa5b2cf251df009c8a180157c9a801021",
+      "upstreamGitBlob": "7ca1013b733d4a87f7b2d89cc7d9ed80832b0660",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/atmosphere-transport.ts",
+      "sha256": "84b081b142252d47791b8863ede28d45ae72524e45459f6944c2e33468e56b1f",
+      "upstreamGitBlob": "a62ff89be4acc8b2492f213786247592355832b3",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/auth-provider.ts",
+      "sha256": "08d0d49fc00e6ee9e0daf1ae342c4e04300a531fead6bdc18436ab00a1b4b442",
+      "upstreamGitBlob": "7f5d6da742ce5e8f2bb36944cec8b8f83f3d9ca9",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/client-options.ts",
+      "sha256": "fe5ffbbf1e7e497813609372a013dad00e75d41275b7f83b72d6a3dedc1915c1",
+      "upstreamGitBlob": "51ab7a4af3f42030443c2865941bf1e0b8c8f5cb",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/errors.ts",
+      "sha256": "68df4eb3da8df5f337ceb1cac7b288054f390f4692c6a01a97c6de94aa0b0207",
+      "upstreamGitBlob": "591590dbe81309f6f1567f5fa6f5b3086232061e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/guards.ts",
+      "sha256": "8ab9b8810827901f6b5b41be3ffafaa7e643a6a13ed49ff77135f5bee42add45",
+      "upstreamGitBlob": "6ddc8a290a54abd137935bb08f331f423a9e37fd",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/index.ts",
+      "sha256": "fcaa781f3ce7f8a4935b6dc15ad6be0e3d769dd7219320b1f4ad8a566cdfdded",
+      "upstreamGitBlob": "8f5019ec90f7ba46639f7d16399457d1442da36d",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/transports/run-with-fallbacks.ts",
+      "sha256": "0578deb8c4ae83abbbcb1a6238d24225ca11a41b273f93652663756c8fcbc149",
+      "upstreamGitBlob": "d397087b2c65306674616d36360f010e3a472abc",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/api-schemas.ts",
+      "sha256": "3e1adee6f5f4a1567a36e056f1c5a79b3be3c08a41367ea9518ecef5c0f9fff1",
+      "upstreamGitBlob": "2728636ee61ee3193a951c8f7747a6ce48e540ef",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/api-status.ts",
+      "sha256": "16de4513b8a85132bca7543fecec79ea2a9fc20391899913b434e07b5765d386",
+      "upstreamGitBlob": "eb3511612ebd4adc9b13af102af14b7be6965bc2",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/data-provider.ts",
+      "sha256": "dbf544c2522cb67b31ac82b2e62e0f6f7be6aef3b279b01458a13adbb6550b3c",
+      "upstreamGitBlob": "54ae738bb54b77a561ec96e778168f2d69faa83b",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/fetch-results.ts",
+      "sha256": "b2f344959915233a9bbd9f473786fc76722895d8a5aeb404384163dc291ad3f7",
+      "upstreamGitBlob": "8586c93110eca1a478624c31a24abe45be744a99",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/index.ts",
+      "sha256": "3f54bca60c5d84902556ce4604e9390762901f5e0fb7e7e24ff100d6a486be97",
+      "upstreamGitBlob": "f89eec7123cbfab569a5c7bbc200259133e76649",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/input-flags.ts",
+      "sha256": "6e5e5cdc9e2f0bfc97c28930a54ade9275fac8277eb14f2974c21a7daede1b38",
+      "upstreamGitBlob": "d77995a779924124a75c823bfe87da4ea67aebce",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/proxy-credentials.ts",
+      "sha256": "a91d99639fb291f988d6ad906d312725ab3f867fdb2c97f29ba8c2fbd7e5bc76",
+      "upstreamGitBlob": "92fa1afa0aeb133e5b8a280fed688700bb71bc1a",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/src/types/social-provider.ts",
+      "sha256": "d5505f32fcdcf3dce06ce881c4a7370c4dbd15b791637451544a972e05941bc7",
+      "upstreamGitBlob": "3e691cdddbf721509599fd0edc3c5fa88cc2379e",
+      "match": true
+    },
+    {
+      "path": "packages/atmosphere/tsconfig.json",
+      "sha256": "efd3ad06bfdeff0e72771ea250a93d483103a291dff2596c7870bec9c7207131",
+      "upstreamGitBlob": "39ccc2d5dbf7f67d9216c147bafc4548bf6c5206",
+      "match": true
+    },
+    {
+      "path": "src/caches.ts",
+      "sha256": "4b75de1b1f54fccf6a5ae5c2b39ab0f05e56ce10fb2075c9d71386a68ca93cf3",
+      "upstreamGitBlob": "3476855b9ab77e117800d218ec4f54846409eb94",
+      "match": true
+    },
+    {
+      "path": "src/constants.ts",
+      "sha256": "21d8931ac5f144a94e8c010cf47f083b7f8cd857b16a8dfd6b2b62c3257fee82",
+      "upstreamGitBlob": "8406e5e69ad69b9ab737a9cbee1076f8feee2de7",
+      "match": true
+    },
+    {
+      "path": "src/embed/activity.ts",
+      "sha256": "fcd14b9f588eacbe3bbbbbf6ac2771d4b78c9ad38077b5a2f077f22df6ca6d39",
+      "upstreamGitBlob": "1310cb002ddd26cde0572b00bc17c815adba2762",
+      "match": true
+    },
+    {
+      "path": "src/embed/status.ts",
+      "sha256": "2128dda30fb5cccba4038335c323bf63291c4c68b582e4f52e505fb0675a12ca",
+      "upstreamGitBlob": "0de0a45da57be6be40af39bf343933ef8b49e4e8",
+      "match": true
+    },
+    {
+      "path": "src/enum.ts",
+      "sha256": "0188a05956823c6ad5bb17eb2d963e93e54f0e1313c0130f59c445b5c1ae7654",
+      "upstreamGitBlob": "198d0834383fab35efec9b70071ae089cacfdfff",
+      "match": true
+    },
+    {
+      "path": "src/experiments.ts",
+      "sha256": "fe517717522c6e14cd55a1e94e624ce1517d9b2b532ce629bee01aeea2d6332e",
+      "upstreamGitBlob": "eb0902304d518393ff7c952a17d22cd1901b4290",
+      "match": true
+    },
+    {
+      "path": "src/helpers/article.ts",
+      "sha256": "86eba037747f9c5533e4e83af9cb78351156f37cb7a0073bb034caa72368a2bf",
+      "upstreamGitBlob": "9ea879861c4ab59a71bd36a6f917108d24eb460c",
+      "match": true
+    },
+    {
+      "path": "src/helpers/branding.ts",
+      "sha256": "866bd73f419c52fb4b6c91afc5103a05eaaa0fc0525da8671b68ec24813e6978",
+      "upstreamGitBlob": "f1f18ace5bfb19b2688a897fb801d20760879992",
+      "match": true
+    },
+    {
+      "path": "src/helpers/detokenize.ts",
+      "sha256": "4cd2f560274e525ff7cbd06e00e4c12f7499c1915cff5350a16ad2f2fcdd6c01",
+      "upstreamGitBlob": "660000e2cf7a2f7ca21419a1dde946555e2f78bc",
+      "match": true
+    },
+    {
+      "path": "src/helpers/endpointBalancing.ts",
+      "sha256": "1b3ce904cd8e9d2c2468977baf804cac2a54275ef76cd5574283910077db0bb7",
+      "upstreamGitBlob": "9d237cb2dc8a5493d69908f18374bcd2f1123392",
+      "match": true
+    },
+    {
+      "path": "src/helpers/giftranscode.ts",
+      "sha256": "05e5a035b39414237be65774a88758f3984672b4b5e789f211a369afbc9b69b0",
+      "upstreamGitBlob": "3c3b4e6165fc5a6ec6aa59f2e2b7fbefc5210582",
+      "match": true
+    },
+    {
+      "path": "src/helpers/graphql.ts",
+      "sha256": "3d92bc6492f42c3e4e0603da39b3eb7e9c51820118a2addfe2aa4f3e01808067",
+      "upstreamGitBlob": "210056f42a160bf509b5b7f864eb9f8701ac1c6c",
+      "match": true
+    },
+    {
+      "path": "src/helpers/language.ts",
+      "sha256": "f9111f4a42a49f71ee8307f9889c944f77b1cbef9b665ce25734ed52fec052c9",
+      "upstreamGitBlob": "04e1302e66717a36c1c03740ddb5b3a250b65a85",
+      "match": true
+    },
+    {
+      "path": "src/helpers/linkFixer.ts",
+      "sha256": "c66821c583d672e381457ee712b4d273aa5d1d9a087a8a980fb223836919d9d8",
+      "upstreamGitBlob": "4f81b9319b44f3f4dca61172e7855e68aaa40436",
+      "match": true
+    },
+    {
+      "path": "src/helpers/mosaic.ts",
+      "sha256": "7f31481b0c6c7d27e470ba7a790b91ab92d1a68a92f2e6f6e480ecab61b87cf0",
+      "upstreamGitBlob": "5d36c5ee2ab6c567d5b32e2780660ee6ef5a62b2",
+      "match": true
+    },
+    {
+      "path": "src/helpers/palette.ts",
+      "sha256": "0d099ce82fc3b157f56b21228d166363187118101f74ec03cdae7d0f13cd9e74",
+      "upstreamGitBlob": "9512a13b79018be97a2fb65108e729a0b80eeb62",
+      "match": true
+    },
+    {
+      "path": "src/helpers/pbsProxy.ts",
+      "sha256": "2a9c0b7a45f2be016705fd81b0f782ccb77e4cf509ab7e7e7bc278f0ff139822",
+      "upstreamGitBlob": "f39353fe0af51c9a9de0b3005ca25ea94eda8618",
+      "match": true
+    },
+    {
+      "path": "src/helpers/pollTime.ts",
+      "sha256": "18845e47c1868333090002ae06a191cad266e8b47fe6c0b773bc9dfcdf32a4dd",
+      "upstreamGitBlob": "941ecf0953c9306967704f2ab03cbb69af96882a",
+      "match": true
+    },
+    {
+      "path": "src/helpers/quote.ts",
+      "sha256": "938b70442e3bd2b242567de084545593197fd558cbe623378a8ae260b3291f2b",
+      "upstreamGitBlob": "df0062310dea22e1d7026d4689ef1f2a3fdb662b",
+      "match": true
+    },
+    {
+      "path": "src/helpers/runtime.ts",
+      "sha256": "d68c19259eabf6f4adc316b820fa4dd0e60b1d96d78294fc3391fae54c3e3892",
+      "upstreamGitBlob": "c366e67b33dce20ad8051612bd170ec455445e53",
+      "match": true
+    },
+    {
+      "path": "src/helpers/snowcode.ts",
+      "sha256": "91cc7c8eb8bcb58260a44c58306993eb4ee8a0e3f1be66f3942710a16b2ec6ea",
+      "upstreamGitBlob": "0615e4c6c31105ad300727ec4a8d8fb5d4a9a0a8",
+      "match": true
+    },
+    {
+      "path": "src/helpers/socialproof.ts",
+      "sha256": "6ce0c713a79ce65d0c8cb2f6b4e8e549740adbe15904d4874615586fdb5d121b",
+      "upstreamGitBlob": "ef090788492a802bceef5fb34a57d7a287b870c9",
+      "match": true
+    },
+    {
+      "path": "src/helpers/syndicationFeeds.ts",
+      "sha256": "da108e2407c402e0c76b7fa61bab390561f0fb737c9f9d38c56a947371a802d0",
+      "upstreamGitBlob": "5e8757474fe687d43a0c3d896e80480f918708b6",
+      "match": true
+    },
+    {
+      "path": "src/helpers/tombstone.ts",
+      "sha256": "11f5f59f914818e01634c6c59dd25b359a91fc1d53b2299f70da98139b0e3bf2",
+      "upstreamGitBlob": "8377758fa9f2b02d67b43f3cb532cbf7455fb437",
+      "match": true
+    },
+    {
+      "path": "src/helpers/transcode.ts",
+      "sha256": "9a211c16f66db2252566ebe5c48d9766623815839d0bf3f42ba9aae1afcce97a",
+      "upstreamGitBlob": "9fec52aa35dd7091a484976dbd08a6ab57794283",
+      "match": true
+    },
+    {
+      "path": "src/helpers/translate.ts",
+      "sha256": "c50dbe0c08ce1b112dc38b260a5e4cbdd848a41573538f35b29997ec0fcdf000",
+      "upstreamGitBlob": "25b7d9785a4632da26a084e23587b7367e386b0a",
+      "match": true
+    },
+    {
+      "path": "src/helpers/translateAI.ts",
+      "sha256": "014e55733483c36f29d0a1f3e2633475aaf2fd30c4df0edded68e684e38dd8cb",
+      "upstreamGitBlob": "a353e569aa1b2d1465b06cb8474b0c4fa2f56083",
+      "match": true
+    },
+    {
+      "path": "src/helpers/twitterTextIndices.ts",
+      "sha256": "3e83f426db2b302c61f74fd024ce20025b40ba63b83f8470505e1fef3f230499",
+      "upstreamGitBlob": "4bebc782db801300fafd80f61fff795ecc3067e8",
+      "match": true
+    },
+    {
+      "path": "src/helpers/unicodestring.ts",
+      "sha256": "f57e11d8f9ba61f380c02017b5526795c4da5f07128407d4df1c69cce0510db2",
+      "upstreamGitBlob": "f63436e080586be70df1699e6e5717bd21e834ce",
+      "match": true
+    },
+    {
+      "path": "src/helpers/useragent.ts",
+      "sha256": "8773cd0747da954b8e40a91611e34f9f15760ba0c1fa61628c913f797ae6bab5",
+      "upstreamGitBlob": "7f35a7c1c2bb057d8e517fd759949eb0c35dbbd2",
+      "match": true
+    },
+    {
+      "path": "src/helpers/utils.ts",
+      "sha256": "163d317281ac4008dbe59b92a01fa4f015f42e4f0ae17aeb73851c36a8ae603e",
+      "upstreamGitBlob": "f310bc28255ac3a1de9f63913d0de3e40f49ca89",
+      "match": true
+    },
+    {
+      "path": "src/providers/bluesky/build-host-adapter.ts",
+      "sha256": "9a53779659faea35db95ae4d4c85f96b751b5743f408f6504deed30ea4113b77",
+      "upstreamGitBlob": "43a684e49bf2c96c2dc5ee91c51678074ca0f30a",
+      "match": true
+    },
+    {
+      "path": "src/providers/instagram/atmosphere-handlers.ts",
+      "sha256": "21354f533509058e2dd9cea849ca921ff05ba0a399277083b5f5aecbb407341e",
+      "upstreamGitBlob": "467d5e78ffc749960de373e5b1c0201f8daa53ed",
+      "match": true
+    },
+    {
+      "path": "src/providers/instagram/atmosphere-register.ts",
+      "sha256": "6ce749281a5c9573584adef0c22aadf2389776b828dabd559a08345a458d878b",
+      "upstreamGitBlob": "b278cac4c02a53fff1a6f7aac27c9b8c632d2f53",
+      "match": true
+    },
+    {
+      "path": "src/providers/instagram/atmosphere-routes.ts",
+      "sha256": "f8a508661d937fed5c9d119016f78b27cf57a5b964c9073c2b7206b717b92f78",
+      "upstreamGitBlob": "8933bd99d2e645b70dec6ed60131d4f5d42f6014",
+      "match": true
+    },
+    {
+      "path": "src/providers/mastodon/atmosphere-handlers.ts",
+      "sha256": "42e2a858e850e0edd782997b51eb5f18f75af3131dfc8dbae3276ef2dfa6bf86",
+      "upstreamGitBlob": "bb1d2ab06bc87d045143b41a7e777b4351a80587",
+      "match": true
+    },
+    {
+      "path": "src/providers/mastodon/atmosphere-register.ts",
+      "sha256": "ea8293a5f755fc226ad5936be7ef396ca69f614928aeeb6f3fd53df6d02ff94d",
+      "upstreamGitBlob": "715b1faa88dc22c82417d6e824797633b2783adc",
+      "match": true
+    },
+    {
+      "path": "src/providers/mastodon/atmosphere-routes.ts",
+      "sha256": "4332e427ffe36145d2f3d6c7962ac49cceaf55fdee5f9968aaf47f9b5d65d97f",
+      "upstreamGitBlob": "e4af25fa5f6da85278aed1c6ce28762c6fab7d84",
+      "match": true
+    },
+    {
+      "path": "src/providers/mastodon/build-host-adapter.ts",
+      "sha256": "060b84359ec6352ab1494e16af0e1555e1b8267e6eaff101823ef7fad218e20c",
+      "upstreamGitBlob": "ef91c365e0f49bcddd06f2b734c1fe9a6fa5d3ea",
+      "match": true
+    },
+    {
+      "path": "src/providers/threads/atmosphere-handlers.ts",
+      "sha256": "99a2d8bab0d9d7bd8dc0b6f78452f7932c817f3a1db6af59940b7a1f652b8ea3",
+      "upstreamGitBlob": "c019fe3459d50722aadd9147155aba97e35add98",
+      "match": true
+    },
+    {
+      "path": "src/providers/threads/atmosphere-register.ts",
+      "sha256": "771a3783c0b530cc90f20034c7dd1e6c3155ca0a67190428e3b53f015aabb588",
+      "upstreamGitBlob": "ffbac2172c11a5892581563a69fb4a0bb75691ac",
+      "match": true
+    },
+    {
+      "path": "src/providers/threads/atmosphere-routes.ts",
+      "sha256": "a4d4e0e64ed45595a7dc6a2ed08a49c7a3d7c47fcdbebf84791223041228f118",
+      "upstreamGitBlob": "486e3e38983ad0e82455c20872cb9464acd372a2",
+      "match": true
+    },
+    {
+      "path": "src/providers/tiktok/atmosphere-handlers.ts",
+      "sha256": "5bdcd53185e33d80ff14378c7f8cea5e0df63a95c8a214571c225a0c5995aef3",
+      "upstreamGitBlob": "18a13131d8db35c7385297f831c272ffefd94b61",
+      "match": true
+    },
+    {
+      "path": "src/providers/tiktok/atmosphere-register.ts",
+      "sha256": "8f4202df6d7e9aa6bb77aed5ddff59f98f057a5b3cfa42365e914cf6977778ce",
+      "upstreamGitBlob": "db0332fc5082f78a9fff7f7acb11d4993c14ae67",
+      "match": true
+    },
+    {
+      "path": "src/providers/tiktok/atmosphere-routes.ts",
+      "sha256": "9b49ba194678c9616f86ec381b8531610004a6e69f4a6e33b4701598cb2a309d",
+      "upstreamGitBlob": "900ad7a4cfdeba0299c397ddc5c8538a14aaae6b",
+      "match": true
+    },
+    {
+      "path": "src/providers/twitter/build-host-adapter.ts",
+      "sha256": "45c8b82f230384063132111830fa41f528b26154aae5874f63f4967a0186a89b",
+      "upstreamGitBlob": "4c1d7d7315e2f26d2ea3182c510c62e5fea1a9aa",
+      "match": true
+    },
+    {
+      "path": "src/providers/twitter/proxy/credentials.ts",
+      "sha256": "b7dcb046e2a635bc3795055fbd8e60c1d9c68fab02328f5b6fc3a3227d0fbcc2",
+      "upstreamGitBlob": "c7fa0e57a49f5bebdeeb8243340bde2ddab45bd3",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/hit.ts",
+      "sha256": "6164641dc2dac8e218d442bc0bcedc042a4e4caef95b84b1e2f9baa557564eef",
+      "upstreamGitBlob": "06eacf3cccde876e99d164482890304cf7f6cf94",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/normalizeApiJsonResponse.ts",
+      "sha256": "3a8ebf2f03100d893c79b73da773c2aed723c5814ef0b7fd3001ff5cac7fb555",
+      "upstreamGitBlob": "f4a4beac0ac63198bdc79372433a7bed84d6f48c",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/openapi-json-route.ts",
+      "sha256": "d7b70b366e9903e483e226eb627e97c8ff766d04334920fcc67492f8f7068dc0",
+      "upstreamGitBlob": "1c8f25d0bd788c8a589bb2f60dc86fc77c3fce73",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/openapi-validation-hook.ts",
+      "sha256": "49777a4fdd38173c8360fc68e0fbfc6008b991dfe7ffa400f0b29a5f74b655cc",
+      "upstreamGitBlob": "97b5270769609df00fe3557d6685ee6fe7252290",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/router.ts",
+      "sha256": "c67a9a64a2ca7ef7389fba4c7ac2d628d7471e9151d50c968ba8a5094503e6ad",
+      "upstreamGitBlob": "289b8ab18e8e24d3c106c868f2848c6c0e35989b",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/routes.ts",
+      "sha256": "113ee0a3616325cca5c425e0d7e23a9fb0580d861d634ed0fb3ac00261b4ddf4",
+      "upstreamGitBlob": "eb9e46bf16ed4badbe26c61fcbccd2f555d4cc40",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/routes/oembed.ts",
+      "sha256": "1175491dec78996acb70f1500d57b246a361436756951c26d5bc8546e67d913b",
+      "upstreamGitBlob": "116776a2517ca477922ba437f2e81a49fd0b63bf",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/routes/twitter.ts",
+      "sha256": "1d86f943762e07103189a3f110e20c05f358031e18608162faad820f2f795bb2",
+      "upstreamGitBlob": "8d51a80715a0f9a784ea33ffa99822872c3096ea",
+      "match": true
+    },
+    {
+      "path": "src/realms/api/schemas.ts",
+      "sha256": "bcbb9a706ae81b05e180c75e376e08b9c0ea13ed46bdada7690a228153721e66",
+      "upstreamGitBlob": "cfa0ff68111ad18a0608c60e36635ac484e3f0fe",
+      "match": true
+    },
+    {
+      "path": "src/realms/atmosphere/router.ts",
+      "sha256": "2a6339d072d85845237e871d74b98b2242aa900edd9e6605ea8405fd253423c2",
+      "upstreamGitBlob": "9778600dec6bb12524ce402615ccf32aad3ba026",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky-api/handlers.ts",
+      "sha256": "1cdfa683898cf4bacf6ec7a378d8abd94465d579ae4270c6909a43f52ad39a29",
+      "upstreamGitBlob": "d638453c30d1591df4bf72b05612ffcc46fb4a00",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky-api/router.ts",
+      "sha256": "32417cda505e1d78d2edd47115ce47f1227c3f9825a061244f5709e2ff5f4f27",
+      "upstreamGitBlob": "a9958e6d53c8972f2710caa5e5f8a2992740a66d",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky-api/routes.ts",
+      "sha256": "9a6814c3e309135f35988a10a0cf27ccdd694ec624a2dbbd60401462f1604f34",
+      "upstreamGitBlob": "251d1bc887b3520a11f92f6226349f0497db770f",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/router.ts",
+      "sha256": "f0f61272d9622bcf3a2f04b9b0dfbc58d081c798693ab2d8b39f596e953076eb",
+      "upstreamGitBlob": "4506ba7e012c343db37f112fcb0346048378edb2",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/routes/activity.ts",
+      "sha256": "85668b9fb424d0a2f99ba18c0a2994ec24fa40f3aefbfd7c3a14b2dea2b40ddf",
+      "upstreamGitBlob": "fcfa2dbd950a31a4445ab293fd5a0ffe927aee31",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/routes/feed.ts",
+      "sha256": "e6bbf35d9667e778878945309e6d3781d099eb26a19c2ac363f82ef9509f75e6",
+      "upstreamGitBlob": "cd084c6416b9c4ec1a21b1c26792b1d44842ccf7",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/routes/oembed.ts",
+      "sha256": "3d1149ac0074cca76b7fa2730a63276d698ea9ec926552506441be5db1d963ad",
+      "upstreamGitBlob": "5db8e62e38842e8f25da197da83fb3e43eaf08af",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/routes/redirects.ts",
+      "sha256": "80d18988b7673d9a40b9ff3f8075ab15cd641aa6a6ec6a39d351fba621a2d0b5",
+      "upstreamGitBlob": "f457ec609d5e54b712054b5b6103a4c508baefe7",
+      "match": true
+    },
+    {
+      "path": "src/realms/bluesky/routes/status.ts",
+      "sha256": "f451162fee56c61c67095e976c6790f1dbe16bb703595b828d6b31c694e28ab3",
+      "upstreamGitBlob": "e8d8b82e507b2cc9fccdb46e0ec177f2e12eedd7",
+      "match": true
+    },
+    {
+      "path": "src/realms/common/version.ts",
+      "sha256": "02bb2871971e48bb47fed9bd7ba7e26990ad1d6bbd6c3f6e43bad9edc35f27b3",
+      "upstreamGitBlob": "e318a3ce8ce26bf3a222f21c8913fff766feb013",
+      "match": true
+    },
+    {
+      "path": "src/realms/instagram/router.ts",
+      "sha256": "683aec7b595ddd7e0858508c5d2501bd8e473718e2fe0ec7c48c41a1712f945c",
+      "upstreamGitBlob": "dbcab76f3d6b7b3428154a87dc0c10aec2be1b9c",
+      "match": true
+    },
+    {
+      "path": "src/realms/instagram/routes/activity.ts",
+      "sha256": "5875b271d95b3c5f306dca9fb77e5cfd22b7408b3ccd6109608ba74f4dd8d3a5",
+      "upstreamGitBlob": "3e8fdbbcf4a62938101ddd1c711537e66ede7282",
+      "match": true
+    },
+    {
+      "path": "src/realms/instagram/routes/oembed.ts",
+      "sha256": "e67ccf3aa9b1ddee2c70f6bc5e3f3c41ae8b2b1ea84fcf68bdb316eee6b4feba",
+      "upstreamGitBlob": "2f1acdf1d741a440de66dfaaf04f0625642633c6",
+      "match": true
+    },
+    {
+      "path": "src/realms/instagram/routes/post.ts",
+      "sha256": "8591a9bbb51edb2d4054b550a96b87aee7ee8f29665f41f86f037bab78c3da4b",
+      "upstreamGitBlob": "034773682d86b9efcbc14b989ad03b117098e0e4",
+      "match": true
+    },
+    {
+      "path": "src/realms/tiktok/router.ts",
+      "sha256": "4bcb6f16917a9df2e28ae0672617d7e31c339a3b5aa5218ebfe504b1f9730a2a",
+      "upstreamGitBlob": "c20a86f782977cea90b65cf346c8af4bc5a6c97d",
+      "match": true
+    },
+    {
+      "path": "src/realms/tiktok/routes/activity.ts",
+      "sha256": "86579bd32def561ffa17b5b5530776034424d20c878736cbe7f3c8a9d09cb856",
+      "upstreamGitBlob": "4c7cef48c639877ee69981a876686aa9c0e1a88e",
+      "match": true
+    },
+    {
+      "path": "src/realms/tiktok/routes/oembed.ts",
+      "sha256": "e835e4db97cfd617f4f88991e5b2347764323d1efe0f22a6fb44993bce5c849e",
+      "upstreamGitBlob": "10a51dd8c87ba3a6c50a7b499d49ff63fc2b1fd3",
+      "match": true
+    },
+    {
+      "path": "src/realms/tiktok/routes/proxy.ts",
+      "sha256": "5f3c35d1dcfd1016e378e0b0506d872511bf8dd9002fbaa19745a646dfa39fd6",
+      "upstreamGitBlob": "612b8a1f0f907ba8133d6cbd8606672e3b95f0f6",
+      "match": true
+    },
+    {
+      "path": "src/realms/tiktok/routes/video.ts",
+      "sha256": "f779625b8e4fc672c62feb9ade93b8202d50dd2e4c0a3df941c40f210946cd10",
+      "upstreamGitBlob": "3ac9a8f08510bba68af37d6b38a412d2f3b123b1",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/router.ts",
+      "sha256": "30fef351019c8b555aa2c0ddd5e950c9bd5effb48bcd6fdf864e8cde8924e83b",
+      "upstreamGitBlob": "6b96d7caa007c554dabcffeb1c407de31c8e60a5",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/routes/activity.ts",
+      "sha256": "a2e0ba2df0599227fa59ec6d1f00bb443f43e31c86c3e0220bdfbfd2a4ebbbb4",
+      "upstreamGitBlob": "b845b2f938af640fcd622384f294d89c806d364a",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/routes/feed.ts",
+      "sha256": "a20caf442616548145be5f731b6e7b6441333fee36a3d64ab14642fcfa655baa",
+      "upstreamGitBlob": "4059a1519188d94abd85d536ab1aaab74e14ca04",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/routes/profile.ts",
+      "sha256": "d9db7aae71e59cc3dcbd5108460696a2712c74a5d4db910e9bc2f0600c422e2f",
+      "upstreamGitBlob": "e5e8c02b8f2c2092b41e19277aa8bbe40f315cf0",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/routes/redirects.ts",
+      "sha256": "f3c6d661352ec93da9eec712716e6ce51ded4ef64a0d512f6c0aed620fd7d120",
+      "upstreamGitBlob": "d42f1e24068f0221ff5d07d3eaed4b290a7a513b",
+      "match": true
+    },
+    {
+      "path": "src/realms/twitter/routes/status.ts",
+      "sha256": "5bcb3aacd0e93ea9a2209439e7b67068eb56a7f24e336eb42e741885f80804bf",
+      "upstreamGitBlob": "32a4963249e34680d22cb53aec5c5730556aa008",
+      "match": true
+    },
+    {
+      "path": "src/render/instantview.ts",
+      "sha256": "39babf0764c88ed0c52d2103a13bc4118056da8216543f3841eecf280e3ade09",
+      "upstreamGitBlob": "b261a4c61a9e1e407a4704fee4c361aa349bc4f0",
+      "match": true
+    },
+    {
+      "path": "src/render/photo.ts",
+      "sha256": "217ec91ff89c4b49af0af71ebee33112c7a884e87fd8abf3671d0bcfc6d1db4e",
+      "upstreamGitBlob": "3f1f7520067da692a0862bdcb51a7ce11012dc81",
+      "match": true
+    },
+    {
+      "path": "src/render/video.ts",
+      "sha256": "3280ed60e0a1f4762a786ee82c484cd0cafb8ccbfb4c30250d2a66fae89d22b8",
+      "upstreamGitBlob": "35384664fd644f6ffa6323c4ad87b13c6661ba14",
+      "match": true
+    },
+    {
+      "path": "src/strings.ts",
+      "sha256": "21f0b7a40ddfe9702622d0be5eabcf6f6207dc4bc4e3fec7aaa26948e083295a",
+      "upstreamGitBlob": "9e03af60ecd7f0a7373e10fabc8d65fbe1f6e1d7",
+      "match": true
+    },
+    {
+      "path": "src/types/apiStatus.ts",
+      "sha256": "844c4b71f1ae7daf8b2eb35c3e4c3eb7910dd0866c0125a7ca01695e990d61c7",
+      "upstreamGitBlob": "79e30c8daf9c6d201190a837b80c309196a6b28c",
+      "match": true
+    },
+    {
+      "path": "src/types/env.d.ts",
+      "sha256": "8afb15b6092185764bd3ffd007b820a1f3dce6c51b04db28948742531591ac5b",
+      "upstreamGitBlob": "178cf15549245b32179b4fdb68df60b4f11b6dac",
+      "match": true
+    },
+    {
+      "path": "src/types/types.d.ts",
+      "sha256": "b95002561d2c211bbd7f7235ac06835589447f5d6f7135c1d78e98d95a7e0fd5",
+      "upstreamGitBlob": "b2fbc5c1c0ee8d6a078d4ba373b5817fa9974841",
+      "match": true
+    },
+    {
+      "path": "src/user.ts",
+      "sha256": "019aabc897e5cb509cb06ce40654d01a204dc4c9a373e9064a4a656feb76106d",
+      "upstreamGitBlob": "29871d56c4acfe6e6299903f81b56135b5404479",
+      "match": true
+    },
+    {
+      "path": "src/worker.ts",
+      "sha256": "5a461948480dcc8c2cf4211940db3719f3145694f05683a4dded30a877df9e06",
+      "upstreamGitBlob": "97d7d55ca8f5d13451099e8db6fd44026b86bc08",
+      "match": true
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "8169a71a90a44d1c3ce63a765a2293f83ea5dc5f1f74fce9cdc9eb4d05337399",
+      "upstreamGitBlob": "01f671226f88852a8ad87216d7811d6a5e8dffb0",
+      "match": true
+    }
+  ]
+}

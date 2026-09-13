@@ -112,7 +112,8 @@ async function runCase(name: string, url: string, wholeXPost: boolean): Promise<
 }
 
 export async function testSocialMediaLocal(args: string[]): Promise<void> {
-	const wholeXPost = args[0] === "--x-post";
+	if (args[0] === "--x-post") throw new Error("Specify scripts/testSocialDeliveryLocal.ts for FxEmbed X checks; --x-post is retired");
+	const wholeXPost = false;
 	const selected = wholeXPost ? args.slice(1) : args;
 	if (selected.length > 1 || (selected.length === 1 && (!cases[selected[0]] || (wholeXPost && !selected[0].startsWith("x-"))))) {
 		throw new Error("Specify one known case name, or --x-post with an optional X case name");
@@ -142,6 +143,7 @@ async function buildImage(): Promise<void> {
 			await copyFile(fileURLToPath(new URL(`./mediaSandbox/${name}`, import.meta.url)), join(directory, name));
 		}
 		await copyFile(fileURLToPath(new URL("../core/socialXPost.ts", import.meta.url)), join(directory, "socialXPost.ts"));
+		await copyFile(fileURLToPath(new URL("../core/socialFxPost.ts", import.meta.url)), join(directory, "socialFxPost.ts"));
 		await docker(["build", "--tag", image, directory], 240_000);
 	}
 	finally {

@@ -1,0 +1,8 @@
+# @file wrangler.toml
+# @description Runs FxEmbed locally without Cloudflare accounts, remote bindings, or telemetry.
+# @module fxEmbedWrangler
+
+name = "caitlyn-fxembed"
+main = "./dist/worker.js"
+compatibility_date = "2026-04-11"
+send_metrics = false

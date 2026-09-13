@@ -1,12 +1,17 @@
 /**
  * @file socialXPost.ts
- * @description Normalizes untrusted X GraphQL data into bounded text, ordered media, and quotes.
+ * @description Normalizes untrusted X data into bounded text, ordered media, and quotes.
  * Performs no network requests; URL checks do not replace the isolated worker's egress gate.
  *
  * @module socialXPost
  */
 
-import type { XPost, XPostIssue, XPostMedia, XPostResult, XVideoVariant } from "../types/socialMedia.js";
+import type { XPost, XPostDiagnostic, XPostIssue, XPostMedia, XPostResult, XVideoVariant } from "../types/socialMedia.js";
+
+const diagnosticTypes = new Set(["Tweet", "TweetUnavailable", "TweetTombstone", "TweetWithVisibilityResults", "TweetPreviewDisplay", "FxStatus", "FxTombstone", "missing", "unknown"]);
+const diagnosticReasons = new Set(["login_required", "age_required", "protected", "deleted", "unavailable", "subscription_required",
+	"unknown_tombstone", "unknown_unavailable", "unexpected_response", "identity_mismatch", "sensitive_disabled", "author_unavailable"]);
+const diagnosticSources = new Set(["reason_code", "tombstone_text", "response_shape", "policy"]);
 
 function record(value: unknown): Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -14,6 +19,71 @@ function record(value: unknown): Record<string, unknown> {
 
 function at(value: unknown, ...keys: string[]): unknown {
 	return keys.reduce((current, key) => record(current)[key], value);
+}
+
+/** Rebuild an allowlisted diagnostic at both the worker boundary and the logging boundary. */
+export function sanitizeXPostDiagnostic(value: unknown): XPostDiagnostic | undefined {
+	const input = record(value);
+	if (input.stage !== "metadata" || typeof input.responseType !== "string" || !diagnosticTypes.has(input.responseType)
+		|| typeof input.reason !== "string" || !diagnosticReasons.has(input.reason)
+		|| typeof input.source !== "string" || !diagnosticSources.has(input.source)
+		|| typeof input.hasLegacy !== "boolean" || typeof input.hasTombstoneText !== "boolean") return undefined;
+	return { stage: "metadata", responseType: input.responseType as XPostDiagnostic["responseType"],
+		reason: input.reason as XPostDiagnostic["reason"], source: input.source as XPostDiagnostic["source"],
+		hasLegacy: input.hasLegacy, hasTombstoneText: input.hasTombstoneText };
+}
+
+function tombstoneTexts(result: Record<string, unknown>): string[] {
+	// Check only explicit notice fields. Never search tweet content, links, or arbitrary nested objects.
+	const notice = result.tombstone;
+	const candidates = [at(notice, "richText", "text"), at(notice, "text", "text"), at(notice, "text")];
+	if (result.__typename === "TweetTombstone") candidates.push(at(result, "richText", "text"), at(result, "text", "text"), result.text);
+	return candidates.filter((value): value is string => typeof value === "string" && value.length > 0 && value.length <= 1_024);
+}
+
+function failure(result: Record<string, unknown>, outcome: "restricted" | "unavailable" | "invalid_response",
+	reason: XPostDiagnostic["reason"], source: XPostDiagnostic["source"] = "response_shape"): XPostResult {
+	return { outcome, diagnostic: {
+		stage: "metadata", responseType: typeof result.__typename === "string" && diagnosticTypes.has(result.__typename)
+			? result.__typename as XPostDiagnostic["responseType"] : result.__typename === undefined ? "missing" : "unknown",
+		reason, source, hasLegacy: result.legacy !== null && typeof result.legacy === "object" && !Array.isArray(result.legacy),
+		hasTombstoneText: tombstoneTexts(result).length > 0,
+	} };
+}
+
+function unavailable(result: Record<string, unknown>): XPostResult | undefined {
+	const tombstone = result.__typename === "TweetTombstone" || Boolean(result.tombstone);
+	if (!tombstone && result.__typename !== "TweetUnavailable" && result.__typename !== "TweetPreviewDisplay") return undefined;
+	// A structured provider reason is stronger evidence than human-readable notice wording.
+	const reasons = new Map<string, XPostDiagnostic["reason"]>([
+		["Protected", "protected"], ["NsfwLoggedOut", "login_required"], ["NsfwViewerHasNoStatedAge", "age_required"],
+		["Deleted", "deleted"],
+	]);
+	let reason = typeof result.reason === "string" ? reasons.get(result.reason) : undefined;
+	let source: XPostDiagnostic["source"] = reason ? "reason_code" : "response_shape";
+	if (!reason && tombstone) {
+		// These are conservative English notice matches, not proof of why a bare tombstone was returned.
+		// Unknown/localized/oversized wording stays unknown, and no notice text leaves this function.
+		const patterns: [RegExp, XPostDiagnostic["reason"]][] = [
+			[/^(?:age-restricted adult content\b|this (?:post|tweet) is age[- ]restricted\b|due to local laws, we are temporarily restricting access to this content until x estimates your age\b)/, "age_required"],
+			[/^(?:to view this media, you(?:'ll| will) need to log in\b|please (?:log|sign) in to (?:view|see) this (?:media|post|tweet)\b)/, "login_required"],
+			[/^this (?:post|tweet) is from a protected account\b/, "protected"],
+			[/^this (?:post|tweet) (?:was|has been) deleted\b/, "deleted"],
+			[/^this (?:post|tweet) is from (?:a suspended account|an account that no longer exists)\b/, "author_unavailable"],
+			[/^this (?:post|tweet) is unavailable\b/, "unavailable"],
+		];
+		for (const text of tombstoneTexts(result)) {
+			const normalized = text.trim().toLowerCase().replace(/’/g, "'");
+			reason = patterns.find(([pattern]) => pattern.test(normalized))?.[1];
+			if (reason) {
+				source = "tombstone_text";
+				break;
+			}
+		}
+	}
+	if (!reason) reason = tombstone ? "unknown_tombstone" : result.__typename === "TweetPreviewDisplay" ? "subscription_required" : "unknown_unavailable";
+	const restricted = ["login_required", "age_required", "protected", "subscription_required"].includes(reason);
+	return failure(result, restricted ? "restricted" : "unavailable", reason, source);
 }
 
 function identifier(value: unknown): string | undefined {
@@ -97,20 +167,24 @@ function mediaItem(raw: unknown, issues: Set<XPostIssue>): XPostMedia | undefine
 	};
 }
 
-function normalize(raw: unknown, expectedId: string, depth: number): XPostResult {
+function normalize(raw: unknown, expectedId: string, depth: number, allowSensitive: boolean): XPostResult {
 	let result = record(raw);
-	if (result.__typename === "TweetWithVisibilityResults") result = record(result.tweet);
-	if (result.__typename === "TweetUnavailable") {
-		return { outcome: ["Protected", "NsfwLoggedOut", "NsfwViewerHasNoStatedAge"].includes(String(result.reason)) ? "restricted" : "unavailable" };
+	const outerFailure = unavailable(result);
+	if (outerFailure) return outerFailure;
+	if (result.__typename === "TweetWithVisibilityResults") {
+		result = record(result.tweet);
+		const innerFailure = unavailable(result);
+		if (innerFailure) return innerFailure;
 	}
-	if (result.__typename === "TweetTombstone" || result.tombstone) return { outcome: "unavailable" };
-	if (result.__typename !== "Tweet") return { outcome: "invalid_response" };
+	if (result.__typename !== "Tweet") return failure(result, "invalid_response", "unexpected_response");
 	const legacy = record(result.legacy);
 	const id = identifier(legacy.id_str) ?? identifier(result.rest_id);
-	if (id !== expectedId || (result.rest_id !== undefined && result.rest_id !== id)) return { outcome: "invalid_response" };
+	if (id !== expectedId || (result.rest_id !== undefined && result.rest_id !== id)) return failure(result, "invalid_response", "identity_mismatch");
 	const user = record(at(result, "core", "user_results", "result"));
 	const userLegacy = record(user.legacy);
-	if (legacy.possibly_sensitive === true || userLegacy.protected === true || user.__typename === "UserUnavailable") return { outcome: "restricted" };
+	if (userLegacy.protected === true || at(user, "privacy", "protected") === true) return failure(result, "restricted", "protected", "policy");
+	if (user.__typename === "UserUnavailable") return failure(result, "restricted", "author_unavailable", "policy");
+	if (legacy.possibly_sensitive === true && !allowSensitive) return failure(result, "restricted", "sensitive_disabled", "policy");
 	const issues = new Set<XPostIssue>();
 	const userCore = record(user.core);
 	const rawHandle = userLegacy.screen_name ?? userCore.screen_name;
@@ -141,6 +215,7 @@ function normalize(raw: unknown, expectedId: string, depth: number): XPostResult
 	// Cards/articles and inline long-form media are not silently declared complete.
 	if (result.card || result.article || legacy.retweeted_status_result || at(result, "note_tweet", "note_tweet_results", "result", "media")) issues.add("unsupported_card");
 	const post: XPost = {
+		...(legacy.possibly_sensitive === true ? { sensitive: true } : {}),
 		id, url: `https://x.com/${handle ?? "i"}/status/${id}`,
 		author: { name: typeof rawName === "string" && rawName.trim() ? decodeText(boundedText(rawName, 200)) : "Unknown author", handle },
 		text: typeof sourceText === "string" ? decodeText(boundedText(sourceText, 25_000)) : "", textComplete,
@@ -153,7 +228,7 @@ function normalize(raw: unknown, expectedId: string, depth: number): XPostResult
 			issues.add("nested_quote_omitted");
 		}
 		else {
-			const quote = quoteId && quoteId !== id ? normalize(quoteResult, quoteId, depth + 1) : undefined;
+			const quote = quoteId && quoteId !== id ? normalize(quoteResult, quoteId, depth + 1, allowSensitive) : undefined;
 			if (quote && "post" in quote) {
 				post.quote = { state: "available", post: quote.post };
 			}
@@ -168,9 +243,9 @@ function normalize(raw: unknown, expectedId: string, depth: number): XPostResult
 }
 
 /** Requires the response to match the requested post, not merely the URL's claimed author. */
-export function normalizeXPost(data: unknown, expectedId: string): XPostResult {
+export function normalizeXPost(data: unknown, expectedId: string, allowSensitive = false): XPostResult {
 	if (!identifier(expectedId)) return { outcome: "invalid_response" };
-	return normalize(at(data, "tweetResult", "result"), expectedId, 0);
+	return normalize(at(data, "tweetResult", "result"), expectedId, 0, allowSensitive);
 }
 
 /** Conservative planning only; a worker must still enforce the actual final byte limit. */

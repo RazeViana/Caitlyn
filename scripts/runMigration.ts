@@ -6,7 +6,7 @@
  * @module runMigration
  */
 
-import "dotenv/config";
+import "../core/loadEnvironment.js";
 
 import fs from "node:fs";
 import path from "node:path";

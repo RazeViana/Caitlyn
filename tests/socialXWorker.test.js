@@ -45,8 +45,19 @@ test("X video byte overflow tries a smaller candidate but actual files still req
 	assert.equal(fake.calls.at(-1).command, "ffmpeg");
 });
 
+test("delivery byte budgets reach image and video downloads and still bound returned bytes", async () => {
+	const fake = dependencies();
+	fake.byteLimit = 1024;
+	fake.retrieve = async (_kind, _url, byteLimit) => {
+		assert.equal(byteLimit, 1024);
+		return { bytes: 1025, mime: "image/png" };
+	};
+	assert.equal((await verifyVideo({ kind: "video" }, candidates, fake)).outcome, "size_limit");
+	assert.equal((await verifyImage({ kind: "image", imageUrl: "https://pbs.twimg.com/media/a.png?name=orig" }, fake)).outcome, "size_limit");
+});
+
 test("X access restrictions, rate limits, and timeouts never try another variant or expose raw failures", async () => {
-	for (const outcome of ["rate_limited", "access_denied", "login_or_restriction", "timeout", "secret signed url https://example.test?token=secret"]) {
+	for (const outcome of ["rate_limited", "access_denied", "gateway_denied", "login_or_restriction", "timeout", "secret signed url https://example.test?token=secret"]) {
 		let attempts = 0;
 		const fake = dependencies();
 		fake.retrieve = async () => {

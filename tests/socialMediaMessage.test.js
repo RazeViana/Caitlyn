@@ -1,85 +1,29 @@
 /**
  * @file socialMediaMessage.test.js
- * @description Tests social-link replacement and preservation of original content.
- * Checks supported domains, trailing text, and failed delivery using synthetic messages.
+ * @description Verifies the opt-in enqueue entry point never rewrites, suppresses, or deletes originals.
+ * Uses synthetic runtimes without Discord or worker access.
  *
  * @module socialMediaMessage.test
  */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { socialMediaMessage } from "../messages/socialMediaMessage.ts";
+import { socialRuntimes } from "../core/socialRuntime.ts";
 
-const { socialMediaMessage } = await import("../messages/socialMediaMessage.ts");
-
-function createMessage(content, failures = {}) {
-	const calls = [];
-	return {
-		message: {
-			channel: {
-				send: async (sentMessage) => {
-					calls.push(["send", sentMessage]);
-					if (failures.send) throw failures.send;
-				},
-			},
-			content,
-			delete: async () => {
-				calls.push(["delete"]);
-				if (failures.delete) throw failures.delete;
-			},
-		},
-		readCalls: () => calls,
-	};
-}
-
-test("supported social URLs are replaced and unsupported messages remain untouched", async () => {
-	const cases = [
-		["https://instagram.com/reel/abc", "[instagram.com](https://instagramez.com/reel/abc)"],
-		["https://www.reddit.com/r/test/abc", "[reddit.com](https://www.redditez.com/r/test/abc)"],
-		["https://tiktok.com/@alice/video/1", "[tiktok.com](https://tiktokez.com/@alice/video/1)"],
-		["https://twitter.com/alice/status/1", "[twitter.com](https://twitterez.com/alice/status/1)"],
-		["https://x.com/alice/status/1", "[x.com](https://twitterez.com/alice/status/1)"],
-	];
-
-	for (const [content, expectedMessage] of cases) {
-		const { message, readCalls } = createMessage(content);
+test("social messages remain untouched when the runtime is disabled", async () => {
+	for (const content of ["https://x.com/alice/status/123", "https://instagram.com/reel/abc", "https://www.reddit.com/r/test/comments/abc/title/", "ordinary text"]) {
+		const message = { client: {}, content };
 		await socialMediaMessage(message);
-		assert.deepEqual(readCalls(), [
-			["send", expectedMessage],
-			["delete"],
-		]);
-	}
-
-	for (const content of [
-		"https://youtube.com/watch?v=abc",
-		"Have a look https://x.com/alice/status/1",
-	]) {
-		const { message, readCalls } = createMessage(content);
-		await socialMediaMessage(message);
-		assert.deepEqual(readCalls(), []);
+		assert.equal(message.content, content);
 	}
 });
 
-test("social URL replacement retains the original if sending fails", async () => {
-	const content = "https://x.com/alice/status/1";
-	const expectedMessage = "[x.com](https://twitterez.com/alice/status/1)";
-	const deleteFailure = createMessage(content, {
-		delete: new Error("delete failed"),
-	});
-
-	await assert.doesNotReject(() => socialMediaMessage(deleteFailure.message));
-	assert.deepEqual(deleteFailure.readCalls(), [["send", expectedMessage], ["delete"]]);
-
-	const sendFailure = createMessage(content, {
-		send: new Error("send failed"),
-	});
-	await assert.doesNotReject(() => socialMediaMessage(sendFailure.message));
-	assert.deepEqual(sendFailure.readCalls(), [
-		["send", expectedMessage],
-	]);
-});
-
-test("link replacement preserves text following the original URL", async () => {
-	const { message, readCalls } = createMessage("https://x.com/alice/status/1 Important context");
+test("enabled social handler delegates only to the queue", async () => {
+	const message = { client: {}, content: "https://x.com/alice/status/123" };
+	let received;
+	socialRuntimes.set(message.client, { enqueue: async (input) => { received = input; } });
 	await socialMediaMessage(message);
-	assert.deepEqual(readCalls(), [["send", "[x.com](https://twitterez.com/alice/status/1) Important context"], ["delete"]]);
+	assert.equal(received, message);
+	socialRuntimes.delete(message.client);
 });

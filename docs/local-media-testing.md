@@ -1,5 +1,7 @@
 # Local isolated media tests
 
+> Historical extractor feasibility harness. For current X metadata/media testing use [the local FxEmbed guide](fxembed.md) and `scripts/testSocialDeliveryLocal.ts`. The old raw-GraphQL `--x-post` mode has been retired; the remaining harness is for legacy multi-platform diagnostics, not the bot's X delivery path.
+
 Verified on 2026-09-10, on this Apple Silicon Mac. This is a disposable feasibility harness, **not the bot's production media worker**. It never logs into Discord or accesses the application database. The baseline is committed as `03eab46`; the X whole-post continuation is uncommitted. See [replacement progress](social-media-replacement.md#x-adapter-and-renderer-continuation) for the latest X results and remaining feature work.
 
 ## Installed locally

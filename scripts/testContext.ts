@@ -6,7 +6,7 @@
  * @module testContext
  */
 
-import "dotenv/config";
+import "../core/loadEnvironment.js";
 
 import { pathToFileURL } from "node:url";
 import { getConversationContext } from "../core/messageStore.js";

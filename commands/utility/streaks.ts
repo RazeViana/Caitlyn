@@ -13,7 +13,7 @@ import {
 } from "discord.js";
 import { getTopStreakUsers } from "../../core/activityTracker.js";
 import logger from "../../core/logger.js";
-import { respondWithError } from "../../core/interactionResponse.js";
+import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { truncate } from "../../core/textLimits.js";
 import type { ActivityRow } from "../../types/models.js";
 
@@ -27,6 +27,7 @@ const defaultStreaksCommandDependencies: StreaksCommandDependencies = {
 
 export const cooldown = 5;
 export const category = "utility";
+export const requiresDatabase = true;
 export const data = new SlashCommandBuilder()
 	.setName("streaks")
 	.setDescription("View the server activity streak leaderboard")
@@ -48,7 +49,7 @@ export async function execute(
 			await respondWithError(interaction, "Use this command in a server.");
 			return;
 		}
-		await interaction.deferReply();
+		if (!await deferInteraction(interaction)) return;
 		const limit = interaction.options.getInteger("limit") || 10;
 		const guildId = interaction.guild!.id;
 

@@ -21,6 +21,9 @@
     ☐ Choose a project license and align README/package metadata
 
 ☐ Features and improvements
+    ✔ Replace all VX runtime paths with pinned local FxEmbed source, bounded API adaptation, and isolated media delivery
+    ☐ Retest FxEmbed previews/playback and original-message cleanup in Discord
+    ☐ Configure authorized X account access separately if restricted posts are required
     ✔ Exclude local database backups and private environment snapshots from Docker builds
     ✔ Add the missing birthday table migration for fresh databases
     ✔ Verify all migrations and birthday replay safety against a disposable local PostgreSQL database
@@ -41,7 +44,8 @@
     ✔ Add owner-only in-channel log-type selection independent of console LOG_LEVEL
     ✔ Keep logging controls out of global publication and remove public logging onboarding
     ✔ Bound log delivery, redact credentials, and test settings persistence and failure handling
-    ☐ Publish updated commands and verify logging in a private Discord channel during an authorized release
+    ✔ Register all 14 current guild commands, including /setup, /logs, and /social, for the authorized Mac test in MandemHQ
+    ✔ Owner configured private Discord logging; verified delivery and preserved all selected log types
     ✔ Commit private Discord logging and merge it into local caitlyn-2.0 (7ad30ed)
     ✔ Add durable same-day birthday catch-up, duplicate prevention, timezone configuration, and recovery logging
     ✔ Commit birthday recovery and merge it into the local integration branch (3bfb0dd)
@@ -54,11 +58,26 @@
     ✔ Sign the local social-media feasibility checkpoint as 03eab46 without merging or pushing
     ✔ Implement/test bounded X full-text, ordered galleries, explicit quote attribution, video candidates, and a safe offline Discord renderer
     ✔ Verify all five owner-supplied X examples locally, including original images and separate parent/quoted H.264/AAC clips
-    ☐ Connect validated worker files and normalized posts through a production transport, durable delivery state, and opt-in configuration
+    ✔ Sign the tested X adapter/renderer checkpoint as 0f3dee4 without merging or pushing
+    ✔ Connect validated worker files and normalized posts through a local Unix transport, durable delivery state, and opt-in configuration
     ☐ Agree social-media API access/budget and production worker integration
     ☐ Verify original images/galleries, full text, quoted posts, and playable video/audio for the replacement
-    ☐ Implement isolated media processing, durable delivery, per-server configuration, and failure handling using existing logging
-    ☐ Replace the hosted social-link fixers after complete media and delivery validation
+    ✔ Implement isolated X processing, durable delivery, per-channel configuration, and failure handling using existing logging
+    ✔ Remove hosted-fixer rewrites from this branch; preserve original links and keep the X replacement disabled by default
+    ✔ Authorize the existing bot for local Discord testing while the homeserver instance is inactive; apply migration 014 locally and start the worker/bot
+    ✔ Diagnose duplicate local bot command acknowledgements; contain expired interactions and stop extra instance
+    ✔ Quarantine ambiguous restored voice sessions without changing history/totals; apply and verify migration 015 locally
+    ✔ Fix X media request identity; verify image, video, exact failed post, and parent/quoted clips through the real worker
+    ✔ Support public sensitive-labelled X posts without the extra channel-age check, as requested; retain actual X access gates
+    ✔ Audit X tombstone/visibility/privacy parsing and carry content-free failure reasons through private logs; keep unexplained tombstones unknown
+    ✔ [Superseded by FxEmbed] Add operator-selected VXTwitter metadata inside the isolated worker, preserving the public-access check, media verification, private logs, and safe deletion
+    ✔ Replace the active hosted VX dependency with a Caitlyn-owned private metadata/delivery API, offline build, direct-only egress, health check, and documented retained dependencies
+    ✔ [Superseded by FxEmbed] Integrate a VX-derived X metadata client and pinned request profiles into the project, with optional private session-file support and sanitized method logs
+    ☐ With explicit owner approval, configure an authorized X account and verify authenticated extraction of the reported age-restricted post
+    ✔ Mention only the original sender, copy captions, and remove unchanged originals after complete sibling deliveries
+    ✔ Persist source cleanup intent with migration 016; verify self-delete and uncertain-delete recovery without losing previews
+    ☐ Complete manual Discord command retest and preview/playback/edit/delete checks after fixes
+    ☐ Complete remaining platform adapters and production deployment/service configuration before full replacement rollout
 
 ☐ Add personality to the bot
     ☐ Commissioned banner

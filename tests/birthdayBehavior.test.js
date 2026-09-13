@@ -90,6 +90,16 @@ test("birthday removal uses parameterized delete and reports existing versus mis
 	}
 });
 
+test("showbirthdays without GIF configuration never calls the GIF API", async () => {
+	const replies = [];
+	await showBirthdaysCommand.execute({ guild: {}, deferReply: async () => undefined, editReply: async (reply) => replies.push(reply) }, {
+		giphyEnabled: () => false,
+		fetch: async () => assert.fail("unconfigured Giphy request"),
+		query: async () => ({ rows: [] }),
+	});
+	assert.deepEqual(replies, ["😢 No birthdays found!"]);
+});
+
 test("showbirthdays preserves deferred reply and deterministic embed grouping", async (context) => {
 	const originalTimezone = process.env.TZ;
 	process.env.TZ = "Europe/Amsterdam";

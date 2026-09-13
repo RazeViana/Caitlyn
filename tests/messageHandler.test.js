@@ -33,7 +33,7 @@ function createMessage(guild = { id: "guild-id" }) {
 	};
 }
 
-test("message handling tracks guild activity before starting overlapping AI and social work", async () => {
+test("slow activity storage does not delay AI or social work, but shutdown still awaits it", async () => {
 	const calls = [];
 	const trackGate = deferred();
 	const aiGate = deferred();
@@ -53,14 +53,6 @@ test("message handling tracks guild activity before starting overlapping AI and 
 		},
 	});
 
-	assert.deepEqual(calls, [{
-		guildId: "guild-id",
-		userId: "user-id",
-		username: "Alice",
-	}]);
-
-	trackGate.resolve();
-	await flushOperations();
 	assert.deepEqual(calls, [
 		{ guildId: "guild-id", userId: "user-id", username: "Alice" },
 		"ai",
@@ -69,6 +61,11 @@ test("message handling tracks guild activity before starting overlapping AI and 
 
 	aiGate.resolve();
 	socialGate.resolve();
+	let completed = false;
+	void operation.then(() => { completed = true; });
+	await flushOperations();
+	assert.equal(completed, false);
+	trackGate.resolve();
 	await operation;
 });
 

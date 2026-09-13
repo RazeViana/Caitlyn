@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { allowedTunnel, isPublicAddress, resolvePublicHost } from "../scripts/mediaSandbox/gateway.ts";
-import { failureCategory } from "../scripts/mediaSandbox/worker.ts";
+import { failureCategory, readFxMetadata } from "../scripts/mediaSandbox/worker.ts";
 
 test("media tunnels permit only known provider hosts on HTTPS port 443", () => {
 	for (const host of ["x.com", "api.x.com", "cdn.syndication.twimg.com", "video.twimg.com", "www.tiktok.com", "www.instagram.com", "scontent.cdninstagram.com"]) {
@@ -17,6 +17,15 @@ test("media tunnels permit only known provider hosts on HTTPS port 443", () => {
 	}
 	for (const authority of ["127.0.0.1:443", "100.70.173.118:443", "[::1]:443", "x.com:5432", "x.com", "x.com.evil.test:443", "evilx.com:443", "user@x.com:443", "x.com.:443", "x.com:443/path", "x.com\r\n:443", "www.reddit.com:443", "discord.com:443"]) {
 		assert.equal(allowedTunnel(authority), null, authority);
+	}
+});
+
+test("media egress always denies hosted VX and Fx metadata services", () => {
+	assert.equal(allowedTunnel("api.vxtwitter.com:443"), null);
+	assert.equal(allowedTunnel("api.fxtwitter.com:443"), null);
+	for (const host of ["vxtwitter.com", "www.vxtwitter.com", "sub.api.vxtwitter.com", "api.vxtwitter.com.evil.test", "api.fixvx.com"]) {
+		assert.equal(allowedTunnel(`${host}:443`), null);
+		assert.equal(allowedTunnel(`${host}:443`), null);
 	}
 });
 
@@ -56,4 +65,16 @@ test("extractor errors distinguish setup, restrictions, content gaps, and policy
 		["Video does not pass filter", "duration_limit"],
 		["Unexpected extractor failure", "extractor_error"],
 	]) assert.equal(failureCategory(message), outcome);
+});
+
+test("FxEmbed metadata stdin preserves split Unicode and rejects oversized or malformed JSON", async () => {
+	const data = Buffer.from(JSON.stringify({ text: "Hello 💜 世界" }));
+	async function* chunks() {
+		for (let index = 0; index < data.length; index++) yield data.subarray(index, index + 1);
+	}
+	assert.deepEqual(await readFxMetadata(chunks()), { text: "Hello 💜 世界" });
+	async function* oversized() { yield Buffer.alloc(1024 * 1024 + 1); }
+	async function* malformed() { yield Buffer.from("not JSON"); }
+	await assert.rejects(() => readFxMetadata(oversized()), /invalid_probe_input/);
+	await assert.rejects(() => readFxMetadata(malformed()));
 });

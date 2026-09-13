@@ -15,6 +15,7 @@ import {
 import { isAIEnabled, toggleAI } from "../../core/aiState.js";
 import logger from "../../core/logger.js";
 import { respondWithError } from "../../core/interactionResponse.js";
+import { getFeatureConfiguration } from "../../core/environment.js";
 
 export const cooldown = 5;
 export const category = "utility";
@@ -25,6 +26,12 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	try {
+		const configuration = getFeatureConfiguration().ai;
+		if (!configuration.configured) {
+			logger.warn("AI toggle refused; configuration unavailable", configuration.problems.join("; "));
+			await respondWithError(interaction, "AI is disabled because its configuration is missing or invalid. Ask the operator to check the startup logs and restart after updating it.");
+			return;
+		}
 		const previousState = isAIEnabled();
 		const newState = toggleAI();
 

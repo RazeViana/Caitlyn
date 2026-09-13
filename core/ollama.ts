@@ -6,7 +6,7 @@
  * @module ollama
  */
 
-import "dotenv/config";
+import "./loadEnvironment.js";
 
 import logger from "./logger.js";
 import type { ChatMessage, OpenWebUIResponse } from "../types/models.js";
