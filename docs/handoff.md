@@ -1,6 +1,6 @@
 # Caitlyn development handoff
 
-Updated: 2026-09-13. Modernization checkpoint: `8ea6f5e`. Signed resilience checkpoint: `b998543`. Signed private logging checkpoint: `7ad30ed`. Signed birthday recovery checkpoint: `3bfb0dd`. Signed X adapter checkpoint: `0f3dee4`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`). Active feature branch: `codex/social-media-replacement`.
+Updated: 2026-09-13. Sanitized, signed feature-branch checkpoints: modernization `09ac21d`, resilience `3244bbb`, private logging `ed3c2ea`, birthday recovery `84c16bd`, X adapter `50703ee`, and self-hosted X/feature configuration/clean footer `2d26b3f`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`). Active feature branch: `codex/social-media-replacement`. See the publication checkpoint below before publishing or merging any older local branch.
 
 The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, private Discord logging, and birthday recovery are committed and integrated locally.
 
@@ -14,7 +14,22 @@ At the owner's request, new preview footers now say only `Caitlyn preview`, with
 
 `npm run check` passes **300 tests, one optional PostgreSQL skip (301 total)**. Three new regression tests cover clean-footer saved identity, nonce-based uncertain recovery/legacy compatibility, and rejection of wrong authors/webhooks/references/message IDs. Existing runtime tests verify the job ID is absent from embed text.
 
-The owner requested a commit and push of the accumulated work on `codex/social-media-replacement` (not a merge). A pre-publication credential check found a database password in an older handoff note; it was redacted here without displaying it. The same value exists in seven local commits after remote integration base `c468729`; publishing the original ancestry would expose it. History cleanup requires the owner's separate approval before pushing. GitHub CLI authentication is available; the 1Password signing agent was unlocked after the owner was asked. Preserve secret exclusions and use a normal, explicit branch push only; never push local rollback references or other branches by default.
+The owner requested a commit and push of the accumulated work on `codex/social-media-replacement` (not a merge). A pre-publication credential check found a database password in an older handoff note and seven unpublished ancestor commits after remote integration base `c468729`. The owner explicitly approved sanitizing that unpublished history, retaining a local rollback reference, and using a normal push without rewriting existing remote branches. With 1Password unlocked, all eight unpublished commits were rebuilt and signed; the seven contaminated handoff blobs were redacted without displaying the value. Author/committer identities, dates, messages, and all other files were preserved. The final tracked tree at `2d26b3f` is identical to the original already-redacted checkpoint `89129e8`.
+
+The cleaned outgoing history passed an exact/URL-encoded/base64 check against the configured local secrets across **597 commit/blob objects**, with no matches. The following map identifies the rewritten checkpoints; older sections retain their original historical hashes:
+
+| Original local commit | Sanitized signed commit | Checkpoint |
+| --- | --- | --- |
+| `8ea6f5e` | `09ac21d` | Modernization |
+| `b998543` | `3244bbb` | Resilience |
+| `7ad30ed` | `ed3c2ea` | Private logging |
+| `3bfb0dd` | `84c16bd` | Birthday recovery |
+| `227ce5e` | `0e77723` | Branch rename documentation |
+| `03eab46` | `7b83163` | Isolated social-media feasibility |
+| `0f3dee4` | `50703ee` | X extraction and rendering |
+| `89129e8` | `2d26b3f` | Self-hosted X, feature gates, feedback, clean footer |
+
+Local-only rollback ref `refs/backup/caitlyn-social-media-20260913-pre-redaction` retains the original `89129e8` ancestry. Older local integration/feature refs were not rewritten and can still retain the private value: **never publish that rollback ref or the old ancestry, and do not merge the old ancestry into the cleaned feature branch**. A future integration must reconcile those local refs onto the sanitized history first. Existing GitHub branches are unchanged; `caitlyn-3.0` remains at `c468729`. This checkpoint is prepared for an explicit normal push of only `codex/social-media-replacement`; verify its remote SHA against local `HEAD` after publication. No force-push, merge, credential rotation or homeserver change is authorized by this cleanup.
 
 The local bot was gracefully restarted from verified PID **50640** to **28222**, session **38838**, at **18:15:08 UTC**, with the same local database/socket/social-enabled/AI-disabled settings from the preceding checkpoint. Broker **94635** and the account backend remain unchanged. New posts receive the clean footer; old posts are not bulk-edited. Nothing installed and no command registrations, database migrations, homeserver changes or merge were performed for this request.
 
