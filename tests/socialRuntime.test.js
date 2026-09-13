@@ -49,6 +49,69 @@ test("idle queue polling logs at most once every five minutes", async () => {
 	assert.equal(f.logs[0][2], "Social queue idle");
 });
 
+test("render diagnostics stay guild-scoped and content-free, including incomplete text-only cards", async () => {
+	for (const textComplete of [true, false]) {
+		const f = fixture();
+		f.result.post.text = "private caption content";
+		f.result.post.textComplete = textComplete;
+		await f.runtime.tick();
+		assert.deepEqual(f.logs.find((entry) => entry[2] === "Social preview rendered"),
+			["debug", "111", "Social preview rendered", f.job.id, "embeds=1", "files=0", "text_attachment=false", `complete=${textComplete}`]);
+		assert.ok(!JSON.stringify(f.logs).includes(f.result.post.text));
+		assert.equal(f.logs.some((entry) => entry[2] === "Social preview is partial"), !textComplete);
+		assert.equal(f.calls.find(([name]) => name === "beginSend")[2], textComplete);
+		const payload = f.calls.find(([name]) => name === "send")[2];
+		assert.equal(payload.embeds[0].footer.text, "Caitlyn preview");
+		assert.ok(payload.embeds[0].description.endsWith(`Shared by <@${f.job.author_id}>`));
+		assert.ok(!JSON.stringify(payload.embeds).includes(f.job.id));
+	}
+});
+
+test("quote delivery places the clean footer after the quoted content, without splitting the tweet pair", async () => {
+	const f = fixture();
+	f.result.post.quote = { state: "available", post: { ...f.result.post, id: "456", url: "https://x.com/bob/status/456", author: { name: "Bob", handle: "bob" }, text: "Quoted content" } };
+	await f.runtime.tick();
+	const payload = f.calls.find(([name]) => name === "send")[2];
+	assert.equal(payload.embeds[0].author.name, "Alice (@alice)");
+	assert.equal(payload.embeds[0].footer, undefined);
+	assert.ok(!payload.embeds[0].description.includes("Shared by"));
+	assert.equal(payload.embeds[1].author.name, "Bob (@bob)");
+	assert.ok(payload.embeds[1].description.startsWith("Quoted content"));
+	assert.ok(payload.embeds[1].description.endsWith("Shared by <@444>"));
+	assert.equal(payload.embeds[1].footer.text, "Caitlyn preview");
+	assert.equal(f.calls.find(([name]) => name === "beginSend")[2], true);
+});
+
+test("TikTok admission namespaces IDs and skips photo routes without changing X jobs", async () => {
+	const f = fixture();
+	await f.runtime.enqueue({ guildId: "111", channelId: "222", id: "333", author: { id: "444", bot: false }, channel: { type: ChannelType.GuildText },
+		flags: { has: () => false }, createdTimestamp: 1_000_000,
+		content: "https://x.com/alice/status/123 https://www.tiktok.com/@creator/video/123 https://vm.tiktok.com/Example/ https://www.tiktok.com/@creator/photo/456" });
+	assert.deepEqual(f.calls.filter(([method]) => method === "enqueue").map(([, job]) => job.post_id).slice(0, 2), ["123", "tiktok:123"]);
+	assert.equal(f.calls.filter(([method]) => method === "enqueue").length, 3);
+});
+
+test("TikTok sends only after canonical alias resolution and reuses confirmed siblings without resending", async () => {
+	for (const resolution of ["send", "reused", "blocked", "stale"]) {
+		const f = fixture({ url: "https://vm.tiktok.com/Example/", post_id: "tiktok:share:fixture" });
+		f.result.provider = "tiktok";
+		f.result.post = { platform: "tiktok", id: "123", url: "https://www.tiktok.com/@creator/video/123", author: { name: "Creator", handle: "creator" },
+			text: "caption", textComplete: true, issues: [], media: [{ id: "123", kind: "video", variants: [] }] };
+		f.result.outcome = "partial";
+		f.dependencies.store.resolveTikTok = async (job, url) => {
+			assert.equal(job.id, f.job.id);
+			assert.equal(url, f.result.post.url);
+			return resolution;
+		};
+		await f.runtime.tick();
+		assert.equal(f.calls.some(([name]) => name === "send"), resolution === "send");
+		assert.equal(f.calls.some(([name]) => name === "beginSend"), resolution === "send");
+		if (resolution === "send") assert.equal(f.calls.find(([name]) => name === "beginSend")[2], false);
+		if (resolution === "blocked") assert.deepEqual(f.finished().at(-1), ["failed", "duplicate_unconfirmed"]);
+		assert.ok(f.logs.some((entry) => entry.includes("mode=tiktok")));
+	}
+});
+
 test("provider selection is logged privately using only trusted modes on success and failure", async () => {
 	for (const provider of ["fxembed", "vxtwitter", "direct", "secret provider text", ["fxembed"]]) {
 		for (const failed of [false, true]) {

@@ -27,6 +27,7 @@ const expectedFiles = [
 	"dist/core/socialProgress.js",
 	"dist/core/socialDeliveryStore.js",
 	"dist/core/socialWorkerClient.js",
+	"dist/core/socialTikTokPost.js",
 	"dist/messages/socialDelivery.js",
 	"dist/commands/utility/social.js",
 	"dist/events/messageUpdate.js",

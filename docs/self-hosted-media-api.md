@@ -4,7 +4,7 @@
 
 Caitlyn now uses the actual pinned [FxEmbed backend](fxembed.md) in `vendor/fxembed`, with `SOCIAL_X_PROVIDER=fxembed` as its only mode. The local backend serves X API v2 metadata on loopback; this broker exposes validated metadata and verified media to the bot over an owner-only Unix socket. All VX runtime paths, profiles and session-file support have been removed.
 
-An owner-provided X session from the local `.env` is now configured in FxEmbed; the broker uses a separate private API key and never receives the X cookies. The formerly age-denied test post now passes metadata and verified video delivery checks, as recorded in [the handoff](handoff.md). X restrictions and session expiry still apply. No hosted Fx/VX API fallback is used. Other platforms and homeserver deployment remain separate work.
+An owner-provided X session from the local `.env` is now configured in FxEmbed; the broker uses a separate private API key and never receives the X cookies. The formerly age-denied test post now passes metadata and verified video delivery checks, as recorded in [the handoff](handoff.md). X restrictions and session expiry still apply. No hosted Fx/VX API fallback is used. [TikTok videos](tiktok.md) use a separate public extractor inside the isolated worker without FxEmbed or host/account credentials. Instagram/Reddit and homeserver deployment remain separate work.
 
 ## Are media files downloaded and uploaded?
 
@@ -23,6 +23,7 @@ The host broker runs `scripts/socialWorker/server.ts` and launches disposable ne
 | `GET /v1/health` | No body | Local service version, idle/busy state, provider mode, hosted-metadata flag. No Docker, X, DB, or Discord probe. |
 | `POST /v1/x/metadata` | Version, canonical X URL, optional `allowSensitive` boolean | Bounded normalized metadata only; local FxEmbed retrieval; no media download or Discord action. |
 | `POST /v1/x` | Existing delivery request with explicit file/total byte budgets | Normalized post plus verified attachment bytes; actual Discord sending remains the bot's responsibility. |
+| `POST /v1/tiktok` | Version, canonical TikTok video/share URL, file/total byte budgets | Isolated public extraction and verified MP4 bytes; `provider=tiktok`. No TikTok metadata-only route or account access. |
 
 Metadata request example:
 
@@ -61,7 +62,7 @@ SOCIAL_WORKER_SOCKET=/path/to/private/worker.sock \
 LOG_LEVEL=INFO node --import tsx scripts/socialWorker/server.ts
 ```
 
-Start the bot separately with the same socket, local DB overrides, `SOCIAL_MEDIA_ENABLED=true`, and `LLM_ENABLED=false` as described in [manual testing](social-delivery.md#authorized-manual-discord-test). Do not run two bot processes with the same token. No new slash command or registration is needed. Keep the existing guild/channel opt-in and private logging configuration.
+Start the bot separately with the same socket, local DB overrides, `SOCIAL_MEDIA_ENABLED=true`, and `LLM_ENABLED=false` as described in [manual testing](social-delivery.md#authorized-manual-discord-test). Do not run two bot processes with the same token. TikTok adds no command name, but updates `/social` descriptions; register that existing command in the authorized test guild when activating this version. Keep existing channel opt-ins and private logging configuration. See [handoff](handoff.md) for the currently selected image.
 
 ## Dependencies
 

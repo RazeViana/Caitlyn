@@ -1,6 +1,6 @@
 /**
  * @file worker.ts
- * @description Verifies isolated media from bounded FxEmbed metadata supplied through process input.
+ * @description Verifies isolated media from private FxEmbed metadata or public TikTok extraction.
  * Uses the restricted Unix gateway and emits summaries, or explicit no-log delivery payloads.
  *
  * @module worker
@@ -92,10 +92,11 @@ export async function readFxMetadata(chunks: AsyncIterable<Uint8Array>): Promise
 	return JSON.parse(Buffer.concat(parts).toString("utf8"));
 }
 
-async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, number], allowSensitive = false, provider = "fxembed", metadataOnly = false): Promise<void> {
+async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, number], allowSensitive = false, provider = "fxembed", metadataOnly = false, tikTok = false): Promise<void> {
 	// This entry point runs only in the isolated harness, never as a bot message handler.
 	const allowed = /^https:\/\/(?:x\.com\/[a-z0-9_]{1,15}\/status\/[1-9]\d{0,24}|www\.tiktok\.com\/@[a-z0-9_.]{1,32}\/video\/[1-9]\d{0,24}|www\.instagram\.com\/(?:p|reel)\/[a-z0-9_-]{1,64}\/)$/i;
-	if (!allowed.test(url)) throw new Error("invalid_probe_input");
+	const tikTokShare = /^https:\/\/(?:(?:vm|vt)\.tiktok\.com\/|www\.tiktok\.com\/t\/)[a-z0-9]{1,64}\/$/i.test(url);
+	if (!allowed.test(url) && !(tikTok && tikTokShare)) throw new Error("invalid_probe_input");
 	if (provider !== "fxembed") throw new Error("invalid_probe_input");
 	const relay = createServer((client) => {
 		const upstream = connect("/ipc/proxy.sock");
@@ -111,6 +112,11 @@ async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, 
 		relay.listen(3128, "127.0.0.1", resolve);
 	});
 	try {
+		if (tikTok && deliveryLimits) {
+			const worker = await import(new URL("./tikTokPostWorker.ts", import.meta.url).href) as typeof import("./tikTokPostWorker.js");
+			process.stdout.write(JSON.stringify(await worker.deliverTikTokPost(url, ...deliveryLimits)) + "\n");
+			return;
+		}
 		if (wholeXPost || deliveryLimits || metadataOnly) {
 			// Metadata-only checks belong to the broker. The verifier never retrieves X metadata.
 			if (!deliveryLimits || wholeXPost || metadataOnly) throw new Error("use_local_fxembed_broker");
@@ -177,12 +183,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	}
 	else {
 		const wholeXPost = process.argv[2] === "--x-post";
-		const delivery = process.argv[2] === "--deliver-x";
+		const tikTok = process.argv[2] === "--deliver-tiktok";
+		const delivery = process.argv[2] === "--deliver-x" || tikTok;
 		const metadataOnly = process.argv[2] === "--metadata-x";
 		await probe(process.argv[wholeXPost || delivery || metadataOnly ? 3 : 2] ?? "", wholeXPost,
 			delivery ? [Number(process.argv[4]), Number(process.argv[5])] : undefined,
 			metadataOnly ? process.argv[4] === "sensitive" : delivery && process.argv[6] === "sensitive",
-			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly).catch(() => {
+			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly, tikTok).catch(() => {
 			process.stdout.write(`${JSON.stringify({ outcome: "invalid_probe_input" })}\n`);
 			process.exitCode = 1;
 		});

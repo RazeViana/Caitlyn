@@ -1,6 +1,6 @@
 /**
  * @file runner.ts
- * @description Fetches local FxEmbed metadata, then verifies media in disposable network-none containers.
+ * @description Routes X through local FxEmbed and TikTok through its isolated extractor, then verifies media.
  * Only the trusted host broker can use Docker; bounded metadata travels via stdin without host secrets or mounts.
  *
  * @module socialWorkerRunner
@@ -16,6 +16,7 @@ import logger from "../../core/logger.js";
 import { createFxEmbedClient, FX_METADATA_LIMIT } from "./fxEmbedClient.js";
 import { normalizeFxPost } from "../../core/socialFxPost.js";
 import { readLocalApiKey } from "../fxEmbed/localAccess.js";
+import { parseSocialLink } from "../../core/socialLinks.js";
 
 const execute = promisify(execFile);
 const restrictions = ["--pull=never", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user=1000:1000", "--log-driver=none"];
@@ -28,6 +29,7 @@ export function parseXMetadataProvider(value: unknown): XMetadataProvider {
 /** Routes are selected by the broker, never by untrusted request-body flags or shell fragments. */
 export function xWorkerArguments(input: SocialWorkerRequest, provider: XMetadataProvider, operation: SocialWorkerOperation): string[] {
 	validateSocialWorkerRequest(input);
+	if (parseSocialLink(input.url)?.platform !== "x") throw new Error("invalid_x_worker_request");
 	parseXMetadataProvider(provider);
 	if (operation === "metadata") return [];
 	if (operation !== "delivery") throw new Error("invalid_worker_operation");
@@ -36,7 +38,9 @@ export function xWorkerArguments(input: SocialWorkerRequest, provider: XMetadata
 
 export async function createDockerSocialRunner(context: string, imageReference: string, selectedProvider: string = "fxembed", origin?: string, apiKeyFile?: string) {
 	const provider = parseXMetadataProvider(selectedProvider);
-	const fetchMetadata = createFxEmbedClient(origin, 30_000, apiKeyFile ? await readLocalApiKey(apiKeyFile) : undefined);
+	let fetchMetadata: ReturnType<typeof createFxEmbedClient> | undefined;
+	try { fetchMetadata = createFxEmbedClient(origin, 30_000, apiKeyFile ? await readLocalApiKey(apiKeyFile) : undefined); }
+	catch { logger.warn("X metadata configuration unavailable; TikTok remains independent", "check=SOCIAL_FXEMBED_URL,SOCIAL_FXEMBED_KEY_FILE"); }
 	if (!/^[a-zA-Z0-9_.-]{1,80}$/.test(context)) throw new Error("invalid_worker_context");
 	async function docker(args: string[], timeout = 10_000, signal?: AbortSignal, stdin?: string): Promise<string> {
 		if (stdin !== undefined) {
@@ -63,16 +67,23 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 	if (!/^sha256:[a-f0-9]{64}$/.test(image)) throw new Error("worker_image_unavailable");
 	let cleanupBlocked = false;
 	return async (input: SocialWorkerRequest, signal: AbortSignal, operation: SocialWorkerOperation = "delivery"): Promise<unknown> => {
-		const args = xWorkerArguments(input, provider, operation);
-		const result = (value: Record<string, unknown>): Record<string, unknown> => ({ ...value, version: 1, purpose: operation, provider });
+		validateSocialWorkerRequest(input);
+		const tikTok = parseSocialLink(input.url)?.platform === "tiktok";
+		if (tikTok && operation !== "delivery") throw new Error("invalid_worker_operation");
+		const args = tikTok ? ["--deliver-tiktok", input.url, String(input.attachmentBytes), String(input.totalBytes)] : xWorkerArguments(input, provider, operation);
+		const result = (value: Record<string, unknown>): Record<string, unknown> => ({ ...value, version: 1, purpose: operation, provider: tikTok ? "tiktok" : provider });
 		if (cleanupBlocked) return result({ outcome: "worker_unavailable" });
-		const postId = input.url.split("/").at(-1)!;
-		const fetched = await fetchMetadata(postId, signal);
-		if (fetched.outcome !== "received") return result(fetched);
-		const metadata = normalizeFxPost(fetched.payload, postId, input.allowSensitive);
-		if (operation === "metadata" || !("post" in metadata)) return result(metadata);
-		const encoded = JSON.stringify(fetched.payload);
-		if (Buffer.byteLength(encoded) > FX_METADATA_LIMIT) return result({ outcome: "invalid_response" });
+		let encoded = "";
+		if (!tikTok) {
+			if (!fetchMetadata) return result({ outcome: "worker_unavailable" });
+			const postId = input.url.split("/").at(-1)!;
+			const fetched = await fetchMetadata(postId, signal);
+			if (fetched.outcome !== "received") return result(fetched);
+			const metadata = normalizeFxPost(fetched.payload, postId, input.allowSensitive);
+			if (operation === "metadata" || !("post" in metadata)) return result(metadata);
+			encoded = JSON.stringify(fetched.payload);
+			if (Buffer.byteLength(encoded) > FX_METADATA_LIMIT) return result({ outcome: "invalid_response" });
+		}
 		const prefix = `caitlyn-social-${randomUUID()}`;
 		const volume = `${prefix}-ipc`;
 		const gateway = `${prefix}-gateway`;
@@ -87,7 +98,7 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 			containers.push(gateway);
 			await docker(["run", "-d", "--name", gateway, "--label=dev.caitlyn.social-worker=true", ...restrictions,
 				"--memory=96m", "--memory-swap=96m", "--cpus=0.25", "--pids-limit=32", "--mount", `type=volume,source=${volume},target=/ipc`,
-				image, "timeout", "-s", "KILL", "120", "node", "/opt/probe/gateway.ts"]);
+				image, "timeout", "-s", "KILL", "120", "node", "/opt/probe/gateway.ts", tikTok ? "tiktok" : "x"]);
 			let ready = false;
 			for (let attempt = 0; attempt < 30 && !signal.aborted; attempt++) {
 				try {

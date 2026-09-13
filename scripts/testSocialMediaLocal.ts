@@ -139,11 +139,12 @@ async function buildImage(): Promise<void> {
 	// Never send the repository root, .env, backups, or dependencies to Docker.
 	const directory = await mkdtemp(join(tmpdir(), "caitlyn-media-build-"));
 	try {
-		for (const name of ["Dockerfile", ".dockerignore", "requirements.txt", "gateway.ts", "worker.ts", "xPostWorker.ts", "xMetadata.py"]) {
+		for (const name of ["Dockerfile", ".dockerignore", "requirements.txt", "gateway.ts", "worker.ts", "xPostWorker.ts", "xMetadata.py", "tikTokPostWorker.ts", "tikTokMedia.py"]) {
 			await copyFile(fileURLToPath(new URL(`./mediaSandbox/${name}`, import.meta.url)), join(directory, name));
 		}
 		await copyFile(fileURLToPath(new URL("../core/socialXPost.ts", import.meta.url)), join(directory, "socialXPost.ts"));
 		await copyFile(fileURLToPath(new URL("../core/socialFxPost.ts", import.meta.url)), join(directory, "socialFxPost.ts"));
+		await copyFile(fileURLToPath(new URL("../core/socialTikTokPost.ts", import.meta.url)), join(directory, "socialTikTokPost.ts"));
 		await docker(["build", "--tag", image, directory], 240_000);
 	}
 	finally {

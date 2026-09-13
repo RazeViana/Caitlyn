@@ -1,7 +1,7 @@
 /**
  * @file socialLinks.ts
  * @description Recognizes and deduplicates social-post links without making network requests.
- * Discards tracking parameters, preserves hidden content, and removes handled X links from preview captions.
+ * Discards tracking parameters, preserves hidden content, and removes handled links from preview captions.
  *
  * @module socialLinks
  */
@@ -134,9 +134,19 @@ export function extractSocialLinks(content: string): SocialLink[] {
 	return [...links.values()];
 }
 
-/** Keep the caption, but let each handled X post's clickable embed carry its source link. */
+export function supportedSocialLink(link: SocialLink): boolean {
+	return (link.platform === "x" && link.kind === "post")
+		|| (link.platform === "tiktok" && (link.kind === "share" || link.url.includes("/video/")));
+}
+
+/** Preserve legacy X queue identities and namespace newer platforms, including opaque share links. */
+export function socialJobPostId(link: SocialLink): string {
+	return link.platform === "x" ? link.id : link.key;
+}
+
+/** Keep the caption, but let each handled post's clickable embed carry its source link. */
 export function socialPostCaption(content: string): string {
-	const handled = new Set(extractSocialLinks(content).filter((link) => link.platform === "x" && link.kind === "post").map((link) => link.key));
+	const handled = new Set(extractSocialLinks(content).filter(supportedSocialLink).map((link) => link.key));
 	let caption = content;
 	// Edit backwards so offsets stay valid, including emoji (Discord uses UTF-16 offsets).
 	for (const span of socialLinkSpans(content).reverse()) {

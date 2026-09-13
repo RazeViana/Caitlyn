@@ -25,17 +25,17 @@ export function isPublicAddress(address: string): boolean {
 	return isIP(address) === 4 && !denied.check(address, "ipv4");
 }
 
-const domains = [
-	"x.com", "twitter.com", "twimg.com",
-	"tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "tiktokv.us", "muscdn.com", "byteoversea.com", "ibytedtos.com",
-	"instagram.com", "cdninstagram.com", "fbcdn.net",
-];
+const xDomains = ["x.com", "twitter.com", "twimg.com"];
+const tikTokDomains = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "tiktokv.us", "muscdn.com", "byteoversea.com", "ibytedtos.com"];
+const domains = [...xDomains, ...tikTokDomains, "instagram.com", "cdninstagram.com", "fbcdn.net"];
+type GatewayPlatform = "x" | "tiktok";
 
-export function allowedTunnel(authority: string): string | null {
+export function allowedTunnel(authority: string, platform?: GatewayPlatform): string | null {
 	const match = authority.match(/^([a-z0-9]+(?:[.-][a-z0-9]+)*):443$/i);
 	if (!match) return null;
 	const host = match[1].toLowerCase();
-	if (!domains.some((domain) => host === domain || host.endsWith(`.${domain}`))) return null;
+	const approved = platform === "x" ? xDomains : platform === "tiktok" ? tikTokDomains : domains;
+	if (!approved.some((domain) => host === domain || host.endsWith(`.${domain}`))) return null;
 	return host;
 }
 
@@ -45,7 +45,7 @@ export async function resolvePublicHost(host: string, resolve = lookup): Promise
 	return addresses[0].address;
 }
 
-export function startGateway(socketPath = "/ipc/proxy.sock") {
+export function startGateway(socketPath = "/ipc/proxy.sock", platform?: GatewayPlatform) {
 	let totalBytes = 0;
 	let active = 0;
 	const log = (event: string, host?: string): void => {
@@ -61,7 +61,7 @@ export function startGateway(socketPath = "/ipc/proxy.sock") {
 	server.requestTimeout = 5_000;
 	server.on("clientError", (_error, socket) => { socket.destroy(); });
 	server.on("connect", (request, client, head) => {
-		const host = allowedTunnel(request.url ?? "");
+		const host = allowedTunnel(request.url ?? "", platform);
 		if (!host || active >= 8 || totalBytes >= 128 * 1_024 * 1_024) {
 			log("blocked_tunnel");
 			client.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
@@ -117,6 +117,6 @@ export function startGateway(socketPath = "/ipc/proxy.sock") {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	if (process.argv[2] !== undefined) throw new Error("invalid_gateway_options");
-	startGateway("/ipc/proxy.sock");
+	if (process.argv.length > 3 || (process.argv[2] !== undefined && !["x", "tiktok"].includes(process.argv[2]))) throw new Error("invalid_gateway_options");
+	startGateway("/ipc/proxy.sock", process.argv[2] as GatewayPlatform | undefined);
 }

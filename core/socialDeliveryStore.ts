@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { pool } from "./createPGPool.js";
 import { withTransaction } from "./transaction.js";
 import type { SocialChannelSetting, SocialJob } from "../types/socialDelivery.js";
+import { parseSocialLink } from "./socialLinks.js";
 
 type NewSocialJob = Pick<SocialJob, "guild_id" | "channel_id" | "source_id" | "author_id" | "source_hash" | "post_id" | "url">;
 
@@ -105,6 +106,31 @@ export function createSocialDeliveryStore(database = pool) {
 				await query(`UPDATE discord.social_jobs SET source_cleanup = 'deleting', next_attempt_at = NOW() + INTERVAL '5 minutes', updated_at = NOW()
 					WHERE guild_id = $1 AND channel_id = $2 AND source_id = $3`, [job.guild_id, job.channel_id, job.source_id]);
 				return true;
+			}, database);
+		},
+		/** Bind an opaque share to its canonical video, reusing only a confirmed complete sibling. */
+		async resolveTikTok(job: SocialJob, url: string): Promise<"send" | "reused" | "blocked" | "stale"> {
+			const resolved = parseSocialLink(url);
+			if (resolved?.platform !== "tiktok" || resolved.kind !== "post" || resolved.url !== url || !url.includes("/video/")) throw new Error("invalid_tiktok_resolution");
+			return withTransaction(async (query) => {
+				const rows = await query("SELECT * FROM discord.social_jobs WHERE guild_id = $1 AND channel_id = $2 AND source_id = $3 ORDER BY id FOR UPDATE", [job.guild_id, job.channel_id, job.source_id]);
+				const jobs = rows.rows as unknown as SocialJob[];
+				const current = jobs.find((item) => item.id === job.id && item.lease_token === job.lease_token);
+				if (!current || current.status !== "processing" || current.cancel_requested || current.source_hash !== job.source_hash || current.author_id !== job.author_id) return "stale";
+				const original = parseSocialLink(current.url);
+				if (original?.platform !== "tiktok" || (original.kind === "post" && original.id !== resolved.id)) throw new Error("invalid_tiktok_resolution");
+				const sibling = jobs.find((item) => item.id !== job.id && parseSocialLink(item.url)?.key === resolved.key
+					&& ["processing", "sending", "uncertain", "sent", "removing"].includes(item.status));
+				if (sibling) {
+					if (sibling.status !== "sent" || !sibling.message_id || !sibling.replacement_ready || sibling.cancel_requested
+						|| sibling.source_hash !== job.source_hash || sibling.author_id !== job.author_id || sibling.source_cleanup !== "pending") return "blocked";
+					await query(`UPDATE discord.social_jobs SET url = $3, status = 'sent', message_id = $4, replacement_ready = TRUE,
+						next_attempt_at = NOW(), last_outcome = 'duplicate_reused', updated_at = NOW() WHERE id = $1 AND lease_token = $2`,
+					[job.id, job.lease_token, url, sibling.message_id]);
+					return "reused";
+				}
+				await query("UPDATE discord.social_jobs SET url = $3, updated_at = NOW() WHERE id = $1 AND lease_token = $2", [job.id, job.lease_token, url]);
+				return "send";
 			}, database);
 		},
 		async sourceReplacements(job: SocialJob): Promise<SocialJob[]> {

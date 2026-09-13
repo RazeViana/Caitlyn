@@ -1,6 +1,6 @@
 /**
  * @file socialMediaMessage.ts
- * @description Enqueues opt-in X previews without downloading media inside a message event.
+ * @description Enqueues opt-in X and TikTok previews without downloading media inside a message event.
  * Leaves originals and unsupported platforms untouched; never uses hosted-fixer fallbacks.
  *
  * @module socialMediaMessage

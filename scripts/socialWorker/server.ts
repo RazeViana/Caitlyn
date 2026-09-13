@@ -15,6 +15,7 @@ import type { SocialWorkerOperation, SocialWorkerRequest } from "../../types/soc
 import type { XMetadataProvider } from "../../types/socialMedia.js";
 import { createDockerSocialRunner, parseXMetadataProvider } from "./runner.js";
 import logger from "../../core/logger.js";
+import { parseSocialLink } from "../../core/socialLinks.js";
 
 export async function startSocialWorkerServer(socketPath: string, run: (input: SocialWorkerRequest, signal: AbortSignal, operation?: SocialWorkerOperation) => Promise<unknown>, options: { provider?: XMetadataProvider } = {}) {
 	const provider = parseXMetadataProvider(options.provider);
@@ -41,14 +42,14 @@ export async function startSocialWorkerServer(socketPath: string, run: (input: S
 			// Liveness only: never probe X, Docker, the database, or Discord on a health request.
 			request.resume();
 			reply(stopping ? 503 : 200, { version: 1, service: "caitlyn-media", status: stopping ? "stopping" : busy ? "busy" : "idle",
-				provider, hostedMetadataEnabled: false, metadataApi: true });
+				provider, platforms: ["x", "tiktok"], hostedMetadataEnabled: false, metadataApi: true });
 			return;
 		}
 		if (stopping || busy) {
 			reply(503, { outcome: "worker_unavailable" });
 			return;
 		}
-		if (request.method !== "POST" || !["/v1/x", "/v1/x/metadata"].includes(request.url ?? "") || request.headers["content-type"] !== "application/json") {
+		if (request.method !== "POST" || !["/v1/x", "/v1/x/metadata", "/v1/tiktok"].includes(request.url ?? "") || request.headers["content-type"] !== "application/json") {
 			reply(400, { outcome: "invalid_response" });
 			return;
 		}
@@ -69,7 +70,9 @@ export async function startSocialWorkerServer(socketPath: string, run: (input: S
 			const parsed = JSON.parse(body);
 			const metadata = operation === "metadata" ? validateSocialMetadataRequest(parsed) : undefined;
 			const input = validateSocialWorkerRequest(metadata ? { ...metadata, attachmentBytes: SOCIAL_FILE_LIMIT, totalBytes: SOCIAL_TOTAL_LIMIT } : parsed);
-			logger.debug("Social worker accepted a bounded X job", `operation=${operation}`);
+			const platform = parseSocialLink(input.url)?.platform;
+			if (platform !== (request.url === "/v1/tiktok" ? "tiktok" : "x")) throw new Error("worker_route_mismatch");
+			logger.debug("Social worker accepted a bounded job", `platform=${platform}`, `operation=${operation}`);
 			const result = await run(input, controller.signal, operation);
 			if (!response.destroyed) {
 				reply(200, metadata ? { ...decodeSocialMetadataResult(result, metadata), version: 1, purpose: "metadata", provider: "fxembed" } : result);
@@ -118,7 +121,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 		const provider = parseXMetadataProvider(process.env.SOCIAL_X_PROVIDER);
 		const run = await createDockerSocialRunner(process.env.SOCIAL_WORKER_DOCKER_CONTEXT ?? "default", process.env.SOCIAL_WORKER_IMAGE ?? "caitlyn-media-api:local", provider, process.env.SOCIAL_FXEMBED_URL, process.env.SOCIAL_FXEMBED_KEY_FILE);
 		const service = await startSocialWorkerServer(process.env.SOCIAL_WORKER_SOCKET ?? "", run, { provider });
-		logger.info("Local social worker ready; socket access is owner-only", `mode=${provider}`, "extractor=fxembed", `localApiAuth=${Boolean(process.env.SOCIAL_FXEMBED_KEY_FILE)}`);
+		logger.info("Local social worker ready; socket access is owner-only", `mode=${provider}`, "platforms=x,tiktok", `localApiAuth=${Boolean(process.env.SOCIAL_FXEMBED_KEY_FILE)}`);
 		for (const signal of ["SIGINT", "SIGTERM"] as const) {
 			process.once(signal, () => {
 				void service.stop().catch(() => {

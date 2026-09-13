@@ -1,7 +1,7 @@
 /**
  * @file socialDelivery.ts
  * @description Sends attributed previews and deletes unchanged sources only after durable replacement approval.
- * Keeps captions/footers clean and verifies message identity before reconciliation or cleanup.
+ * Keeps sender commentary outside the attributed card and verifies identity before reconciliation or cleanup.
  *
  * @module socialDelivery
  */
@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { ChannelType, MessageFlags, PermissionFlagsBits, type Client, type Message, type MessageCreateOptions, type TextChannel } from "discord.js";
 import type { SocialJob } from "../types/socialDelivery.js";
 import { withTimeout } from "../core/asyncTools.js";
-import { extractSocialLinks, socialPostCaption } from "../core/socialLinks.js";
+import { extractSocialLinks, socialJobPostId, socialPostCaption, supportedSocialLink } from "../core/socialLinks.js";
 
 export function socialSourceHash(content: string): string {
 	return createHash("sha256").update(content).digest("hex");
@@ -53,14 +53,14 @@ export function createSocialDiscordDelivery(client: Client) {
 			&& !source.flags.has(MessageFlags.SuppressEmbeds) && socialSourceHash(source.content) === job.source_hash;
 	}
 
-	function attributedContent(source: Message, job: SocialJob): string {
-		const caption = socialPostCaption(source.content);
-		return `Shared by <@${job.author_id}>${caption ? `\n${caption}` : ""}`;
+	function captionFits(caption: string, job: SocialJob): boolean {
+		// Retain the earlier message budget: recovered legacy previews may have omitted longer commentary.
+		return `Shared by <@${job.author_id}>${caption ? `\n${caption}` : ""}`.length <= 2_000;
 	}
 
 	function replaceable(source: Message, job: SocialJob): boolean {
 		// Attachments, stickers, polls, replies, threads, and long messages are not copied by this handler.
-		return unchanged(source, job) && attributedContent(source, job).length <= 2_000
+		return unchanged(source, job) && captionFits(socialPostCaption(source.content), job)
 			&& !source.attachments?.size && !source.stickers?.size && !source.poll && !source.reference && !source.hasThread;
 	}
 
@@ -89,9 +89,10 @@ export function createSocialDiscordDelivery(client: Client) {
 			const destination = await channel(job, true);
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			if (!unchanged(source, job)) throw new Error("source_changed");
-			const attribution = attributedContent(source, job);
+			const caption = socialPostCaption(source.content);
 			const message = await destination.send({ ...payload,
-				content: attribution.length <= 2_000 ? attribution : `Shared by <@${job.author_id}> (original message retained)`,
+				// The renderer owns the in-card attribution; link-only messages need no standalone content.
+				content: captionFits(caption, job) ? caption || undefined : "Original message retained; sender commentary is too long to copy.",
 				allowedMentions: { parse: [], users: [job.author_id], repliedUser: false },
 				reply: undefined,
 				nonce: socialNonce(job), enforceNonce: true });
@@ -102,7 +103,7 @@ export function createSocialDiscordDelivery(client: Client) {
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			const member = destination.guild.members.me ?? await destination.guild.members.fetchMe();
 			if (!replaceable(source, job) || !destination.permissionsFor(member)?.has(PermissionFlagsBits.ManageMessages)) return;
-			return extractSocialLinks(source.content).filter((link) => link.platform === "x" && link.kind === "post").map((link) => link.id);
+			return extractSocialLinks(source.content).filter(supportedSocialLink).map(socialJobPostId);
 		},
 		async deleteSource(job: SocialJob, replacements: SocialJob[]): Promise<"deleted" | "retained"> {
 			return withTimeout((async () => {

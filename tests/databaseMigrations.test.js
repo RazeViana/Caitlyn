@@ -173,6 +173,55 @@ test("database migrations bootstrap a fresh local database safely", {
 			assert.deepEqual(await store.sourceReplacements(second), replacements);
 		});
 
+		await context.test("mixed-platform identities and resolved TikTok aliases reuse one confirmed preview safely", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			await store.configure("971", "972", true);
+			const input = { guild_id: "971", channel_id: "972", source_id: "973", author_id: "974", source_hash: "d".repeat(64), post_id: "975", url: "https://x.com/alice/status/975" };
+			await store.enqueue(input);
+			const x = await store.claim();
+			await store.beginSend(x, true, false);
+			await store.sent(x, "980");
+			await store.finish(x, "sent", "waiting_for_siblings");
+			const url = "https://www.tiktok.com/@creator/video/975";
+			await store.enqueue({ ...input, post_id: "tiktok:975", url });
+			const tikTok = await store.claim();
+			assert.equal(tikTok.post_id, "tiktok:975");
+			assert.equal(await store.resolveTikTok({ ...tikTok, lease_token: x.lease_token }, url), "stale");
+			assert.equal(await store.resolveTikTok(tikTok, url), "send");
+			await store.beginSend(tikTok, true, false);
+			await store.sent(tikTok, "981");
+			await store.finish(tikTok, "sent", "waiting_for_alias");
+			const aliasId = `tiktok:share:${"a".repeat(64)}`;
+			await store.enqueue({ ...input, post_id: aliasId, url: "https://vm.tiktok.com/Example/" });
+			const alias = await store.claim();
+			assert.equal(await store.resolveTikTok(alias, url), "reused");
+			const replacements = await store.sourceReplacements(alias);
+			assert.equal(replacements.length, 3);
+			assert.deepEqual(replacements.filter((job) => job.post_id.startsWith("tiktok:")).map((job) => job.message_id), ["981", "981"]);
+			assert.ok(replacements.some((job) => job.post_id === aliasId && job.url === url && job.replacement_ready));
+			assert.equal(await store.beginSourceDelete(alias, ["975", "tiktok:975"]), false);
+			assert.equal(await store.beginSourceDelete(alias, ["975", "tiktok:975", aliasId]), true);
+			await store.finishSourceDelete(alias, "deleted");
+			assert.ok((await store.sourceReplacements(alias)).every((job) => job.source_cleanup === "deleted"));
+		});
+
+		await context.test("unconfirmed TikTok siblings cannot produce duplicate sends or authorize source deletion", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			const input = { guild_id: "971", channel_id: "972", source_id: "983", author_id: "974", source_hash: "e".repeat(64), post_id: "tiktok:985", url: "https://www.tiktok.com/@creator/video/985" };
+			await store.enqueue(input);
+			const first = await store.claim();
+			await store.resolveTikTok(first, input.url);
+			await store.beginSend(first, true, false);
+			await store.finish(first, "uncertain", "send_not_confirmed");
+			await store.enqueue({ ...input, post_id: `tiktok:share:${"b".repeat(64)}`, url: "https://vt.tiktok.com/Example/" });
+			const alias = await store.claim();
+			assert.equal(await store.resolveTikTok(alias, input.url), "blocked");
+			await store.finish(alias, "failed", "duplicate_unconfirmed");
+			assert.ok((await store.sourceReplacements(alias)).every((job) => job.message_id === null && job.source_cleanup === "pending"));
+		});
+
 		await context.test("private logging survives replay and reserves one main server even while disabled", async () => {
 			const { createGuildSettingsStore } = await import("../core/guildSettings.ts");
 			const settings = createGuildSettingsStore(applicationPool);

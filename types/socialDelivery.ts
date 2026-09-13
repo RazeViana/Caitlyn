@@ -6,7 +6,7 @@
  * @module socialDelivery
  */
 
-import type { XMetadataProvider, XPost, XPostDiagnostic } from "./socialMedia.js";
+import type { SocialMetadataProvider, SocialPost, XPost, XPostDiagnostic } from "./socialMedia.js";
 import type { SocialMediaAttachment } from "../core/socialPostRender.js";
 
 export interface SocialJob {
@@ -36,10 +36,10 @@ export interface SocialWorkerRequest {
 	allowSensitive?: boolean;
 }
 
-export type SocialWorkerFailure = { outcome: "unavailable" | "restricted" | "rate_limited" | "worker_unavailable" | "invalid_response" | "timeout";
-	diagnostic?: XPostDiagnostic; provider?: XMetadataProvider };
+export type SocialWorkerFailure = { outcome: "unavailable" | "unsupported" | "restricted" | "rate_limited" | "worker_unavailable" | "invalid_response" | "timeout";
+	diagnostic?: XPostDiagnostic; provider?: SocialMetadataProvider };
 
-export type SocialWorkerResult = { outcome: "ready" | "partial"; post: XPost; files: SocialMediaAttachment[]; mediaFailures?: string[]; provider?: XMetadataProvider }
+export type SocialWorkerResult = { outcome: "ready" | "partial"; post: SocialPost; files: SocialMediaAttachment[]; mediaFailures?: string[]; provider?: SocialMetadataProvider }
 	| SocialWorkerFailure;
 
 export type SocialMetadataRequest = Pick<SocialWorkerRequest, "version" | "url" | "allowSensitive">;

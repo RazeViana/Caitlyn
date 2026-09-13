@@ -21,6 +21,11 @@
     ☐ Choose a project license and align README/package metadata
 
 ☐ Features and improvements
+    ✔ Add caption-first X/TikTok cards with compact source links, content-type layouts, and separate quote attribution
+    ✔ Implement isolated TikTok video/share-link extraction, attributed previews, safe failures, and canonical alias deduplication
+    ✔ Verify TikTok MP4/audio/decode, oversized-video handling, X compatibility, and real PostgreSQL alias transitions locally
+    ☐ Verify fresh TikTok mobile share links and actual Discord playback/source cleanup with owner-sent examples
+    ☐ Add TikTok photo slideshows/soundtracks and agree a larger-video strategy
     ✔ Replace all VX runtime paths with pinned local FxEmbed source, bounded API adaptation, and isolated media delivery
     ☐ Retest FxEmbed previews/playback and original-message cleanup in Discord
     ☐ Configure authorized X account access separately if restricted posts are required

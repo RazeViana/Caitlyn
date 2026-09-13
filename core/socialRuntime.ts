@@ -10,10 +10,10 @@ import { MessageFlags, ChannelType, type Client, type Message } from "discord.js
 import logger from "./logger.js";
 import { withLogGuild } from "./logContext.js";
 import { withTimeout } from "./asyncTools.js";
-import { extractSocialLinks } from "./socialLinks.js";
+import { extractSocialLinks, socialJobPostId, supportedSocialLink } from "./socialLinks.js";
 import { socialDeliveryStore, type SocialDeliveryStore } from "./socialDeliveryStore.js";
 import { requestSocialWorker, SOCIAL_FILE_LIMIT, SOCIAL_TOTAL_LIMIT } from "./socialWorkerClient.js";
-import { renderXPost } from "./socialPostRender.js";
+import { renderSocialPost } from "./socialPostRender.js";
 import { sanitizeXPostDiagnostic } from "./socialXPost.js";
 import { getFeatureConfiguration } from "./environment.js";
 import { startSocialProgress } from "./socialProgress.js";
@@ -116,6 +116,7 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			const result = await dependencies.worker({ version: 1, url: job.url, attachmentBytes: SOCIAL_FILE_LIMIT, totalBytes: SOCIAL_TOTAL_LIMIT, allowSensitive: true }, controller.signal);
 			log.info("Social extraction finished", job.id, `duration_ms=${Math.max(0, dependencies.now() - extractionStarted)}`);
 			if (result.provider === "fxembed") log.info("Social extraction provider mode", job.id, "mode=fxembed");
+			if (result.provider === "tiktok") log.info("Social extraction provider mode", job.id, "mode=tiktok");
 			if (!("post" in result)) {
 				const retry = ["worker_unavailable", "timeout"].includes(result.outcome) && job.attempts < 3;
 				await store.finish(job, retry ? "queued" : "failed", result.outcome);
@@ -129,10 +130,20 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 				await store.finish(job, "cancelled", "source_or_shutdown_changed");
 				return;
 			}
-			const rendered = renderXPost(result.post, result.files, { attachmentBytes: SOCIAL_FILE_LIMIT, messageBytes: SOCIAL_TOTAL_LIMIT });
+			if (result.post.platform === "tiktok") {
+				const resolution = await store.resolveTikTok(job, result.post.url);
+				if (resolution !== "send") {
+					if (resolution === "blocked") await store.finish(job, "failed", "duplicate_unconfirmed");
+					log.info("Social duplicate resolution completed", job.id, resolution);
+					return;
+				}
+			}
+			const rendered = renderSocialPost(result.post, result.files, { attachmentBytes: SOCIAL_FILE_LIMIT, messageBytes: SOCIAL_TOTAL_LIMIT }, job.author_id);
 			const embeds = rendered.payload.embeds as { footer?: { text: string } }[];
-			embeds[0].footer = { text: SOCIAL_PREVIEW_FOOTER };
-			if (rendered.omittedMedia || result.outcome === "partial") log.warn("Social preview is partial", job.id, `omitted=${rendered.omittedMedia}`, result.mediaFailures?.join(",") ?? "");
+			embeds[rendered.footerEmbedIndex].footer = { text: SOCIAL_PREVIEW_FOOTER };
+			log.debug("Social preview rendered", job.id, `embeds=${embeds.length}`, `files=${rendered.payload.files?.length ?? 0}`,
+				`text_attachment=${rendered.textFileAttached}`, `complete=${rendered.complete}`);
+			if (!rendered.complete || result.outcome === "partial") log.warn("Social preview is partial", job.id, `omitted=${rendered.omittedMedia}`, result.mediaFailures?.join(",") ?? "");
 			// An unacknowledged claim never authorizes a send; persisted sending state is reconciled.
 			sendStarted = true;
 			if (!await store.beginSend(job, result.outcome === "ready" && rendered.complete, job.sensitive)) return;
@@ -192,13 +203,13 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 		async enqueue(message: Message): Promise<void> {
 			if (stopping || !message.guildId || message.author.bot || message.webhookId || message.channel.type !== ChannelType.GuildText
 				|| message.flags.has(MessageFlags.SuppressEmbeds) || dependencies.now() - message.createdTimestamp > 30 * 60_000) return;
-			const links = extractSocialLinks(message.content).filter((link) => link.platform === "x" && link.kind === "post");
+			const links = extractSocialLinks(message.content).filter(supportedSocialLink);
 			if (!links.length) return;
 			try {
 				if (!await store.enabled(message.guildId, message.channelId)) return;
 				for (const link of links) {
 					const accepted = await store.enqueue({ guild_id: message.guildId, channel_id: message.channelId, source_id: message.id,
-						author_id: message.author.id, source_hash: socialSourceHash(message.content), post_id: link.id, url: link.url });
+						author_id: message.author.id, source_hash: socialSourceHash(message.content), post_id: socialJobPostId(link), url: link.url });
 					log.debug(accepted ? "Social job queued" : "Social job not queued (duplicate, capacity, or disabled)", message.id, link.key);
 					if (accepted) wake();
 				}

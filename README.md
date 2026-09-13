@@ -10,7 +10,8 @@ Caitlyn is a modular Discord bot built with Discord.js, TypeScript, PostgreSQL, 
 - [Resilience and rollout](docs/resilience.md)
 - [Private main-server logging](docs/discord-logging.md)
 - [Social-media replacement progress and feasibility](docs/social-media-replacement.md)
-- [Opt-in X delivery and worker setup](docs/social-delivery.md)
+- [Opt-in social delivery and worker setup](docs/social-delivery.md)
+- [TikTok videos, share links, and limits](docs/tiktok.md)
 - [Self-hosted media API, dependencies, and local build](docs/self-hosted-media-api.md)
 - [Local FxEmbed backend and configuration](docs/fxembed.md)
 - [Exact FxEmbed installation inventory](docs/fxembed-installations.md)
@@ -26,7 +27,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 - PostgreSQL and pgvector conversation storage with recent and semantic context.
 - Message, voice, leaderboard, and daily/weekly/monthly streak tracking.
 - Birthday management and scheduled reminders with same-day outage catch-up and persistent duplicate prevention.
-- Opt-in X previews with isolated extraction, sender mentions, and safe original-message cleanup after complete delivery (disabled by default; live validation pending). Public sensitive-labelled posts are supported without an extra channel-age check; X access gates are not bypassed.
+- Opt-in X and TikTok video previews with isolated extraction, sender mentions, and safe original-message cleanup after complete delivery (disabled by default). TikTok mobile share links are resolved inside the worker. Failed or oversized content retains the original. Public sensitive-labelled X posts are supported; provider access gates are not bypassed.
 - Typed ESM command, event, job, and message modules.
 - Private main-server logging with owner-only channel setup and in-channel level selection.
 - Dynamic loaders that run TypeScript in development and compiled JavaScript in production.
@@ -129,7 +130,7 @@ The application reads these variables from `.env`:
 | `PGHOST`, `PGPORT` | PostgreSQL server address |
 | `PGUSER`, `PGPASSWORD`, `PGDATABASE` | PostgreSQL credentials and database |
 | `LLM_ENABLED` | Initial AI state; use `true` or `false` |
-| `SOCIAL_MEDIA_ENABLED` | Optional X worker integration switch; defaults to `false`; channel opt-in is also required |
+| `SOCIAL_MEDIA_ENABLED` | Optional X/TikTok worker integration switch; defaults to `false`; channel opt-in is also required |
 | `SOCIAL_WORKER_SOCKET` | Absolute private local Unix socket path; required only when social integration is enabled |
 | `OLLAMA_MODEL` | Model name sent to Open WebUI |
 | `WEBUI_API_KEY` | Bearer token for Open WebUI |
@@ -142,7 +143,7 @@ The application reads these variables from `.env`:
 
 The Open WebUI model configuration owns the system prompt.
 
-The separate media broker provides Caitlyn's [self-hosted media API](docs/self-hosted-media-api.md). Its sole provider is now `SOCIAL_X_PROVIDER=fxembed`, using the pinned FxEmbed backend inside this project. Caitlyn calls only the loopback service, never hosted VX/Fx APIs. The bot-facing metadata and verified-media endpoints remain on an owner-only Unix socket. Export broker settings when starting the broker, not the bot.
+The separate media broker provides Caitlyn's [self-hosted media API](docs/self-hosted-media-api.md). X uses `SOCIAL_X_PROVIDER=fxembed`, the pinned FxEmbed backend inside this project, never hosted VX/Fx APIs. [TikTok](docs/tiktok.md) uses the already pinned extractor inside the isolated worker, without FxEmbed or an account. Bot-facing endpoints remain on an owner-only Unix socket. Export broker settings when starting the broker, not the bot.
 
 See [FxEmbed setup and limitations](docs/fxembed.md). No account is connected automatically. Upstream documents that NSFW/restricted posts may require authorized X account credentials; switching backends does not remove that requirement.
 
@@ -195,7 +196,7 @@ Apply only migrations that the target database has not already received. The run
 - `/setup logs|status|disable` — configure the private main-server logging channel (bot owner with administrator permission only).
 - `/logs levels types:info,warning,error` and `/logs status` — select or inspect log types from inside the logging channel (bot owner only); `all` and `none` are also supported.
 - `/streaks [limit]` — rank activity streaks.
-- `/social enable|disable|disable-server|status` — configure opt-in X previews in server text channels (administrator only; requires operator-enabled worker integration).
+- `/social enable|disable|disable-server|status` — configure opt-in X and TikTok previews in server text channels (administrator only; requires operator-enabled worker integration).
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
 - `/user` — show information about the user who runs the command.
 

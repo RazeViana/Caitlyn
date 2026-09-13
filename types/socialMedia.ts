@@ -1,6 +1,6 @@
 /**
  * @file socialMedia.ts
- * @description Defines canonical social links and bounded, separately attributed X posts.
+ * @description Defines canonical social links and bounded, attributed X and TikTok posts.
  * Metadata readiness does not imply that media has been downloaded or delivered.
  *
  * @module socialMedia
@@ -9,6 +9,7 @@
 export type SocialPlatform = "x" | "instagram" | "reddit" | "tiktok";
 
 export type XMetadataProvider = "fxembed";
+export type SocialMetadataProvider = XMetadataProvider | "tiktok";
 
 export interface SocialLink {
 	platform: SocialPlatform;
@@ -26,6 +27,7 @@ export interface XVideoVariant {
 	bitrate: number;
 	width?: number;
 	height?: number;
+	estimatedBytes?: number;
 }
 
 export interface XPostMedia {
@@ -40,6 +42,7 @@ export interface XPostMedia {
 }
 
 export interface XPost {
+	platform?: "x";
 	sensitive?: boolean;
 	id: string;
 	url: string;
@@ -50,6 +53,14 @@ export interface XPost {
 	issues: XPostIssue[];
 	quote?: { state: "available"; post: XPost } | { state: "unavailable"; id?: string };
 }
+
+/** TikTok video posts reuse attachment contracts, never X identities or quote semantics. */
+export interface TikTokPost extends Omit<XPost, "platform" | "quote"> {
+	platform: "tiktok";
+	quote?: never;
+}
+
+export type SocialPost = XPost | TikTokPost;
 
 /** Closed vocabulary only: provider text, URLs, and arbitrary reason/type strings must never escape. */
 export interface XPostDiagnostic {
