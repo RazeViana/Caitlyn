@@ -109,6 +109,14 @@ class TikTokRequestTest(unittest.TestCase):
         self.assertEqual(failure(ValueError("private signed URL https://example.test?token=secret")), "restricted")
         self.assertEqual(failure(ValueError("provider says secret")), "extractor_error")
 
+    def test_compression_source_budget_is_bounded_before_connecting(self):
+        with patch("urllib.request.build_opener") as build, patch("builtins.open", mock_open()):
+            build.return_value.open.return_value = response(size=7)
+            self.assertEqual(video("https://v16.tiktokcdn.com/clip", 48 * 1024 * 1024)["bytes"], 7)
+            with self.assertRaisesRegex(ValueError, "invalid_input"):
+                video("https://v16.tiktokcdn.com/clip", 48 * 1024 * 1024 + 1)
+            self.assertEqual(build.return_value.open.call_count, 1)
+
 
 class TikTokContextTest(unittest.TestCase):
     def test_anonymous_context_is_owner_only_and_never_uses_a_host_path(self):

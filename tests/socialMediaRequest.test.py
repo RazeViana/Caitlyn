@@ -68,6 +68,33 @@ class MediaRequestTest(unittest.TestCase):
                 media("https://video.twimg.com/fixture.mp4", True, 1024)
             output.assert_not_called()
 
+    def test_compression_source_limit_is_video_only_and_checked_before_connecting(self):
+        for video, limit in ((True, 48 * 1024 * 1024 + 1), (False, 8 * 1024 * 1024 + 1), (True, 1023), (True, True)):
+            url = "https://video.twimg.com/fixture.mp4" if video else "https://pbs.twimg.com/media/fixture.png?name=orig"
+            with patch("urllib.request.build_opener") as build, self.assertRaisesRegex(ValueError, "invalid_input"):
+                try:
+                    media(url, video, limit)
+                finally:
+                    build.assert_not_called()
+        with patch("urllib.request.build_opener") as build, patch("builtins.open", mock_open()), redirect_stdout(io.StringIO()):
+            response = build.return_value.open.return_value.__enter__.return_value
+            response.headers = Message()
+            response.headers["Content-Type"] = "video/mp4"
+            response.headers["Content-Length"] = str(48 * 1024 * 1024)
+            response.read.side_effect = [b"fixture", b""]
+            media("https://video.twimg.com/fixture.mp4", True, 48 * 1024 * 1024)
+            self.assertEqual(build.return_value.open.call_count, 1)
+
+    def test_streamed_overflow_is_not_written_past_the_budget(self):
+        with patch("urllib.request.build_opener") as build, patch("builtins.open", mock_open()) as output:
+            response = build.return_value.open.return_value.__enter__.return_value
+            response.headers = Message()
+            response.headers["Content-Type"] = "video/mp4"
+            response.read.side_effect = [b"a" * 1024, b"b", b""]
+            with self.assertRaisesRegex(ValueError, "size_limit"):
+                media("https://video.twimg.com/fixture.mp4", True, 1024)
+            output().write.assert_called_once_with(b"a" * 1024)
+
 
 if __name__ == "__main__":
     unittest.main()

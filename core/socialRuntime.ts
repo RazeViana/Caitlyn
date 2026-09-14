@@ -143,6 +143,7 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			embeds[rendered.footerEmbedIndex].footer = { text: SOCIAL_PREVIEW_FOOTER };
 			log.debug("Social preview rendered", job.id, `embeds=${embeds.length}`, `files=${rendered.payload.files?.length ?? 0}`,
 				`text_attachment=${rendered.textFileAttached}`, `complete=${rendered.complete}`);
+			if (result.files.some((file) => file.compressed)) log.info("Social video compressed to upload budget", job.id);
 			if (!rendered.complete || result.outcome === "partial") log.warn("Social preview is partial", job.id, `omitted=${rendered.omittedMedia}`, result.mediaFailures?.join(",") ?? "");
 			// An unacknowledged claim never authorizes a send; persisted sending state is reconciled.
 			sendStarted = true;

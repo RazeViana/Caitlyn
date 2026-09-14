@@ -193,7 +193,9 @@ def metadata(url):
 
 
 def video(url, limit):
-    if not 1024 <= limit <= 8 * 1024 * 1024:
+    # Only the trusted worker selects the larger source budget for its compression fallback.
+    # Discord delivery remains capped separately at 8 MiB; all input stays in bounded tmpfs.
+    if not 1024 <= limit <= 48 * 1024 * 1024:
         raise ValueError("invalid_input")
     with open_checked(url, True) as response:
         mime = response.headers.get_content_type()

@@ -19,7 +19,7 @@ export const SOCIAL_FILE_LIMIT = 8 * 1_024 * 1_024;
 export const SOCIAL_TOTAL_LIMIT = 20 * 1_024 * 1_024;
 const issues = new Set<XPostIssue>(["missing_author", "incomplete_text", "invalid_media", "unsupported_media", "media_limit", "quote_unavailable", "nested_quote_omitted", "unsupported_card"]);
 const failures = new Set(["unavailable", "unsupported", "restricted", "rate_limited", "worker_unavailable", "invalid_response", "timeout"]);
-const mediaFailures = new Set(["rate_limited", "login_or_restriction", "access_denied", "gateway_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified", "video_validation_failed", "image_validation_failed", "not_attempted"]);
+const mediaFailures = new Set(["rate_limited", "login_or_restriction", "restricted", "access_denied", "gateway_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified", "video_validation_failed", "image_validation_failed", "not_attempted", "compression_timeout", "compression_incomplete"]);
 
 function object(value: unknown): Record<string, unknown> {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid_worker_response");
@@ -167,6 +167,7 @@ export function decodeSocialWorkerResult(value: unknown, input: SocialWorkerRequ
 			const key = `${postId}:${mediaId}`;
 			const extension = text(file.extension, 4) as "jpg" | "png" | "webp" | "mp4";
 			if (!media || seen.has(key) || !(media.kind === "image" ? ["jpg", "png", "webp"] : ["mp4"]).includes(extension)) throw new Error("invalid_worker_response");
+			if (file.compressed !== undefined && (typeof file.compressed !== "boolean" || media.kind !== "video")) throw new Error("invalid_worker_response");
 			seen.add(key);
 			const encoded = text(file.base64, Math.ceil(input.attachmentBytes / 3) * 4);
 			if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) throw new Error("invalid_worker_response");
@@ -179,7 +180,7 @@ export function decodeSocialWorkerResult(value: unknown, input: SocialWorkerRequ
 					: extension === "webp" ? data.toString("ascii", 0, 4) === "RIFF" && data.toString("ascii", 8, 12) === "WEBP"
 						: data.toString("ascii", 4, 8) === "ftyp";
 			if (!signature) throw new Error("invalid_worker_response");
-			return { postId, mediaId, extension, data };
+			return { postId, mediaId, extension, data, ...(file.compressed === true ? { compressed: true } : {}) };
 		});
 		return { outcome: result.outcome as "ready" | "partial", ...provider, post: normalized, files, mediaFailures: reasons };
 	}

@@ -68,9 +68,9 @@ export function normalizeTikTokPost(value: unknown, expectedId?: string): { outc
 }
 
 /** Try the highest fitting MP4 first; only an actual byte overflow permits another candidate. */
-export function tikTokVideoCandidates(media: XPostMedia, byteLimit: number): XVideoVariant[] {
+export function tikTokVideoCandidates(media: XPostMedia, byteLimit: number, smallest = false): XVideoVariant[] {
 	return media.variants.filter((variant) => {
 		const estimate = variant.estimatedBytes ?? (media.durationSeconds && variant.bitrate ? media.durationSeconds * variant.bitrate / 8 * 1.1 : undefined);
 		return estimate === undefined || estimate <= byteLimit;
-	}).sort((a, b) => b.bitrate - a.bitrate).slice(0, 4);
+	}).sort((a, b) => smallest ? (a.estimatedBytes ?? Infinity) - (b.estimatedBytes ?? Infinity) || a.bitrate - b.bitrate : b.bitrate - a.bitrate).slice(0, 4);
 }

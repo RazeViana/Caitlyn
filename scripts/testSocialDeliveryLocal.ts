@@ -15,9 +15,10 @@ import { renderSocialPost } from "../core/socialPostRender.js";
 import { parseSocialLink, supportedSocialLink } from "../core/socialLinks.js";
 import logger from "../core/logger.js";
 
-export async function testSocialDeliveryLocal(selected = "all"): Promise<void> {
+export async function testSocialDeliveryLocal(selected = "all", attachmentBytes = SOCIAL_FILE_LIMIT): Promise<void> {
+	if (!Number.isSafeInteger(attachmentBytes) || attachmentBytes < 1_024 || attachmentBytes > SOCIAL_FILE_LIMIT) throw new Error("invalid_local_delivery_budget");
 	const supplied = parseSocialLink(selected);
-	if (supplied && (supplied.platform !== "tiktok" || !supportedSocialLink(supplied))) throw new Error("invalid_local_delivery_case");
+	if (supplied && !supportedSocialLink(supplied)) throw new Error("invalid_local_delivery_case");
 	if (!supplied && !["all", "image", "gallery", "video", "video-regression", "quote", "tiktok"].includes(selected)) throw new Error("invalid_local_delivery_case");
 	const run = await createDockerSocialRunner(process.env.SOCIAL_WORKER_DOCKER_CONTEXT ?? "colima-caitlyn-media-test", process.env.SOCIAL_WORKER_IMAGE ?? "caitlyn-media-api:local", "fxembed", process.env.SOCIAL_FXEMBED_URL, process.env.SOCIAL_FXEMBED_KEY_FILE);
 	const directory = await mkdtemp("/tmp/caitlyn-delivery-");
@@ -25,7 +26,7 @@ export async function testSocialDeliveryLocal(selected = "all"): Promise<void> {
 	let service: Awaited<ReturnType<typeof startSocialWorkerServer>> | undefined;
 	try {
 		service = await startSocialWorkerServer(socket, run);
-		for (const [label, url] of supplied ? [["tiktok", supplied.url]] : [
+		for (const [label, url] of supplied ? [[supplied.platform, supplied.url]] : [
 			["image", "https://x.com/TheHiddenOneAC/status/2097940988492664992"],
 			["gallery", "https://x.com/HeyShuggie/status/2097725753634755034"],
 			["video", "https://x.com/iClipCx/status/2097745425323209202"],
@@ -34,13 +35,14 @@ export async function testSocialDeliveryLocal(selected = "all"): Promise<void> {
 			...(selected === "tiktok" ? [["tiktok", "https://www.tiktok.com/@nicoiscold/video/7675179840605015310"]] : []),
 		]) {
 			if (!supplied && selected !== "all" && selected !== label) continue;
-			const result = await requestSocialWorker(socket, { version: 1, url, attachmentBytes: SOCIAL_FILE_LIMIT, totalBytes: SOCIAL_TOTAL_LIMIT });
+			const result = await requestSocialWorker(socket, { version: 1, url, attachmentBytes, totalBytes: SOCIAL_TOTAL_LIMIT });
 			if (!("post" in result)) {
 				logger.warn("Local worker returned a bounded failure outcome", label, result.outcome);
 				throw new Error(`local_worker_${result.outcome}`);
 			}
-			const rendered = renderSocialPost(result.post, result.files, { attachmentBytes: SOCIAL_FILE_LIMIT, messageBytes: SOCIAL_TOTAL_LIMIT });
+			const rendered = renderSocialPost(result.post, result.files, { attachmentBytes, messageBytes: SOCIAL_TOTAL_LIMIT });
 			logger.info("Local social delivery result", label, JSON.stringify({ outcome: result.outcome, mediaFailures: result.mediaFailures, files: result.files.length,
+				compressedFiles: result.files.filter((file) => file.compressed).length,
 				bytes: result.files.reduce((total, file) => total + file.data.length, 0), embeds: rendered.payload.embeds?.length,
 				quote: result.post.quote?.state ?? "none", omittedMedia: rendered.omittedMedia }));
 			if (result.outcome !== "ready" || rendered.omittedMedia || !result.files.length) throw new Error("local_worker_incomplete_result");
@@ -55,7 +57,7 @@ export async function testSocialDeliveryLocal(selected = "all"): Promise<void> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	try { await testSocialDeliveryLocal(process.argv[2]); }
+	try { await testSocialDeliveryLocal(process.argv[2], process.argv[3] === undefined ? undefined : Number(process.argv[3])); }
 	catch {
 		logger.error("Local social delivery verification failed; inspect bounded worker outcomes");
 		process.exitCode = 1;

@@ -7,7 +7,7 @@ TikTok uses the same opt-in channels, durable queue, sender-only mentions, nativ
 - Canonical `tiktok.com/@creator/video/ID` links, including recognized mobile/www aliases and tracking parameters.
 - `vm.tiktok.com`, `vt.tiktok.com`, and `www.tiktok.com/t/` share links. Resolution is bounded and happens only inside the isolated worker. Redirects to private/unapproved hosts, login pages, profiles, and unsupported routes do not trigger extraction.
 - Caption-first cards with creator attribution, plus a verified H.264/AAC MP4 uploaded to Discord. A compact `TikTok · Video · Original ↗` line and clickable author open the canonical source; there is no large link title or duplicate video thumbnail. `Shared by @sender` sits inside the main card below the caption/source line. Sender commentary is kept separately above the card without handled source URLs; link-only shares have no standalone text. Missing captions add no filler; long captions use a full-text attachment. See [shared presentation behavior](social-delivery.md#behavior-and-configuration).
-- At most 8 MiB per attachment, 20 MiB aggregate, and 15 minutes of video. These are Caitlyn's conservative budgets, not a claim about a particular server's Discord limit. Known oversized formats are skipped; actual streaming bytes remain bounded. Only a size failure permits another candidate, with a four-candidate maximum. No transcoding, splitting, muted-audio fallback, or cap bypass is attempted.
+- At most 8 MiB per attachment, 20 MiB aggregate, and 15 minutes of video. These are Caitlyn's conservative budgets, not a claim about a particular server's Discord limit. Fitting originals are preferred; a size-only failure can use one bounded [compression fallback](video-compression.md), with a 48 MiB temporary source cap and a four-download maximum. Full audio/video duration and decoded output are checked before upload, and reduced quality is labelled. No splitting, muted-audio fallback, or output-cap bypass is attempted.
 
 Photo slideshows, live streams, audio-only posts, incompatible formats, and logged-in/private content are not supported in this slice. A standalone unsupported link stays untouched. Failed/partial video previews preserve their original message; partial cards explicitly say media is missing. Unsupported links in mixed-source captions remain visible rather than being silently removed. Actual provider access restrictions and rate limits are terminal; temporary worker/timeouts retain the existing bounded retry policy.
 
@@ -29,19 +29,21 @@ The full local path retrieved **2,953,029 bytes** from TikTok's [official embed 
 
 Tests cover cross-platform identities, malformed responses, hostile URLs, byte limits, unsupported content, media failures, isolated Unix routing, and alias/source cleanup. Python tests use mocked requests in the already installed sandbox runtime. The disposable PostgreSQL suite checks real mixed-platform/alias transitions and removes its own synthetic database afterwards. See [handoff](handoff.md) for final test counts, current image/process identities, command registration, and live activation status.
 
+September 14 update: the bounded compression fallback now delivers the entire 654-second `nicoiscold` example as a **7,388,255-byte MP4**, with verified audio/duration and zero omissions. Its earlier `size_limit` result above describes the pre-compression baseline. The smaller TikTok and X examples still pass without compression. See [compression verification](video-compression.md#verification-and-activation) for the quality tradeoff and current source-only image build.
+
 Build a source-only candidate without installing dependencies or replacing the existing worker tag:
 
 ```bash
 node --import tsx scripts/buildSocialWorkerImage.ts \
-  colima-caitlyn-media-test caitlyn-media-api:local caitlyn-media-tiktok:local
+  colima-caitlyn-media-test caitlyn-media-compression:local caitlyn-media-shared-compression:local
 
-SOCIAL_WORKER_IMAGE=caitlyn-media-tiktok:local \
+SOCIAL_WORKER_IMAGE=caitlyn-media-shared-compression:local \
 node --import tsx scripts/testSocialDeliveryLocal.ts \
   https://www.tiktok.com/@scout2015/video/6718335390845095173
 ```
 
-The diagnostic also accepts a supported TikTok share URL. It logs only counts and closed outcomes, cleans up its own socket/containers/media, and never logs into Discord. An incomplete result intentionally exits nonzero. The broker resolves an image tag at startup, so rebuilding a tag alone does not update a running broker. Existing `/social` command descriptions need targeted guild registration when activating this version; no new command name is introduced.
+The diagnostic also accepts a supported TikTok share URL. It logs only counts and closed outcomes, cleans up its own socket/containers/media, and never logs into Discord. An incomplete result intentionally exits nonzero. The broker resolves an image tag at startup, so rebuilding a tag alone does not update a running broker. TikTok's `/social` descriptions were already registered for the current local test guild; shared compression introduces no command changes or registration requirement.
 
 ## Remaining work
 
-Manual Discord desktop/mobile playback and original-message cleanup still need a fresh owner-sent TikTok link. Photo galleries with their soundtracks, larger-media strategy, account-only access, and homeserver service supervision are separate work. TikTok's [official oEmbed interface](https://developers.tiktok.com/docs/en/embed-videos) supplies player markup, not the verified attachment workflow; the [pinned extractor source](https://github.com/yt-dlp/yt-dlp/blob/2026.08.19/yt_dlp/extractor/tiktok.py) is an external dependency retained inside the worker, not a hosted embed service.
+Manual Discord desktop/mobile playback of compressed videos and fresh mobile-share links still need owner testing. X now uses the same shared compression path, including quoted videos. Photo galleries with their soundtracks, Reddit extraction, account-only access, and homeserver service supervision are separate work. TikTok's [official oEmbed interface](https://developers.tiktok.com/docs/en/embed-videos) supplies player markup, not the verified attachment workflow; the [pinned extractor source](https://github.com/yt-dlp/yt-dlp/blob/2026.08.19/yt_dlp/extractor/tiktok.py) is an external dependency retained inside the worker, not a hosted embed service.

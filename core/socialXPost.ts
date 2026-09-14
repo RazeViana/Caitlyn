@@ -249,12 +249,13 @@ export function normalizeXPost(data: unknown, expectedId: string, allowSensitive
 }
 
 /** Conservative planning only; a worker must still enforce the actual final byte limit. */
-export function xVideoCandidates(media: XPostMedia, byteLimit: number): XVideoVariant[] {
+export function xVideoCandidates(media: XPostMedia, byteLimit: number, smallest = false): XVideoVariant[] {
 	if (!Number.isSafeInteger(byteLimit) || byteLimit <= 0 || media.kind === "image") return [];
 	return media.variants.filter((variant) => {
 		if (!media.durationSeconds || !variant.bitrate) return true;
 		return (variant.bitrate + 192_000) * media.durationSeconds / 8 * 1.1 <= byteLimit;
 	}).sort((a, b) => {
+		if (smallest) return (a.bitrate || Infinity) - (b.bitrate || Infinity) || (a.height ?? Infinity) - (b.height ?? Infinity);
 		// Unknown sizes go last; known candidates favor resolution then bitrate.
 		if (!a.bitrate || !b.bitrate) return Number(Boolean(b.bitrate)) - Number(Boolean(a.bitrate));
 		return (b.height ?? 0) - (a.height ?? 0) || b.bitrate - a.bitrate;

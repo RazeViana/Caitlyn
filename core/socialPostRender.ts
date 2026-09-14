@@ -18,6 +18,7 @@ export interface SocialMediaAttachment {
 	mediaId: string;
 	data: Buffer;
 	extension: "jpg" | "png" | "webp" | "mp4";
+	compressed?: boolean;
 }
 
 export interface SocialRenderLimits {
@@ -110,6 +111,7 @@ export function renderSocialPost(post: SocialPost, attachments: readonly SocialM
 			// Names are scoped to this message, readable in the native video player, and contain no job/post IDs.
 			const name = `${platform}-${index ? "quote" : "post"}-${media.kind}-${mediaIndex + 1}.${file.extension}`;
 			files.push({ attachment: file.data, name, description: truncate(`${index ? "Quoted post" : "Post"} by @${item.author.handle ?? "unknown"}: ${media.alt ?? media.kind}`, 1_024) });
+			if (file.compressed && !notes.includes("Video compressed to fit the upload limit; quality is reduced.")) notes.push("Video compressed to fit the upload limit; quality is reduced.");
 			remainingBytes -= file.data.length;
 			if (media.kind === "image") {
 				const image = { url: `attachment://${name}` };

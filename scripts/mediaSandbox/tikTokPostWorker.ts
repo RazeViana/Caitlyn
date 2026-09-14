@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import type { normalizeTikTokPost, tikTokVideoCandidates } from "../../core/socialTikTokPost.js";
+import type { compressVideo } from "./videoCompression.js";
 
 const execute = promisify(execFile);
 const failures = new Set(["invalid_input", "output_limit", "redirect_denied", "unsupported", "restricted", "size_limit", "invalid_media",
@@ -42,6 +43,7 @@ interface TikTokDependencies {
 	readFile: (path: string) => Promise<Buffer>;
 	normalize: typeof normalizeTikTokPost;
 	candidates: typeof tikTokVideoCandidates;
+	compress?: typeof compressVideo;
 }
 
 export async function deliverTikTokPost(url: string, attachmentBytes: number, totalBytes: number, injected?: TikTokDependencies): Promise<unknown> {
@@ -50,21 +52,23 @@ export async function deliverTikTokPost(url: string, attachmentBytes: number, to
 	if ((!postId && !share) || !Number.isSafeInteger(attachmentBytes) || attachmentBytes < 1_024 || attachmentBytes > 8 * 1_024 * 1_024
 		|| !Number.isSafeInteger(totalBytes) || totalBytes < attachmentBytes || totalBytes > 20 * 1_024 * 1_024) return { outcome: "invalid_response" };
 	try {
-		const { verifyVideo } = await import(new URL("./xPostWorker.ts", import.meta.url).href) as typeof import("./xPostWorker.js");
+		const { prepareVideoAttachment } = await import(new URL("./videoDelivery.ts", import.meta.url).href) as typeof import("./videoDelivery.js");
 		const adapter = injected ? undefined : await import(new URL("./socialTikTokPost.ts", import.meta.url).href) as typeof import("../../core/socialTikTokPost.js");
-		const dependencies = injected ?? { retrieve, execute, readFile, normalize: adapter!.normalizeTikTokPost, candidates: adapter!.tikTokVideoCandidates };
+		const dependencies: TikTokDependencies = injected ?? { retrieve, execute, readFile, normalize: adapter!.normalizeTikTokPost, candidates: adapter!.tikTokVideoCandidates };
 		const result = dependencies.normalize(await dependencies.retrieve("metadata", url), postId);
 		if (!("post" in result)) return result;
 		const media = result.post.media[0];
-		const verified = await verifyVideo(media, dependencies.candidates(media, attachmentBytes), {
-			retrieve: async (_kind, candidate, limit) => dependencies.retrieve("video", candidate, limit), execute: dependencies.execute, byteLimit: attachmentBytes });
+		const verified = await prepareVideoAttachment(media, { ...dependencies, byteLimit: attachmentBytes,
+			retrieve: async (_kind, candidate, limit) => dependencies.retrieve("video", candidate, limit),
+			candidates: (limit, smallest) => dependencies.candidates(media, limit, smallest) });
 		if (verified.outcome !== "video_verified") {
 			return { version: 1, outcome: "partial", post: result.post, files: [], mediaFailures: [verified.outcome] };
 		}
 		const data = await dependencies.readFile("/tmp/x-video.mp4");
 		if (!data.length || data.length > attachmentBytes || data.length !== verified.bytes) return { outcome: "invalid_response" };
 		return { version: 1, outcome: result.outcome, post: result.post,
-			files: [{ postId: result.post.id, mediaId: media.id, extension: "mp4", base64: data.toString("base64"), sha256: createHash("sha256").update(data).digest("hex") }], mediaFailures: [] };
+			files: [{ postId: result.post.id, mediaId: media.id, extension: "mp4", base64: data.toString("base64"), sha256: createHash("sha256").update(data).digest("hex"),
+				...(verified.compressed === true ? { compressed: true } : {}) }], mediaFailures: [] };
 	}
 	catch (error) {
 		const reason = error instanceof Error ? error.message : "";

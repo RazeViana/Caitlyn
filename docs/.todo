@@ -25,7 +25,12 @@
     ✔ Implement isolated TikTok video/share-link extraction, attributed previews, safe failures, and canonical alias deduplication
     ✔ Verify TikTok MP4/audio/decode, oversized-video handling, X compatibility, and real PostgreSQL alias transitions locally
     ☐ Verify fresh TikTok mobile share links and actual Discord playback/source cleanup with owner-sent examples
-    ☐ Add TikTok photo slideshows/soundtracks and agree a larger-video strategy
+    ✔ Add size-only, bounded TikTok compression and verify the full oversized example with audio; preserve originals on failure
+    ☐ Verify compressed TikTok quality and desktop/mobile playback with fresh owner-sent examples
+    ✔ Share video verification/compression across X and TikTok, including X parent/quote budgets and attribution
+    ☐ Reuse the shared video delivery/compression helper when implementing the Reddit adapter
+    ☐ Verify compressed X parent/quoted videos in Discord with owner-sent examples
+    ☐ Add TikTok photo slideshows/soundtracks
     ✔ Replace all VX runtime paths with pinned local FxEmbed source, bounded API adaptation, and isolated media delivery
     ☐ Retest FxEmbed previews/playback and original-message cleanup in Discord
     ☐ Configure authorized X account access separately if restricted posts are required

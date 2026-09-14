@@ -82,6 +82,26 @@ test("quote delivery places the clean footer after the quoted content, without s
 	assert.equal(f.calls.find(([name]) => name === "beginSend")[2], true);
 });
 
+test("compressed-video diagnostics remain guild-scoped and only complete previews authorize source replacement", async () => {
+	for (const complete of [true, false]) {
+		const f = fixture();
+		f.result.post.text = "private caption not for logs";
+		f.result.post.media = [{ id: "456", kind: "video", variants: [] }];
+		f.result.files = [{ postId: "123", mediaId: "456", extension: "mp4", data: Buffer.alloc(100), compressed: true }];
+		if (!complete) {
+			f.result.post.quote = { state: "available", post: { ...f.result.post, id: "789", url: "https://x.com/bob/status/789" } };
+			f.result.outcome = "partial";
+			f.result.mediaFailures = ["compression_incomplete"];
+		}
+		await f.runtime.tick();
+		assert.deepEqual(f.logs.find((entry) => entry[2] === "Social video compressed to upload budget"),
+			["info", "111", "Social video compressed to upload budget", f.job.id]);
+		assert.ok(!JSON.stringify(f.logs).includes(f.result.post.text));
+		assert.ok(!JSON.stringify(f.logs).includes("https://"));
+		assert.equal(f.calls.find(([name]) => name === "beginSend")[2], complete);
+	}
+});
+
 test("TikTok admission namespaces IDs and skips photo routes without changing X jobs", async () => {
 	const f = fixture();
 	await f.runtime.enqueue({ guildId: "111", channelId: "222", id: "333", author: { id: "444", bot: false }, channel: { type: ChannelType.GuildText },

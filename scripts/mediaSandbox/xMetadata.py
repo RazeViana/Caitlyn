@@ -21,6 +21,13 @@ def media(url, is_video=False, byte_limit=None):
                else r"https://pbs\.twimg\.com/media/[a-zA-Z0-9_-]+\.(?:jpg|jpeg|png|webp)\?name=orig")
     if not re.fullmatch(pattern, url) or "/../" in url or "/./" in url:
         raise ValueError("invalid_input")
+    # Only temporary compression inputs may reach 48 MiB; image and delivered-file caps stay unchanged.
+    limit = (10 if is_video else 12) * 1024 * 1024
+    if byte_limit is not None:
+        maximum = (48 if is_video else 8) * 1024 * 1024
+        if type(byte_limit) is not int or not 1024 <= byte_limit <= maximum:
+            raise ValueError("invalid_input")
+        limit = byte_limit
     opener = urllib.request.build_opener(
         urllib.request.ProxyHandler({"https": "http://127.0.0.1:3128"}), NoRedirect(),
     )
@@ -31,12 +38,6 @@ def media(url, is_video=False, byte_limit=None):
         mime = response.headers.get_content_type()
         if mime not in (("video/mp4", "application/octet-stream") if is_video else ("image/jpeg", "image/png", "image/webp")):
             raise ValueError("invalid_media")
-        # These are local test budgets, not an assumed Discord server limit.
-        limit = (10 if is_video else 12) * 1024 * 1024
-        if byte_limit is not None:
-            if not 1024 <= byte_limit <= 8 * 1024 * 1024:
-                raise ValueError("invalid_input")
-            limit = min(limit, byte_limit)
         declared = response.headers.get("Content-Length")
         if declared and int(declared) > limit:
             raise ValueError("size_limit")

@@ -151,6 +151,78 @@ test("TikTok oversized videos produce explicitly partial previews and never auth
 	assert.equal(renderSocialPost(result.post, [], { attachmentBytes: 1024, messageBytes: 1024 * 1024 }).complete, false);
 });
 
+test("TikTok compresses one bounded larger source, preserves the upload cap and labels reduced quality", async () => {
+	const value = raw();
+	value.formats[0].filesize = 700_000;
+	const f = dependencies(value);
+	const retrieve = f.retrieve;
+	f.retrieve = async (...args) => args[0] === "metadata" ? retrieve(...args) : (f.calls.push(args), { bytes: 700_000 });
+	f.compress = async (limit) => {
+		f.calls.push(["compress", limit]);
+		return { outcome: "video_verified", bytes: bytes.length, compressed: true };
+	};
+	const wire = { ...await deliverTikTokPost(url, 128 * 1024, 256 * 1024, f), provider: "tiktok" };
+	assert.equal(wire.outcome, "ready");
+	assert.deepEqual(f.calls.filter(([kind]) => kind === "video").map((call) => call[2]), [48 * 1024 * 1024]);
+	assert.deepEqual(f.calls.find(([kind]) => kind === "compress"), ["compress", 128 * 1024]);
+	const result = decodeSocialWorkerResult(wire, { ...input, attachmentBytes: 128 * 1024, totalBytes: 256 * 1024 });
+	assert.equal(result.outcome, "ready");
+	assert.equal(result.files[0].compressed, true);
+	const rendered = renderSocialPost(result.post, result.files, { attachmentBytes: 128 * 1024, messageBytes: 256 * 1024 });
+	assert.equal(rendered.complete, true);
+	assert.ok(rendered.payload.embeds[0].description.includes("Video compressed to fit the upload limit; quality is reduced."));
+	for (const marker of ["yes", 1, {}, null]) {
+		const changed = structuredClone(wire);
+		changed.files[0].compressed = marker;
+		assert.equal(decodeSocialWorkerResult(changed, { ...input, attachmentBytes: 128 * 1024, totalBytes: 256 * 1024 }).outcome, "invalid_response");
+	}
+});
+
+test("TikTok compression never retries access failures or promotes incomplete output to a replacement", async () => {
+	for (const reason of ["access_denied", "rate_limited", "timeout", "video_validation_failed", "size_limit", "compression_timeout", "compression_incomplete"]) {
+		const value = raw();
+		value.formats[0].filesize = 700_000;
+		const f = dependencies(value);
+		const retrieve = f.retrieve;
+		f.retrieve = async (...args) => {
+			if (args[0] === "metadata") return retrieve(...args);
+			f.calls.push(args);
+			if (["access_denied", "rate_limited", "timeout"].includes(reason)) throw new Error(reason);
+			return { bytes: 700_000 };
+		};
+		f.compress = async () => {
+			f.calls.push(["compress"]);
+			return { outcome: reason };
+		};
+		const wire = await deliverTikTokPost(url, 128 * 1024, 256 * 1024, f);
+		assert.equal(wire.outcome, "partial");
+		assert.deepEqual(wire.files, []);
+		assert.deepEqual(wire.mediaFailures, [reason]);
+		assert.equal(f.calls.filter(([kind]) => kind === "video").length, 1);
+		assert.equal(f.calls.filter(([kind]) => kind === "compress").length, ["access_denied", "rate_limited", "timeout"].includes(reason) ? 0 : 1);
+	}
+});
+
+test("TikTok compression preserves the four-download bound and skips sources over its temporary cap", async () => {
+	const value = raw();
+	value.formats = Array.from({ length: 8 }, (_, index) => ({ ...value.formats[0], url: `${cdn}&variant=${index}`, filesize: 1000 }));
+	const f = dependencies(value);
+	const retrieve = f.retrieve;
+	f.retrieve = async (...args) => {
+		if (args[0] === "metadata") return retrieve(...args);
+		f.calls.push(args);
+		throw new Error("size_limit");
+	};
+	const wire = await deliverTikTokPost(url, 128 * 1024, 256 * 1024, f);
+	assert.equal(wire.outcome, "partial");
+	assert.equal(f.calls.filter(([kind]) => kind === "video").length, 4);
+	assert.deepEqual(f.calls.filter(([kind]) => kind === "video").map((call) => call[2]), [128 * 1024, 128 * 1024, 128 * 1024, 48 * 1024 * 1024]);
+	value.formats.forEach((format) => { format.filesize = 48 * 1024 * 1024 + 1; });
+	const oversized = dependencies(value);
+	assert.equal((await deliverTikTokPost(url, 128 * 1024, 256 * 1024, oversized)).outcome, "partial");
+	assert.equal(oversized.calls.length, 1);
+});
+
 test("TikTok wire validation binds platform/post/author/media identities and enforces response integrity", async () => {
 	const wire = { ...await deliverTikTokPost(url, 1024, 2048, dependencies()), provider: "tiktok" };
 	for (const mutate of [
