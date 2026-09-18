@@ -1,6 +1,6 @@
 /**
  * @file testSocialDeliveryLocal.ts
- * @description Verifies real X or TikTok attachments through the local broker without a Discord login.
+ * @description Verifies real X, TikTok or public Instagram attachments through the local broker without a Discord login.
  * Reuses the dedicated test image, logs only metadata counts, and removes its own temporary socket.
  *
  * @module testSocialDeliveryLocal
@@ -37,11 +37,12 @@ export async function testSocialDeliveryLocal(selected = "all", attachmentBytes 
 			if (!supplied && selected !== "all" && selected !== label) continue;
 			const result = await requestSocialWorker(socket, { version: 1, url, attachmentBytes, totalBytes: SOCIAL_TOTAL_LIMIT });
 			if (!("post" in result)) {
-				logger.warn("Local worker returned a bounded failure outcome", label, result.outcome);
+				logger.warn("Local worker returned a bounded failure outcome", label, result.outcome, result.instagramReason ?? "");
 				throw new Error(`local_worker_${result.outcome}`);
 			}
 			const rendered = renderSocialPost(result.post, result.files, { attachmentBytes, messageBytes: SOCIAL_TOTAL_LIMIT });
 			logger.info("Local social delivery result", label, JSON.stringify({ outcome: result.outcome, mediaFailures: result.mediaFailures, files: result.files.length,
+				issues: result.post.issues, mediaKinds: result.post.media.map((media) => media.kind),
 				compressedFiles: result.files.filter((file) => file.compressed).length,
 				bytes: result.files.reduce((total, file) => total + file.data.length, 0), embeds: rendered.payload.embeds?.length,
 				quote: result.post.quote?.state ?? "none", omittedMedia: rendered.omittedMedia }));

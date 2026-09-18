@@ -1,5 +1,7 @@
 # Caitlyn development handoff
 
+Latest checkpoint: **2026-09-18 — Instagram verified and running locally; Reddit parked.**
+
 Updated: 2026-09-14. Sanitized, signed feature-branch checkpoints: modernization `09ac21d`, resilience `3244bbb`, private logging `ed3c2ea`, birthday recovery `84c16bd`, X adapter `50703ee`, self-hosted X/feature configuration/clean footer `2d26b3f`, and TikTok/presentation `870dfbb`. Current integration branch: `caitlyn-3.0` (formerly `caitlyn-2.0`). Active feature branch: `codex/social-media-replacement`. See the publication checkpoint below before publishing or merging any older local branch.
 
 The TypeScript integration was already complete at `c468729` (`docs: record Caitlyn 2.0 follow-ups`). The original integration plan under `docs/superpowers/` describes that completed migration; use this file and [the task list](.todo) for current progress. Modernization, resilience, private Discord logging, and birthday recovery are committed and integrated locally.
@@ -8,7 +10,29 @@ The TypeScript integration was already complete at `c468729` (`docs: record Cait
 
 At the owner's request, birthday recovery was signed as `3bfb0dd` and fast-forwarded from `features/birthday-recovery` into local `caitlyn-2.0`. The integration branch was then renamed to `caitlyn-3.0` both locally and on GitHub. GitHub's branch still points to `c468729`; renaming it did not publish the newer local commits. Future feature branches start from `caitlyn-3.0`, and the old names in historical plans/checkpoints describe their original context. `main`, package versions, deployment configuration, and the homeserver are unchanged.
 
-## Latest continuation: shared compression publication/integration checkpoint (2026-09-14)
+## Instagram integration scope and verification (2026-09-18)
+
+The owner requested an Instagram commit and merge into `caitlyn-3.0`. This checkpoint includes only Instagram integration, access notices, tests and documentation; the parked Reddit parser/rendering/media work remains uncommitted in the active checkout. The exact staged snapshot passed `npm run check` separately from those Reddit files: **363 tests passed, one optional PostgreSQL skip (364 total)**, plus typecheck, lint and clean build. Staged whitespace and local secret-value checks passed without displaying credentials. Both GitHub branch tips were verified through the existing GitHub login at `a82cfc0`; SSH fetch was unavailable. No push was requested, and the running local bot/broker and `.env` were left unchanged.
+
+Instagram carousels accept up to eight images, videos or mixed items within the existing byte budgets. Automated ordered-media checks pass; real mixed-carousel extraction and Discord presentation still need an owner-supplied example.
+
+## Latest continuation: public Instagram fixed, access notices added, local testing active (2026-09-18)
+
+The owner confirmed both Instagram samples are public and asked for nicely formatted private/login failure messages. Root causes: HTML was a client-rendered shell requiring the pinned extractor's logged-out same-origin GraphQL hydration request, and image candidates contained URLs without dimensions. Added one bounded public hydration request (no account, impersonation, alternate endpoint or denial retries), and retained URL-only image candidates for actual decoder validation. Metadata absence and normal login links no longer imply private access.
+
+Owner photo `DdUCjIygdfq` now passes real isolated delivery: 2,438,382 bytes, one verified image, complete caption/card. Reel `DdGpKGeo7Lc` passes with audio: 5,014,030 bytes, one verified MP4; at a diagnostic 1 MiB cap it compresses to 905,235 bytes with audio and no omissions. No diagnostic sent Discord messages. Explicit private/login-required/401 results generate an attributed lock-icon reply with a compact source link, no ping/comment duplication, and original preservation. Durable claim/nonce/reconciliation prevent duplicate notices; they never authorize original deletion. Generic 403, rate limits, challenges, redirects, empty metadata and unavailable posts are not labelled private.
+
+`npm run check` passed **404 tests, one optional PostgreSQL skip (405 total)**; **10 Python fixtures** separately passed in a network-none container. All owned test containers/volumes/media/staging sockets were cleaned up. No packages/tools installed/upgraded. Two source-only image revisions were built with all seven dependency layers unchanged: intermediate `sha256:402f2f9903e7d765623717df407116dd6f4e194fea8203352ec6e4bbeaf3791b` and selected `sha256:50894c2e409bfcb61d36274cdfa66f5701b965cc38e87c0095de0b4ee18efa4d` (`caitlyn-media-instagram:local`). The earlier shared-compression tag/image remains unchanged.
+
+The owner explicitly approved local restart/registration and confirmed the homeserver is inactive. Old bot/broker PIDs were already gone, so no unrelated process was stopped. The prior host FxEmbed API-key file was missing; restored only the existing local API key privately from the running container, validated authenticated health, and saved it to the new 0700 runtime directory/0600 file. No account/container configuration or browser session changed.
+
+- Broker **97148**, session **5329**, ready **16:40:45 UTC**: context `colima-caitlyn-media-test`, image `caitlyn-media-instagram:local`, provider fxembed, FxEmbed `http://127.0.0.1:8787`, key `/tmp/caitlyn-instagram-runtime-kV7aHH/fxembed.key`, socket `/tmp/caitlyn-instagram-runtime-kV7aHH/worker.sock`, `LOG_LEVEL=INFO`. Health: 200/idle/platforms x,tiktok,instagram.
+- Bot **318**, session **98628**, online **16:41:04 UTC**: same socket, `PGHOST=127.0.0.1 PGPORT=5432 PGDATABASE=caitlyn_test SOCIAL_MEDIA_ENABLED=true LLM_ENABLED=false LOG_LEVEL=INFO`. Startup confirmed PostgreSQL, 14 commands/8 events, social/private logging configured and AI off. Exactly one local bot and broker confirmed; reverify PID/cwd before stopping.
+- `/social` alone was patched/read back in the configured guild at **16:40:48 UTC**. Other commands and global registration unchanged. No `.env`, database schema/config file, homeserver, commit, merge or push change. Runtime overrides are process-only. Old stale sockets were left untouched.
+
+Next: owner Discord playback/layout/source-cleanup acceptance, a real mixed-carousel example, and actual private/login-card acceptance. Reddit remains parked with all prior offline work preserved. See [Instagram](instagram.md) for current limits and repeatable checks; older unavailable/disabled entries below are historical.
+
+## Previous continuation: shared compression publication/integration checkpoint (2026-09-14)
 
 The owner requested committing and pushing both compression continuations, then merging into `caitlyn-3.0`. This checkpoint includes the shared X/TikTok pipeline, tests, documentation and future Reddit integration contract described below. The final `npm run check` passed **345 tests, one optional PostgreSQL skip (346 total)**; typecheck/lint/clean build and whitespace checks passed. The 493-file exact/URL-encoded/base64 scan against locally configured secrets found no matches. No installation or runtime restart is needed for publication; the active processes/images remain as recorded in the preceding implementation checkpoint below. Earlier descriptions of this work as uncommitted are historical.
 

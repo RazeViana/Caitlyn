@@ -91,7 +91,7 @@ export function renderSocialPost(post: SocialPost, attachments: readonly SocialM
 		if (item.quote?.state === "unavailable") notes.push("The quoted post is unavailable.");
 		const card: APIEmbed = {
 			// Keep the quoting author/text on top; the quieter quoted card follows without a large title.
-			url: item.url, color: index ? 0x747f8d : platform === "tiktok" ? 0x25f4ee : 0x1d9bf0,
+			url: item.url, color: index ? 0x747f8d : platform === "tiktok" ? 0x25f4ee : platform === "instagram" ? 0xe1306c : 0x1d9bf0,
 			author: { name: truncate(authorName(`${item.author.name}${item.author.handle ? ` (@${item.author.handle})` : ""}`), 240) || "Unknown author", url: item.url },
 			description: truncate(escaped, textLimit) || (item.media.length || item.quote ? undefined : "No text supplied."),
 		};
@@ -122,8 +122,9 @@ export function renderSocialPost(post: SocialPost, attachments: readonly SocialM
 		}
 		omittedMedia += missing;
 		if (missing) notes.push(`${missing} media item(s) could not be attached; open the original.`);
-		const format = [index ? "Quoted post" : item.quote ? "Quote" : undefined, mediaLabel(item.media) || (item.quote ? undefined : "Text")].filter(Boolean).join(" · ");
-		const source = `${platform === "tiktok" ? "TikTok" : "X"} · ${format} · [Original ↗](${item.url})`;
+		const labelledMedia = item.platform === "instagram" ? item.media.map((media) => media.kind === "gif" ? { ...media, kind: "video" as const } : media) : item.media;
+		const format = [index ? "Quoted post" : item.quote ? "Quote" : undefined, mediaLabel(labelledMedia) || (item.quote ? undefined : "Text")].filter(Boolean).join(" · ");
+		const source = `${platform === "tiktok" ? "TikTok" : platform === "instagram" ? "Instagram" : "X"} · ${format} · [Original ↗](${item.url})`;
 		card.description = [card.description, notes.join("\n"), source, index === posts.length - 1 && sharedBy ? `Shared by <@${sharedBy}>` : undefined].filter(Boolean).join("\n\n");
 	}
 	return {

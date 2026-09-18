@@ -1,6 +1,6 @@
 /**
  * @file worker.ts
- * @description Verifies isolated media from private FxEmbed metadata or public TikTok extraction.
+ * @description Verifies isolated media from private FxEmbed metadata or public TikTok/Instagram extraction.
  * Uses the restricted Unix gateway and emits summaries, or explicit no-log delivery payloads.
  *
  * @module worker
@@ -92,7 +92,7 @@ export async function readFxMetadata(chunks: AsyncIterable<Uint8Array>): Promise
 	return JSON.parse(Buffer.concat(parts).toString("utf8"));
 }
 
-async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, number], allowSensitive = false, provider = "fxembed", metadataOnly = false, tikTok = false): Promise<void> {
+async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, number], allowSensitive = false, provider = "fxembed", metadataOnly = false, tikTok = false, instagram = false): Promise<void> {
 	// This entry point runs only in the isolated harness, never as a bot message handler.
 	const allowed = /^https:\/\/(?:x\.com\/[a-z0-9_]{1,15}\/status\/[1-9]\d{0,24}|www\.tiktok\.com\/@[a-z0-9_.]{1,32}\/video\/[1-9]\d{0,24}|www\.instagram\.com\/(?:p|reel)\/[a-z0-9_-]{1,64}\/)$/i;
 	const tikTokShare = /^https:\/\/(?:(?:vm|vt)\.tiktok\.com\/|www\.tiktok\.com\/t\/)[a-z0-9]{1,64}\/$/i.test(url);
@@ -112,6 +112,11 @@ async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, 
 		relay.listen(3128, "127.0.0.1", resolve);
 	});
 	try {
+		if (instagram && deliveryLimits) {
+			const worker = await import(new URL("./instagramPostWorker.ts", import.meta.url).href) as typeof import("./instagramPostWorker.js");
+			process.stdout.write(JSON.stringify(await worker.deliverInstagramPost(url, ...deliveryLimits)) + "\n");
+			return;
+		}
 		if (tikTok && deliveryLimits) {
 			const worker = await import(new URL("./tikTokPostWorker.ts", import.meta.url).href) as typeof import("./tikTokPostWorker.js");
 			process.stdout.write(JSON.stringify(await worker.deliverTikTokPost(url, ...deliveryLimits)) + "\n");
@@ -184,12 +189,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	else {
 		const wholeXPost = process.argv[2] === "--x-post";
 		const tikTok = process.argv[2] === "--deliver-tiktok";
-		const delivery = process.argv[2] === "--deliver-x" || tikTok;
+		const instagram = process.argv[2] === "--deliver-instagram";
+		const delivery = process.argv[2] === "--deliver-x" || tikTok || instagram;
 		const metadataOnly = process.argv[2] === "--metadata-x";
 		await probe(process.argv[wholeXPost || delivery || metadataOnly ? 3 : 2] ?? "", wholeXPost,
 			delivery ? [Number(process.argv[4]), Number(process.argv[5])] : undefined,
 			metadataOnly ? process.argv[4] === "sensitive" : delivery && process.argv[6] === "sensitive",
-			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly, tikTok).catch(() => {
+			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly, tikTok, instagram).catch(() => {
 			process.stdout.write(`${JSON.stringify({ outcome: "invalid_probe_input" })}\n`);
 			process.exitCode = 1;
 		});

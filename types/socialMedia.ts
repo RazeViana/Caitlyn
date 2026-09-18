@@ -1,6 +1,6 @@
 /**
  * @file socialMedia.ts
- * @description Defines canonical social links and bounded, attributed X and TikTok posts.
+ * @description Defines canonical social links and bounded, attributed X, TikTok and Instagram posts.
  * Metadata readiness does not imply that media has been downloaded or delivered.
  *
  * @module socialMedia
@@ -9,7 +9,7 @@
 export type SocialPlatform = "x" | "instagram" | "reddit" | "tiktok";
 
 export type XMetadataProvider = "fxembed";
-export type SocialMetadataProvider = XMetadataProvider | "tiktok";
+export type SocialMetadataProvider = XMetadataProvider | "tiktok" | "instagram";
 
 export interface SocialLink {
 	platform: SocialPlatform;
@@ -60,7 +60,15 @@ export interface TikTokPost extends Omit<XPost, "platform" | "quote"> {
 	quote?: never;
 }
 
-export type SocialPost = XPost | TikTokPost;
+/** Instagram shortcodes are case-sensitive and are not X/TikTok numeric post IDs. */
+export interface InstagramPost extends Omit<XPost, "platform" | "quote"> {
+	platform: "instagram";
+	quote?: never;
+}
+
+export type SocialPost = XPost | TikTokPost | InstagramPost;
+
+export type InstagramFailureReason = "http_401" | "http_403" | "http_404" | "http_429" | "http_redirect" | "page_metadata_missing" | "page_restricted" | "login_required" | "private_post" | "query_failed";
 
 /** Closed vocabulary only: provider text, URLs, and arbitrary reason/type strings must never escape. */
 export interface XPostDiagnostic {

@@ -41,6 +41,18 @@ test("Discord social replies preserve originals, suppress mentions, and use a st
 	assert.ok(!f.calls.some(([name]) => name === "delete"));
 });
 
+test("access notices reply without copying commentary or pinging the original sender", async () => {
+	const f = fixture();
+	await f.delivery.send(f.job, { embeds: [{ title: "Private Instagram post" }] }, { notice: true });
+	const payload = f.calls.find(([name]) => name === "send")[1];
+	assert.equal(payload.content, undefined);
+	assert.deepEqual(payload.reply, { messageReference: "333", failIfNotExists: true });
+	assert.deepEqual(payload.allowedMentions, { parse: [], users: [], repliedUser: false });
+	assert.equal(payload.nonce, socialNonce(f.job));
+	assert.equal(payload.enforceNonce, true);
+	assert.ok(!f.calls.some(([name]) => name === "delete"));
+});
+
 test("mixed X/TikTok sources require every namespaced replacement and retain unsupported photo links", async () => {
 	const f = fixture();
 	f.source.content = "caption https://x.com/alice/status/123 https://www.tiktok.com/@creator/video/123 https://www.tiktok.com/@creator/photo/456";

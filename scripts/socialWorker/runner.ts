@@ -1,6 +1,6 @@
 /**
  * @file runner.ts
- * @description Routes X through local FxEmbed and TikTok through its isolated extractor, then verifies media.
+ * @description Routes X through local FxEmbed and TikTok/Instagram through isolated public extractors, then verifies media.
  * Only the trusted host broker can use Docker; bounded metadata travels via stdin without host secrets or mounts.
  *
  * @module socialWorkerRunner
@@ -40,7 +40,7 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 	const provider = parseXMetadataProvider(selectedProvider);
 	let fetchMetadata: ReturnType<typeof createFxEmbedClient> | undefined;
 	try { fetchMetadata = createFxEmbedClient(origin, 30_000, apiKeyFile ? await readLocalApiKey(apiKeyFile) : undefined); }
-	catch { logger.warn("X metadata configuration unavailable; TikTok remains independent", "check=SOCIAL_FXEMBED_URL,SOCIAL_FXEMBED_KEY_FILE"); }
+	catch { logger.warn("X metadata configuration unavailable; TikTok and Instagram remain independent", "check=SOCIAL_FXEMBED_URL,SOCIAL_FXEMBED_KEY_FILE"); }
 	if (!/^[a-zA-Z0-9_.-]{1,80}$/.test(context)) throw new Error("invalid_worker_context");
 	async function docker(args: string[], timeout = 10_000, signal?: AbortSignal, stdin?: string): Promise<string> {
 		if (stdin !== undefined) {
@@ -68,13 +68,13 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 	let cleanupBlocked = false;
 	return async (input: SocialWorkerRequest, signal: AbortSignal, operation: SocialWorkerOperation = "delivery"): Promise<unknown> => {
 		validateSocialWorkerRequest(input);
-		const tikTok = parseSocialLink(input.url)?.platform === "tiktok";
-		if (tikTok && operation !== "delivery") throw new Error("invalid_worker_operation");
-		const args = tikTok ? ["--deliver-tiktok", input.url, String(input.attachmentBytes), String(input.totalBytes)] : xWorkerArguments(input, provider, operation);
-		const result = (value: Record<string, unknown>): Record<string, unknown> => ({ ...value, version: 1, purpose: operation, provider: tikTok ? "tiktok" : provider });
+		const platform = parseSocialLink(input.url)!.platform;
+		if (platform !== "x" && operation !== "delivery") throw new Error("invalid_worker_operation");
+		const args = platform !== "x" ? [`--deliver-${platform}`, input.url, String(input.attachmentBytes), String(input.totalBytes)] : xWorkerArguments(input, provider, operation);
+		const result = (value: Record<string, unknown>): Record<string, unknown> => ({ ...value, version: 1, purpose: operation, provider: platform === "x" ? provider : platform });
 		if (cleanupBlocked) return result({ outcome: "worker_unavailable" });
 		let encoded = "";
-		if (!tikTok) {
+		if (platform === "x") {
 			if (!fetchMetadata) return result({ outcome: "worker_unavailable" });
 			const postId = input.url.split("/").at(-1)!;
 			const fetched = await fetchMetadata(postId, signal);
@@ -98,7 +98,7 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 			containers.push(gateway);
 			await docker(["run", "-d", "--name", gateway, "--label=dev.caitlyn.social-worker=true", ...restrictions,
 				"--memory=96m", "--memory-swap=96m", "--cpus=0.25", "--pids-limit=32", "--mount", `type=volume,source=${volume},target=/ipc`,
-				image, "timeout", "-s", "KILL", "120", "node", "/opt/probe/gateway.ts", tikTok ? "tiktok" : "x"]);
+				image, "timeout", "-s", "KILL", "120", "node", "/opt/probe/gateway.ts", platform]);
 			let ready = false;
 			for (let attempt = 0; attempt < 30 && !signal.aborted; attempt++) {
 				try {

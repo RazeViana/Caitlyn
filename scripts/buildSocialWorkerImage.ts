@@ -33,12 +33,13 @@ export async function buildSocialWorkerImage(context: string, baseline: string, 
 	const previous = JSON.parse(await docker(["image", "inspect", baseline]))[0];
 	const directory = await mkdtemp(join(tmpdir(), "caitlyn-media-build-"));
 	try {
-		for (const name of ["Dockerfile", ".dockerignore", "requirements.txt", "gateway.ts", "worker.ts", "xPostWorker.ts", "xMetadata.py", "tikTokPostWorker.ts", "tikTokMedia.py", "videoCompression.ts", "videoDelivery.ts"]) {
+		for (const name of ["Dockerfile", ".dockerignore", "requirements.txt", "gateway.ts", "worker.ts", "xPostWorker.ts", "xMetadata.py", "tikTokPostWorker.ts", "tikTokMedia.py", "instagramPostWorker.ts", "instagramMedia.py", "videoCompression.ts", "videoDelivery.ts"]) {
 			await copyFile(join(source, name), join(directory, name));
 		}
 		await copyFile(fileURLToPath(new URL("../core/socialXPost.ts", import.meta.url)), join(directory, "socialXPost.ts"));
 		await copyFile(fileURLToPath(new URL("../core/socialFxPost.ts", import.meta.url)), join(directory, "socialFxPost.ts"));
 		await copyFile(fileURLToPath(new URL("../core/socialTikTokPost.ts", import.meta.url)), join(directory, "socialTikTokPost.ts"));
+		await copyFile(fileURLToPath(new URL("../core/socialInstagramPost.ts", import.meta.url)), join(directory, "socialInstagramPost.ts"));
 		// Build without a tag so a failed verification cannot replace a working image reference.
 		const output = await docker(["build", "--quiet", "--network=none", "--pull=false", directory]);
 		const imageId = output.trim();

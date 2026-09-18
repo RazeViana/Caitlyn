@@ -136,6 +136,7 @@ export function extractSocialLinks(content: string): SocialLink[] {
 
 export function supportedSocialLink(link: SocialLink): boolean {
 	return (link.platform === "x" && link.kind === "post")
+		|| (link.platform === "instagram" && link.kind === "post" && link.id.length <= 28)
 		|| (link.platform === "tiktok" && (link.kind === "share" || link.url.includes("/video/")));
 }
 

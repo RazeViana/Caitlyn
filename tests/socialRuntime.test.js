@@ -347,13 +347,67 @@ test("queue processing is single-flight and shutdown aborts active extraction", 
 	assert.equal(f.calls.filter(([name]) => name === "claim").length, 1);
 });
 
-test("only fresh visible X links in opted-in text channels enter the queue", async () => {
+test("Instagram failure logs use only allowlisted reasons and never leak provider text", async () => {
+	for (const reason of ["page_metadata_missing", "http_429", "secret provider text", {}, []]) {
+		const f = fixture({ post_id: "instagram:DdUCjIygdfq", url: "https://www.instagram.com/p/DdUCjIygdfq/" });
+		f.dependencies.worker = async () => ({ outcome: "unavailable", provider: "instagram", instagramReason: reason });
+		await f.runtime.tick();
+		assert.equal(f.calls.some(([name]) => name === "send" || name === "deleteSource"), false);
+		const warning = f.logs.find((entry) => entry[2] === "Social extraction unavailable; original preserved");
+		assert.equal(warning[1], "111");
+		assert.equal(warning.some((entry) => typeof entry === "string" && entry.startsWith("instagram_reason=")), ["page_metadata_missing", "http_429"].includes(reason));
+		assert.ok(!JSON.stringify(f.logs).includes("secret provider text"));
+	}
+});
+
+test("explicit Instagram restrictions send one durably claimed notice that can never replace the original", async () => {
+	for (const instagramReason of ["private_post", "login_required", "http_401"]) {
+		const f = fixture({ post_id: "instagram:DdUCjIygdfq", url: "https://www.instagram.com/p/DdUCjIygdfq/", source_cleanup: "pending" });
+		f.dependencies.worker = async () => ({ provider: "instagram", outcome: "restricted", instagramReason });
+		await f.runtime.tick();
+		assert.deepEqual(f.calls.find(([name]) => name === "beginSend").slice(2), [false, false]);
+		const sent = f.calls.find(([name]) => name === "send");
+		assert.equal(sent[2].embeds[0].footer.text, "Caitlyn preview");
+		assert.match(sent[2].embeds[0].description, /original message has been kept/);
+		assert.deepEqual(sent[3], { notice: true });
+		assert.equal(f.calls.filter(([name]) => name === "sent").length, 1);
+		f.job.status = "sent";
+		f.job.replacement_ready = false;
+		await f.runtime.tick();
+		assert.ok(!f.calls.some(([name]) => name === "deleteSource" || name === "beginSourceDelete"));
+		assert.deepEqual(f.calls.find(([name]) => name === "finishSourceDelete").slice(2), ["retained"]);
+	}
+});
+
+test("Instagram access notices require an unchanged source and acknowledged claim; uncertain sends never resend", async () => {
+	for (const stage of ["source", "claim", "send"]) {
+		const f = fixture({ post_id: "instagram:DdUCjIygdfq", url: "https://www.instagram.com/p/DdUCjIygdfq/" });
+		f.dependencies.worker = async () => {
+			if (stage === "source") f.dependencies.delivery.sourceValid = async () => false;
+			return { provider: "instagram", outcome: "restricted", instagramReason: "login_required" };
+		};
+		if (stage === "claim") f.dependencies.store.beginSend = async () => false;
+		if (stage === "send") f.dependencies.delivery.send = async () => { throw new Error("uncertain acceptance"); };
+		await f.runtime.tick();
+		assert.ok(!f.calls.some(([name]) => name === "deleteSource"));
+		if (stage !== "send") { assert.ok(!f.calls.some(([name]) => name === "send" || name === "sent")); }
+		else {
+			assert.equal(f.finished()[0][0], "uncertain");
+			f.job.status = "uncertain";
+			const workerCalls = f.calls.filter(([name]) => name === "worker").length;
+			await f.runtime.tick();
+			assert.equal(f.calls.filter(([name]) => name === "worker").length, workerCalls);
+		}
+	}
+});
+
+test("only fresh visible supported links in opted-in text channels enter the queue", async () => {
 	const f = fixture();
 	const message = { guildId: "111", channelId: "222", id: "333", author: { id: "444", bot: false }, channel: { type: ChannelType.GuildText },
 		content: "look https://x.com/alice/status/123", flags: { has: () => false }, createdTimestamp: f.dependencies.now() };
 	for (const changes of [{ guildId: null }, { author: { bot: true } }, { webhookId: "999" }, { channel: { type: ChannelType.PublicThread } },
 		{ createdTimestamp: -2_000_000 }, { flags: { has: (flag) => flag === MessageFlags.SuppressEmbeds } },
-		{ content: "||https://x.com/alice/status/123||" }, { content: "https://instagram.com/p/abc/" }]) {
+		{ content: "||https://x.com/alice/status/123||" }, { content: "https://instagram.com/share/p/abc/" }, { content: "https://www.reddit.com/comments/abc1/" }]) {
 		await f.runtime.enqueue({ ...message, ...changes });
 	}
 	assert.equal(f.calls.length, 0);
@@ -361,9 +415,12 @@ test("only fresh visible X links in opted-in text channels enter the queue", asy
 	const queued = f.calls.find(([name]) => name === "enqueue")[1];
 	assert.equal(queued.source_hash, socialSourceHash(message.content));
 	assert.equal(queued.guild_id, "111");
+	await f.runtime.enqueue({ ...message, content: "https://instagram.com/p/DdUCjIygdfq/" });
+	const instagram = f.calls.filter(([name]) => name === "enqueue").at(-1)[1];
+	assert.equal(instagram.post_id, "instagram:DdUCjIygdfq");
 	f.dependencies.store.enabled = async () => false;
 	await f.runtime.enqueue(message);
-	assert.equal(f.calls.filter(([name]) => name === "enqueue").length, 1);
+	assert.equal(f.calls.filter(([name]) => name === "enqueue").length, 2);
 	await f.runtime.cancel("111", "222", "333");
 	assert.deepEqual(f.calls.at(-1), ["cancelSource", "111", "222", "333"]);
 });

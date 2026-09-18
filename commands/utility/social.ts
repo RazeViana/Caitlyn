@@ -1,6 +1,6 @@
 /**
  * @file social.ts
- * @description Lets server administrators opt text channels into X and TikTok previews or disable them.
+ * @description Lets server administrators opt text channels into X, TikTok and public Instagram previews or disable them.
  * Settings are separate from private operator logging and default to disabled.
  *
  * @module social
@@ -15,9 +15,9 @@ import logger from "../../core/logger.js";
 export const category = "utility";
 export const requiresDatabase = true;
 export const cooldown = 5;
-export const data = new SlashCommandBuilder().setName("social").setDescription("Configure X and TikTok previews in this server")
+export const data = new SlashCommandBuilder().setName("social").setDescription("Configure X, TikTok and Instagram previews in this server")
 	.setContexts(InteractionContextType.Guild).setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-	.addSubcommand((command) => command.setName("enable").setDescription("Enable X and TikTok previews in this text channel"))
+	.addSubcommand((command) => command.setName("enable").setDescription("Enable X, TikTok and Instagram previews in this text channel"))
 	.addSubcommand((command) => command.setName("disable").setDescription("Disable new previews in this text channel"))
 	.addSubcommand((command) => command.setName("disable-server").setDescription("Disable new previews throughout this server"))
 	.addSubcommand((command) => command.setName("status").setDescription("Show this server's preview settings"));
@@ -33,7 +33,7 @@ export async function execute(interaction: ChatInputCommandInteraction, store = 
 		if (action === "status") {
 			const channels = (await store.settings(interaction.guildId)).filter((setting) => setting.enabled);
 			const list = channels.slice(0, 25).map((setting) => `<#${setting.channel_id}>`).join(", ") || "None";
-			await interaction.editReply({ content: `X and TikTok preview channels: ${list}${channels.length > 25 ? " (first 25 shown)" : ""}.\nWorker integration: ${socialRuntimes.has(interaction.client) ? "enabled" : "disabled by the operator"}. Complete replacements mention the sender and remove the original when safe. TikTok videos and mobile share links are supported; slideshows and login-restricted posts keep their originals.`, allowedMentions: { parse: [] } });
+			await interaction.editReply({ content: `X, TikTok and Instagram preview channels: ${list}${channels.length > 25 ? " (first 25 shown)" : ""}.\nWorker integration: ${socialRuntimes.has(interaction.client) ? "enabled" : "disabled by the operator"}. Complete replacements mention the sender and remove the original when safe. Public Instagram photo/reel/carousel links and TikTok video/share links are supported. Stories, private/login-restricted posts and TikTok slideshows keep their originals.`, allowedMentions: { parse: [] } });
 			return;
 		}
 		if (!["enable", "disable", "disable-server"].includes(action)) throw new Error("invalid_action");
@@ -47,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction, store = 
 		}
 		await store.configure(interaction.guildId, action === "disable-server" ? null : interaction.channelId!, action === "enable");
 		logger.info("Social preview configuration updated", action, interaction.channelId);
-		await interaction.editReply(action === "enable" ? "X and TikTok previews enabled here. Complete replacements mention the sender and remove the original (requires Manage Messages). Failed/partial previews, TikTok slideshows, or extra source attachments keep the original."
+		await interaction.editReply(action === "enable" ? "X, TikTok and Instagram previews enabled here. Complete replacements mention the sender and remove the original (requires Manage Messages). Failed/partial previews, unsupported posts, or extra source attachments keep the original."
 			: "New previews disabled and pending jobs cancelled. Existing completed previews are left in place.");
 	}
 	catch {

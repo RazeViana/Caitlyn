@@ -21,6 +21,14 @@
     ☐ Choose a project license and align README/package metadata
 
 ☐ Features and improvements
+    ✔ Park Reddit at the owner's request; preserve offline work and the live-access approval gate
+    ✔ Connect public Instagram photo/reel/carousel normalization, isolated delivery, shared compression, transport, cards and private logging in source
+    ✔ Resolve Instagram public-page hydration and URL-only image candidates; both owner examples pass real isolated delivery checks with no account
+    ✔ Add formatted Instagram private/login notices with durable duplicate prevention and original preservation; never mislabel transient failures
+    ✔ Activate the Instagram worker/local bot and verify updated /social registration after owner confirmation of homeserver inactivity
+    ✔ Verify the owner's Instagram photo and reel plus real size-only reel compression with audio
+    ☐ Verify a real Instagram mixed carousel (synthetic ordered-media tests pass)
+    ☐ Verify Instagram desktop/mobile playback and complete-only source cleanup in Discord
     ✔ Add caption-first X/TikTok cards with compact source links, content-type layouts, and separate quote attribution
     ✔ Implement isolated TikTok video/share-link extraction, attributed previews, safe failures, and canonical alias deduplication
     ✔ Verify TikTok MP4/audio/decode, oversized-video handling, X compatibility, and real PostgreSQL alias transitions locally

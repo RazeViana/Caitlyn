@@ -27,14 +27,15 @@ export function isPublicAddress(address: string): boolean {
 
 const xDomains = ["x.com", "twitter.com", "twimg.com"];
 const tikTokDomains = ["tiktok.com", "tiktokcdn.com", "tiktokcdn-us.com", "tiktokv.com", "tiktokv.us", "muscdn.com", "byteoversea.com", "ibytedtos.com"];
-const domains = [...xDomains, ...tikTokDomains, "instagram.com", "cdninstagram.com", "fbcdn.net"];
-type GatewayPlatform = "x" | "tiktok";
+const instagramDomains = ["instagram.com", "cdninstagram.com", "fbcdn.net"];
+const domains = [...xDomains, ...tikTokDomains, ...instagramDomains];
+type GatewayPlatform = "x" | "tiktok" | "instagram";
 
 export function allowedTunnel(authority: string, platform?: GatewayPlatform): string | null {
 	const match = authority.match(/^([a-z0-9]+(?:[.-][a-z0-9]+)*):443$/i);
 	if (!match) return null;
 	const host = match[1].toLowerCase();
-	const approved = platform === "x" ? xDomains : platform === "tiktok" ? tikTokDomains : domains;
+	const approved = platform === "x" ? xDomains : platform === "tiktok" ? tikTokDomains : platform === "instagram" ? instagramDomains : domains;
 	if (!approved.some((domain) => host === domain || host.endsWith(`.${domain}`))) return null;
 	return host;
 }
@@ -117,6 +118,6 @@ export function startGateway(socketPath = "/ipc/proxy.sock", platform?: GatewayP
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-	if (process.argv.length > 3 || (process.argv[2] !== undefined && !["x", "tiktok"].includes(process.argv[2]))) throw new Error("invalid_gateway_options");
+	if (process.argv.length > 3 || (process.argv[2] !== undefined && !["x", "tiktok", "instagram"].includes(process.argv[2]))) throw new Error("invalid_gateway_options");
 	startGateway("/ipc/proxy.sock", process.argv[2] as GatewayPlatform | undefined);
 }

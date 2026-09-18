@@ -6,7 +6,7 @@
  * @module socialDelivery
  */
 
-import type { SocialMetadataProvider, SocialPost, XPost, XPostDiagnostic } from "./socialMedia.js";
+import type { InstagramFailureReason, SocialMetadataProvider, SocialPost, XPost, XPostDiagnostic } from "./socialMedia.js";
 import type { SocialMediaAttachment } from "../core/socialPostRender.js";
 
 export interface SocialJob {
@@ -37,7 +37,7 @@ export interface SocialWorkerRequest {
 }
 
 export type SocialWorkerFailure = { outcome: "unavailable" | "unsupported" | "restricted" | "rate_limited" | "worker_unavailable" | "invalid_response" | "timeout";
-	diagnostic?: XPostDiagnostic; provider?: SocialMetadataProvider };
+	diagnostic?: XPostDiagnostic; instagramReason?: InstagramFailureReason; provider?: SocialMetadataProvider };
 
 export type SocialWorkerResult = { outcome: "ready" | "partial"; post: SocialPost; files: SocialMediaAttachment[]; mediaFailures?: string[]; provider?: SocialMetadataProvider }
 	| SocialWorkerFailure;

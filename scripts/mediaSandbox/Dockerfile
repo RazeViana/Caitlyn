@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 py3-pip ffmpeg \
 COPY requirements.txt /opt/requirements.txt
 RUN /opt/extractor/bin/pip install --no-cache-dir --require-hashes -r /opt/requirements.txt \
     && mkdir /ipc && chown node:node /ipc
-COPY gateway.ts worker.ts xPostWorker.ts xMetadata.py socialXPost.ts socialFxPost.ts tikTokPostWorker.ts tikTokMedia.py socialTikTokPost.ts videoCompression.ts videoDelivery.ts /opt/probe/
+COPY gateway.ts worker.ts xPostWorker.ts xMetadata.py socialXPost.ts socialFxPost.ts tikTokPostWorker.ts tikTokMedia.py socialTikTokPost.ts instagramPostWorker.ts instagramMedia.py socialInstagramPost.ts videoCompression.ts videoDelivery.ts /opt/probe/
 USER node
 WORKDIR /tmp
 CMD ["node", "/opt/probe/worker.ts"]

@@ -85,16 +85,16 @@ export function createSocialDiscordDelivery(client: Client) {
 				return unchanged(source, job);
 			})(), 10_000, "social_source_check");
 		},
-		async send(job: SocialJob, payload: MessageCreateOptions): Promise<string> {
+		async send(job: SocialJob, payload: MessageCreateOptions, options: { notice?: boolean } = {}): Promise<string> {
 			const destination = await channel(job, true);
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			if (!unchanged(source, job)) throw new Error("source_changed");
 			const caption = socialPostCaption(source.content);
 			const message = await destination.send({ ...payload,
 				// The renderer owns the in-card attribution; link-only messages need no standalone content.
-				content: captionFits(caption, job) ? caption || undefined : "Original message retained; sender commentary is too long to copy.",
-				allowedMentions: { parse: [], users: [job.author_id], repliedUser: false },
-				reply: undefined,
+				content: options.notice ? undefined : captionFits(caption, job) ? caption || undefined : "Original message retained; sender commentary is too long to copy.",
+				allowedMentions: { parse: [], users: options.notice ? [] : [job.author_id], repliedUser: false },
+				reply: options.notice ? { messageReference: job.source_id, failIfNotExists: true } : undefined,
 				nonce: socialNonce(job), enforceNonce: true });
 			return message.id;
 		},

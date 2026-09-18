@@ -15,6 +15,8 @@ import { socialDeliveryStore, type SocialDeliveryStore } from "./socialDeliveryS
 import { requestSocialWorker, SOCIAL_FILE_LIMIT, SOCIAL_TOTAL_LIMIT } from "./socialWorkerClient.js";
 import { renderSocialPost } from "./socialPostRender.js";
 import { sanitizeXPostDiagnostic } from "./socialXPost.js";
+import { sanitizeInstagramReason } from "./socialInstagramPost.js";
+import { renderInstagramAccessNotice } from "./socialAccessNotice.js";
 import { getFeatureConfiguration } from "./environment.js";
 import { startSocialProgress } from "./socialProgress.js";
 import { createSocialDiscordDelivery, SOCIAL_PREVIEW_FOOTER, socialSourceHash, type SocialDiscordDelivery } from "../messages/socialDelivery.js";
@@ -117,12 +119,33 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			log.info("Social extraction finished", job.id, `duration_ms=${Math.max(0, dependencies.now() - extractionStarted)}`);
 			if (result.provider === "fxembed") log.info("Social extraction provider mode", job.id, "mode=fxembed");
 			if (result.provider === "tiktok") log.info("Social extraction provider mode", job.id, "mode=tiktok");
+			if (result.provider === "instagram") log.info("Social extraction provider mode", job.id, "mode=instagram_public");
 			if (!("post" in result)) {
+				const diagnostic = sanitizeXPostDiagnostic(result.diagnostic);
+				const instagramReason = result.provider === "instagram" ? sanitizeInstagramReason(result.instagramReason) : undefined;
+				log.warn("Social extraction unavailable; original preserved", job.id, result.outcome,
+					...(diagnostic ? [JSON.stringify(diagnostic)] : []), ...(instagramReason ? [`instagram_reason=${instagramReason}`] : []));
+				const notice = renderInstagramAccessNotice(job.url, job.author_id, result);
+				if (notice) {
+					if (stopping || !await delivery.sourceValid(job)) {
+						await store.finish(job, "cancelled", "source_or_shutdown_changed");
+						return;
+					}
+					const embed = notice.embeds![0] as { footer?: { text: string }; description?: string };
+					embed.description += "\n\nYour original message has been kept.";
+					embed.footer = { text: SOCIAL_PREVIEW_FOOTER };
+					// Reuse durable nonce/reconciliation; a notice is NEVER a complete replacement.
+					sendStarted = true;
+					if (!await store.beginSend(job, false, false)) return;
+					const operation = delivery.send(job, notice, { notice: true }).then(async (messageId) => {
+						await store.sent(job, messageId);
+						log.info("Instagram access notice delivered; original preserved", job.id, instagramReason);
+					});
+					await withTimeout(operation, dependencies.sendTimeoutMs ?? 15_000, "social_access_notice");
+					return;
+				}
 				const retry = ["worker_unavailable", "timeout"].includes(result.outcome) && job.attempts < 3;
 				await store.finish(job, retry ? "queued" : "failed", result.outcome);
-				const diagnostic = sanitizeXPostDiagnostic(result.diagnostic);
-				log.warn("Social extraction unavailable; original preserved", job.id, result.outcome,
-					...(diagnostic ? [JSON.stringify(diagnostic)] : []));
 				return;
 			}
 			job.sensitive = result.post.sensitive === true || (result.post.quote?.state === "available" && result.post.quote.post.sensitive === true);

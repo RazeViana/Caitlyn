@@ -8,10 +8,11 @@
 
 import { createHash } from "node:crypto";
 import { request } from "node:http";
-import type { SocialMetadataProvider, SocialPost, TikTokPost, XPost, XPostIssue, XPostMedia } from "../types/socialMedia.js";
+import type { InstagramPost, SocialMetadataProvider, SocialPost, TikTokPost, XPost, XPostIssue, XPostMedia } from "../types/socialMedia.js";
 import type { SocialMetadataRequest, SocialMetadataResult, SocialWorkerFailure, SocialWorkerRequest, SocialWorkerResult } from "../types/socialDelivery.js";
 import { parseSocialLink, supportedSocialLink } from "./socialLinks.js";
 import { sanitizeXPostDiagnostic, xMediaUrl } from "./socialXPost.js";
+import { sanitizeInstagramReason } from "./socialInstagramPost.js";
 
 export const SOCIAL_WIRE_LIMIT = 30 * 1_024 * 1_024;
 export const SOCIAL_METADATA_LIMIT = 1_024 * 1_024;
@@ -135,23 +136,46 @@ function tikTokPost(value: unknown, requestedUrl: string): TikTokPost {
 		media: [{ id: postId, kind: "video", variants: [] }] };
 }
 
+function instagramPost(value: unknown, requestedUrl: string): InstagramPost {
+	const input = object(value);
+	const author = object(input.author);
+	const handle = text(author.handle, 30);
+	const requested = parseSocialLink(requestedUrl);
+	if (requested?.platform !== "instagram" || requested.kind !== "post" || input.platform !== "instagram"
+		|| input.id !== requested.id || input.url !== requested.url || !/^[a-z0-9_.]{1,30}$/i.test(handle)
+		|| input.quote !== undefined || input.sensitive !== undefined || typeof input.textComplete !== "boolean"
+		|| !Array.isArray(input.media) || !input.media.length || input.media.length > 8 || !Array.isArray(input.issues)
+		|| input.issues.length > issues.size || input.issues.some((issue) => !issues.has(issue))) throw new Error("invalid_worker_response");
+	const media: XPostMedia[] = input.media.map((raw) => {
+		const item = object(raw);
+		if (!["image", "video", "gif"].includes(String(item.kind))) throw new Error("invalid_worker_response");
+		return { id: id(item.id), kind: item.kind as XPostMedia["kind"], variants: [], alt: item.alt === undefined ? undefined : text(item.alt, 1_024) };
+	});
+	if (new Set(media.map((item) => item.id)).size !== media.length) throw new Error("invalid_worker_response");
+	return { platform: "instagram", id: requested.id, url: requested.url, author: { handle, name: text(author.name, 200) },
+		text: text(input.text, 25_000), textComplete: input.textComplete, issues: input.issues, media };
+}
+
 export function decodeSocialWorkerResult(value: unknown, input: SocialWorkerRequest): SocialWorkerResult {
 	try {
 		const result = object(value);
 		const platform = parseSocialLink(input.url)?.platform;
-		const expectedProvider = platform === "tiktok" ? "tiktok" : "fxembed";
+		const expectedProvider = platform === "tiktok" || platform === "instagram" ? platform : "fxembed";
 		if (result.purpose !== undefined && result.purpose !== "delivery") throw new Error("invalid_worker_response");
-		if ((result.provider !== undefined && result.provider !== expectedProvider) || (platform === "tiktok" && result.provider !== "tiktok")) throw new Error("invalid_worker_response");
+		if ((result.provider !== undefined && result.provider !== expectedProvider) || (platform !== "x" && result.provider !== expectedProvider)) throw new Error("invalid_worker_response");
 		const provider = result.provider === undefined ? {} : { provider: result.provider as SocialMetadataProvider };
 		if (typeof result.outcome === "string" && failures.has(result.outcome)) {
 			const diagnostic = sanitizeXPostDiagnostic(result.diagnostic);
-			if (platform === "tiktok" && result.diagnostic !== undefined) throw new Error("invalid_worker_response");
+			const instagramReason = sanitizeInstagramReason(result.instagramReason);
+			if (result.instagramReason !== undefined && (platform !== "instagram" || !instagramReason)) throw new Error("invalid_worker_response");
+			if (platform !== "x" && result.diagnostic !== undefined) throw new Error("invalid_worker_response");
 			if (result.diagnostic !== undefined && !diagnostic) throw new Error("invalid_worker_response");
-			return { outcome: result.outcome, ...provider, ...(diagnostic ? { diagnostic } : {}) } as SocialWorkerResult;
+			return { outcome: result.outcome, ...provider, ...(diagnostic ? { diagnostic } : {}), ...(instagramReason ? { instagramReason } : {}) } as SocialWorkerResult;
 		}
 		if (result.version !== 1 || typeof result.outcome !== "string" || !["ready", "partial"].includes(result.outcome)
 			|| !Array.isArray(result.files) || result.files.length > 8) throw new Error("invalid_worker_response");
-		const normalized: SocialPost = platform === "tiktok" ? tikTokPost(result.post, input.url) : post(result.post);
+		const normalized: SocialPost = platform === "tiktok" ? tikTokPost(result.post, input.url)
+			: platform === "instagram" ? instagramPost(result.post, input.url) : post(result.post);
 		const reasons = result.mediaFailures ?? [];
 		if (!Array.isArray(reasons) || reasons.length > 8 || reasons.some((reason) => !mediaFailures.has(reason))) throw new Error("invalid_worker_response");
 		if (platform !== "tiktok" && normalized.id !== parseSocialLink(input.url)?.id) throw new Error("invalid_worker_response");
@@ -161,7 +185,7 @@ export function decodeSocialWorkerResult(value: unknown, input: SocialWorkerRequ
 		const seen = new Set<string>();
 		const files = result.files.map((raw) => {
 			const file = object(raw);
-			const postId = id(file.postId);
+			const postId = platform === "instagram" ? text(file.postId, 28) : id(file.postId);
 			const mediaId = id(file.mediaId);
 			const media = posts.find((item) => item.id === postId)?.media.find((item) => item.id === mediaId);
 			const key = `${postId}:${mediaId}`;
@@ -206,7 +230,7 @@ export function decodeSocialMetadataResult(value: unknown, input: SocialMetadata
 	catch { return { outcome: "invalid_response" }; }
 }
 
-async function exchange<Result>(socketPath: string, input: SocialMetadataRequest | SocialWorkerRequest, endpoint: "/v1/x" | "/v1/x/metadata" | "/v1/tiktok",
+async function exchange<Result>(socketPath: string, input: SocialMetadataRequest | SocialWorkerRequest, endpoint: "/v1/x" | "/v1/x/metadata" | "/v1/tiktok" | "/v1/instagram",
 	limit: number, decode: (value: unknown) => Result, signal?: AbortSignal, timeoutMs = 130_000): Promise<Result | SocialWorkerFailure> {
 	if (!socketPath.startsWith("/") || Buffer.byteLength(socketPath) > 100 || /[\p{Cc}]/u.test(socketPath)) return { outcome: "worker_unavailable" };
 	return new Promise((resolve) => {
@@ -243,7 +267,8 @@ async function exchange<Result>(socketPath: string, input: SocialMetadataRequest
 
 export async function requestSocialWorker(socketPath: string, input: SocialWorkerRequest, signal?: AbortSignal, timeoutMs = 130_000): Promise<SocialWorkerResult> {
 	const validated = validateSocialWorkerRequest(input);
-	return exchange(socketPath, validated, parseSocialLink(validated.url)?.platform === "tiktok" ? "/v1/tiktok" : "/v1/x", SOCIAL_WIRE_LIMIT, (value) => decodeSocialWorkerResult(value, validated), signal, timeoutMs);
+	const platform = parseSocialLink(validated.url)?.platform;
+	return exchange(socketPath, validated, platform === "tiktok" ? "/v1/tiktok" : platform === "instagram" ? "/v1/instagram" : "/v1/x", SOCIAL_WIRE_LIMIT, (value) => decodeSocialWorkerResult(value, validated), signal, timeoutMs);
 }
 
 export async function requestSocialMetadata(socketPath: string, input: SocialMetadataRequest, signal?: AbortSignal, timeoutMs = 60_000): Promise<SocialMetadataResult> {

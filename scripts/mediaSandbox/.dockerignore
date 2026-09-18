@@ -13,5 +13,8 @@
 !tikTokPostWorker.ts
 !tikTokMedia.py
 !socialTikTokPost.ts
+!instagramPostWorker.ts
+!instagramMedia.py
+!socialInstagramPost.ts
 !videoCompression.ts
 !videoDelivery.ts

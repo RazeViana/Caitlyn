@@ -17,7 +17,7 @@ import type { xVideoCandidates } from "../../core/socialXPost.js";
 import type { compressVideo } from "./videoCompression.js";
 
 const execute = promisify(execFile);
-const outcomes = new Set(["rate_limited", "login_or_restriction", "access_denied", "gateway_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified"]);
+const outcomes = new Set(["rate_limited", "login_or_restriction", "restricted", "access_denied", "gateway_denied", "unavailable", "timeout", "size_limit", "output_limit", "invalid_input", "invalid_image", "invalid_media", "redirect_denied", "extractor_error", "duration_limit", "audio_unverified"]);
 interface VerificationDependencies {
 	byteLimit?: number;
 	retrieve: typeof retrieve;

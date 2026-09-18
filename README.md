@@ -28,6 +28,7 @@ The README stays at the repository root for GitHub; supporting project documenta
 - Message, voice, leaderboard, and daily/weekly/monthly streak tracking.
 - Birthday management and scheduled reminders with same-day outage catch-up and persistent duplicate prevention.
 - Opt-in X and TikTok video previews with isolated extraction, sender mentions, and safe original-message cleanup after complete delivery (disabled by default). TikTok mobile share links are resolved inside the worker. Failed or oversized content retains the original. Public sensitive-labelled X posts are supported; provider access gates are not bypassed.
+- Public Instagram photo/reel/carousel integration supports captions, ordered attachments and formatted private/login notices. Photo/reel extraction and compression are verified without an account; the local bot is enabled for Discord acceptance testing. See [Instagram status and limitations](docs/instagram.md). Reddit development is parked.
 - Typed ESM command, event, job, and message modules.
 - Private main-server logging with owner-only channel setup and in-channel level selection.
 - Dynamic loaders that run TypeScript in development and compiled JavaScript in production.
@@ -130,7 +131,7 @@ The application reads these variables from `.env`:
 | `PGHOST`, `PGPORT` | PostgreSQL server address |
 | `PGUSER`, `PGPASSWORD`, `PGDATABASE` | PostgreSQL credentials and database |
 | `LLM_ENABLED` | Initial AI state; use `true` or `false` |
-| `SOCIAL_MEDIA_ENABLED` | Optional X/TikTok worker integration switch; defaults to `false`; channel opt-in is also required |
+| `SOCIAL_MEDIA_ENABLED` | Optional social worker integration switch; defaults to `false`; channel opt-in is also required. Instagram is experimental; see its status documentation |
 | `SOCIAL_WORKER_SOCKET` | Absolute private local Unix socket path; required only when social integration is enabled |
 | `OLLAMA_MODEL` | Model name sent to Open WebUI |
 | `WEBUI_API_KEY` | Bearer token for Open WebUI |
@@ -196,7 +197,7 @@ Apply only migrations that the target database has not already received. The run
 - `/setup logs|status|disable` — configure the private main-server logging channel (bot owner with administrator permission only).
 - `/logs levels types:info,warning,error` and `/logs status` — select or inspect log types from inside the logging channel (bot owner only); `all` and `none` are also supported.
 - `/streaks [limit]` — rank activity streaks.
-- `/social enable|disable|disable-server|status` — configure opt-in X and TikTok previews in server text channels (administrator only; requires operator-enabled worker integration).
+- `/social enable|disable|disable-server|status` — configure opt-in social previews in server text channels (administrator only; requires operator-enabled worker integration). Updated command descriptions include experimental Instagram support; register them when deploying that worker.
 - `/toggleai` — enable or disable AI replies at runtime (administrator only).
 - `/user` — show information about the user who runs the command.
 
