@@ -169,29 +169,67 @@ class Operations:
             result = subprocess.run(args, capture_output=True, timeout=timeout, check=True)
             require(len(result.stdout) <= 2_097_152, "command_output_too_large")
             return result.stdout.decode().strip()
-        except (subprocess.SubprocessError, OSError, UnicodeError):
+        except subprocess.TimeoutExpired:
+            raise UpdateError("server_command_timed_out") from None
+        except subprocess.CalledProcessError as error:
+            raise UpdateError("server_command_exit_" + str(error.returncode)) from None
+        except OSError as error:
+            raise UpdateError("server_command_os_error_" + str(error.errno)) from None
+        except (subprocess.SubprocessError, UnicodeError):
             raise UpdateError("server_command_failed") from None
 
     def api(self, method, *args):
-        return json.loads(self.command(["midclt", "call", method] + [json.dumps(value) for value in args]))
+        # TrueNAS ships this client with midclt. Use its local socket directly:
+        # sudo's command checking can kill midclt when a long Compose argument
+        # is truncated during argv verification. Configuration stays off argv.
+        try:
+            from truenas_api_client import Client
+        except ImportError:
+            raise UpdateError("truenas_client_missing") from None
+        try:
+            with Client(call_timeout=30) as client:
+                return client.call(method, *args)
+        except Exception:
+            # API errors can include submitted configuration; never log them.
+            raise UpdateError("server_api_failed") from None
 
     def job(self, method, *args):
+        require(method in {"app.stop", "app.update", "app.start"}, "unsupported_app_job")
+        logging.info("Asking TrueNAS to run %s", method)
         try:
             identifier = self.api(method, *args)
-        except UpdateError:
-            raise UncertainUpdate("app_job_result_unknown") from None
-        require(isinstance(identifier, int), "invalid_app_job")
+        except UpdateError as error:
+            logging.error("TrueNAS did not confirm a job number for %s (%s); the request will not be repeated", method, error)
+            raise UncertainUpdate("app_job_number_unknown") from None
+        if type(identifier) is not int or identifier <= 0:
+            raise UncertainUpdate("app_job_number_unknown")
+        logging.info("TrueNAS accepted %s as job %d", method, identifier)
         deadline = time.monotonic() + 300
+        missed_checks = 0
         while time.monotonic() < deadline:
             try:
                 jobs = self.api("core.get_jobs", [["id", "=", identifier]], {"select": ["id", "state"]})
-            except UpdateError:
-                raise UncertainUpdate("app_job_result_unknown") from None
-            if jobs and jobs[0]["state"] == "SUCCESS":
+                require(isinstance(jobs, list) and len(jobs) == 1
+                        and isinstance(jobs[0], dict) and jobs[0].get("id") == identifier
+                        and jobs[0].get("state") in {"WAITING", "RUNNING", "SUCCESS", "FAILED", "ABORTED"},
+                        "app_job_status_missing")
+            except UpdateError as error:
+                missed_checks += 1
+                if missed_checks == 1 or missed_checks % 10 == 0:
+                    logging.warning("Could not read %s job %d (%s); checking that same job again", method, identifier, error)
+                # Reading a known job is safe to repeat. Never repeat the app mutation.
+                time.sleep(2)
+                continue
+            if missed_checks:
+                logging.info("TrueNAS job %d status is available again", identifier)
+                missed_checks = 0
+            if jobs[0]["state"] == "SUCCESS":
+                logging.info("TrueNAS finished %s job %d", method, identifier)
                 return
-            if jobs and jobs[0]["state"] in ("FAILED", "ABORTED"):
+            if jobs[0]["state"] in ("FAILED", "ABORTED"):
                 raise UpdateError("app_job_failed")
             time.sleep(2)
+        logging.error("Could not confirm completion of %s job %d within five minutes", method, identifier)
         raise UncertainUpdate("app_job_still_running")
 
     def current(self):
@@ -238,7 +276,7 @@ class Operations:
                       "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--log-driver=none",
                       "--env=DOTENV_CONFIG_PATH=/run/caitlyn-bot/bot.env", "--env=LLM_ENABLED=false", "--env=SOCIAL_MEDIA_ENABLED=true",
                       "--mount=type=bind,source=" + self.config["runtimeRoot"] + "/bot,target=/run/caitlyn-bot,readonly",
-                      "--entrypoint=timeout", image, "-s", "KILL", "40", "node", "/app/scripts/deployment/checkRelease.mjs"], timeout=50)
+                      "--entrypoint=timeout", image, "-s", "KILL", "90", "node", "/app/scripts/deployment/checkRelease.mjs"], timeout=100)
 
     def save(self, state):
         save_private(self.directory / "state.json", state)
@@ -317,8 +355,8 @@ def apply_release(manifest, inventory, config, state, operations):
     except UncertainUpdate:
         logging.error("An app update may still be running; automatic updates are paused for review")
         raise
-    except UpdateError:
-        logging.error("The release did not pass its checks; restoring the previous app and commands")
+    except UpdateError as error:
+        logging.error("The release did not pass its checks (%s); restoring the previous app and commands", error)
         pending["phase"] = "rolling_back"
         operations.save(pending)
         operations.replace(current)

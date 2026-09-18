@@ -7,10 +7,13 @@ import importlib.util
 import hashlib
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 spec = importlib.util.spec_from_file_location("updater", Path(__file__).resolve().parents[1] / "scripts/deployment/autoUpdate.py")
 updater = importlib.util.module_from_spec(spec)
@@ -233,10 +236,70 @@ class UpdaterTests(unittest.TestCase):
         with patch.object(operations, "api", side_effect=updater.UpdateError("command_timeout")):
             with self.assertRaises(updater.UncertainUpdate):
                 operations.job("app.start", "caitlyn")
-        with patch.object(operations, "api", side_effect=[123, [{"state": "FAILED"}]]):
+        with patch.object(operations, "api", side_effect=[123, [{"id": 123, "state": "FAILED"}]]):
             with self.assertRaises(updater.UpdateError) as result:
                 operations.job("app.start", "caitlyn")
             self.assertNotIsInstance(result.exception, updater.UncertainUpdate)
+
+    def test_known_job_status_can_be_retried_without_repeating_the_mutation(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        responses = [123, updater.UpdateError("server_command_exit_1"), [],
+                     [{"id": 999, "state": "SUCCESS"}], [{"id": 123, "state": "SUCCESS"}]]
+        with patch.object(operations, "api", side_effect=responses) as api, patch.object(updater.time, "sleep"):
+            operations.job("app.stop", "caitlyn")
+        self.assertEqual([call.args[0] for call in api.call_args_list], ["app.stop"] + ["core.get_jobs"] * 4)
+        for call in api.call_args_list[1:]:
+            self.assertEqual(call.args[1], [["id", "=", 123]])
+
+    def test_unreadable_job_stops_polling_at_deadline_without_repeating_mutation(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        with patch.object(operations, "api", side_effect=[123, updater.UpdateError("server_command_timed_out")]) as api, \
+                patch.object(updater.time, "monotonic", side_effect=[0, 1, 301]), patch.object(updater.time, "sleep"):
+            with self.assertRaises(updater.UncertainUpdate):
+                operations.job("app.update", "caitlyn", {"custom_compose_config": COMPOSE})
+        self.assertEqual(api.call_count, 2)
+
+    def test_invalid_acknowledgements_are_uncertain_not_safe_to_rollback(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        for response in (None, True, "123", 0, -1, {}):
+            with patch.object(operations, "api", return_value=response) as api:
+                with self.assertRaises(updater.UncertainUpdate):
+                    operations.job("app.start", "caitlyn")
+                self.assertEqual(api.call_count, 1)
+
+    def test_native_api_keeps_large_configuration_off_command_arguments(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        factory = MagicMock()
+        client = factory.return_value.__enter__.return_value
+        client.call.return_value = 123
+        payload = {"custom_compose_config": {"fixture": "private" * 2000}}
+        with patch.dict(sys.modules, {"truenas_api_client": SimpleNamespace(Client=factory)}), \
+                patch.object(updater.subprocess, "run") as command:
+            self.assertEqual(operations.api("app.update", "caitlyn", payload), 123)
+        factory.assert_called_once_with(call_timeout=30)
+        client.call.assert_called_once_with("app.update", "caitlyn", payload)
+        command.assert_not_called()
+
+    def test_native_api_errors_never_include_configuration(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        factory = MagicMock()
+        factory.return_value.__enter__.return_value.call.side_effect = RuntimeError("private configuration")
+        with patch.dict(sys.modules, {"truenas_api_client": SimpleNamespace(Client=factory)}):
+            with self.assertRaisesRegex(updater.UpdateError, "^server_api_failed$"):
+                operations.api("app.query")
+        with patch.dict(sys.modules, {"truenas_api_client": None}):
+            with self.assertRaisesRegex(updater.UpdateError, "^truenas_client_missing$"):
+                operations.api("app.query")
+
+    def test_child_errors_report_only_safe_codes_not_output_or_arguments(self):
+        operations = updater.Operations(CONFIG, Path("/fixture"))
+        errors = [(subprocess.CalledProcessError(1, ["secret"], output=b"private", stderr=b"private"), "server_command_exit_1"),
+                  (subprocess.TimeoutExpired(["secret"], 30, output=b"private"), "server_command_timed_out"),
+                  (FileNotFoundError(2, "private"), "server_command_os_error_2")]
+        for error, expected in errors:
+            with patch.object(updater.subprocess, "run", side_effect=error):
+                with self.assertRaisesRegex(updater.UpdateError, "^" + expected + "$"):
+                    operations.command(["fixture"])
 
     def test_rollback_restarts_an_already_stopped_app_without_stopping_it_twice(self):
         operations = updater.Operations(CONFIG, Path("/fixture"))

@@ -11,6 +11,10 @@ import { pool } from "../../dist/core/createPGPool.js";
 import { getFeatureConfiguration, validateEnvironment } from "../../dist/core/environment.js";
 
 try {
+	// Import the complete entry point before stopping the working bot. Its entry
+	// guard keeps imports inert: no Discord login, handlers or scheduled jobs.
+	const { startBot } = await import("../../dist/main.js");
+	if (typeof startBot !== "function") throw new Error("release_entry_point_missing");
 	validateEnvironment();
 	const features = getFeatureConfiguration();
 	if (!features.database.enabled || !features.socialMedia.enabled || features.ai.enabled

@@ -9,7 +9,7 @@ Pushing to `main` releases the bot and all three media images together. Feature 
 3. It publishes each image to GHCR with the commit SHA, records its immutable digest, and inventories the installed container packages.
 4. Only after every build and inventory succeeds, it publishes a GitHub release named `main-<commit>`. The release has `caitlyn-release.json` and `caitlyn-installations.json` attached. There is no mutable `latest` image in this rollout path.
 5. A TrueNAS cron task checks every five minutes. It accepts only a complete release for the current `main` commit, with the approved database migration fingerprint.
-6. It downloads all four images and checks their revision labels and architecture. A temporary bot-image check verifies database access and required tables without logging into Discord or writing data.
+6. It downloads all four images and checks their revision labels and architecture. A temporary bot-image check imports the full bot entry point, then verifies database access and required tables without starting the bot, logging into Discord or writing data. This check has a 90-second limit and runs while the existing bot is still online.
 7. If the app is still running with the same configuration and the worker is idle, it saves the previous app configuration, stops the app, applies all image IDs, and starts the app again.
 8. It waits for healthy media services and the bot's completed Discord startup, then registers commands in the configured guild. Ordinary restarts do not register commands again. Global commands are not changed by this updater.
 
@@ -25,7 +25,7 @@ Release metadata is read from a **public GitHub repository** without an API toke
 
 ## Server setup
 
-Use the existing Python 3, Docker and `midclt` on TrueNAS. No host pip/npm installation or GitHub runner is needed. The updater is a root-owned script because it controls the selected app through TrueNAS and Docker; its folder and configuration must not be writable by the bot or other users.
+Use the existing Python 3, Docker and TrueNAS API client (the library shipped with `midclt`). No host pip/npm installation or GitHub runner is needed. The updater calls the local TrueNAS socket directly, keeping app configuration out of command-line arguments. The updater is a root-owned script because it controls the selected app through TrueNAS and Docker; its folder and configuration must not be writable by the bot or other users.
 
 Create a dedicated directory outside the container mounts, mode 0700, owned by root. Its parent directories must not be writable or replaceable by unprivileged users. The mainframe uses `/root/.config/caitlyn-release-updater` on its writable root-home dataset, not the apps-owned runtime dataset. Copy `scripts/deployment/autoUpdate.py` there, mode 0600. Add `config.json`, also root-owned mode 0600:
 
@@ -67,7 +67,7 @@ Add `--check` to run the release metadata checks without pulling images, registe
 - Missing images, unexpected repositories, bad hashes, new migrations and failed preflight checks stop the update before the running app is touched.
 - A busy worker defers the update. An app stopped or edited during the download is left alone. Changes in the final short stop/update window still require operator coordination.
 - Failed startup or guild registration triggers restoration of the saved app configuration, readiness checks and old guild command registration. The failed commit is blocked from automatic retries; a new commit can release a fix.
-- If a TrueNAS job's result is unknown, the updater does not start a competing rollback. It leaves its saved state marked unfinished and pauses further updates for inspection. A failed rollback also remains unfinished.
+- The updater logs each TrueNAS job number and checks that same job for up to five minutes. A missed status check is retried; the stop/update/start request itself is never repeated blindly. If its job number or final result is still unknown, the updater does not start a competing rollback. It leaves its saved state marked unfinished and pauses further updates for inspection. A failed rollback also remains unfinished.
 - No database rollback or image/volume pruning is performed. Preserve post-release database writes. Temporary worker leftovers require explicit inspection; the updater never deletes them automatically.
 
 The updater directory contains `updates.log` (1 MiB plus three rotated files), `state.json`, and per-release folders with `previous-compose.json` and `installations.json`. Logs use UTC and short status messages, never raw command output, credentials or media content. These are deployment logs on the server, not automatically forwarded to Discord. Existing bot logs keep their configured private Discord destination.

@@ -54,3 +54,10 @@ test("CI publishes a complete release after four builds and inventories, never m
 	assert.doesNotMatch(workflow, /tags:[^\n]*:latest/);
 	assert.doesNotMatch(workflow, /--working-overlays/);
 });
+
+test("release preflight imports the full bot without calling its startup function", async () => {
+	const source = await readFile("scripts/deployment/checkRelease.mjs", "utf8");
+	assert.match(source, /await import\("\.\.\/\.\.\/dist\/main\.js"\)/);
+	assert.doesNotMatch(source, /startBot\s*\(/);
+	assert.ok(source.indexOf("await import") < source.indexOf("pool.query(\"BEGIN READ ONLY\")"));
+});
