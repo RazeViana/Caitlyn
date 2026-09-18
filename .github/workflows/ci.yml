@@ -1,36 +1,148 @@
-name: Build & push image
+# @file ci.yml
+# @description Checks changes and publishes a complete, immutable main-branch release for the mainframe updater.
+# @module releaseWorkflow
+
+name: Check and release Caitlyn
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: caitlyn-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-
       - name: Install dependencies
         run: npm ci
-
       - name: Check TypeScript application
         run: npm run check
 
-      - name: Log in to GHCR
-        run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+  release:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Build & push
+      - name: Prepare exact committed build contexts
+        id: contexts
+        shell: bash
+        run: |
+          bundle=$(node scripts/deployment/prepareBundle.mjs "$GITHUB_SHA")
+          echo "bundle=$bundle" >> "$GITHUB_OUTPUT"
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        env:
+          REGISTRY_TOKEN: ${{ secrets.CR_PAT }}
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish bot
+        id: bot
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: ${{ steps.contexts.outputs.bundle }}/source
+          file: ${{ steps.contexts.outputs.bundle }}/source/scripts/deployment/Dockerfile
+          target: bot
+          platforms: linux/amd64
           push: true
-          tags: |
-            ghcr.io/razeviana/caitlyn:latest
-            ghcr.io/razeviana/caitlyn:${{ github.sha }}
+          tags: ${{ steps.contexts.outputs.registry }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=bot
+          cache-to: type=gha,mode=max,scope=bot
+
+      - name: Publish broker
+        id: broker
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ steps.contexts.outputs.bundle }}/source
+          file: ${{ steps.contexts.outputs.bundle }}/source/scripts/deployment/Dockerfile
+          target: broker
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.contexts.outputs.registry }}-broker:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=bot
+
+      - name: Publish FxEmbed
+        id: fxembed
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ steps.contexts.outputs.bundle }}/fxembed
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.contexts.outputs.registry }}-fxembed:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=fxembed
+          cache-to: type=gha,mode=max,scope=fxembed
+
+      - name: Publish media worker
+        id: media
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ steps.contexts.outputs.bundle }}/media
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.contexts.outputs.registry }}-media:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=media
+          cache-to: type=gha,mode=max,scope=media
+
+      - name: Record installed container packages and release digests
+        env:
+          REGISTRY: ${{ steps.contexts.outputs.registry }}
+          BOT_DIGEST: ${{ steps.bot.outputs.digest }}
+          BROKER_DIGEST: ${{ steps.broker.outputs.digest }}
+          FXEMBED_DIGEST: ${{ steps.fxembed.outputs.digest }}
+          MEDIA_DIGEST: ${{ steps.media.outputs.digest }}
+        shell: bash
+        run: |
+          mkdir release
+          for role in bot broker fxembed media; do
+            variable="${role^^}_DIGEST"
+            suffix="-$role"
+            if [ "$role" = bot ]; then suffix=""; fi
+            image="$REGISTRY$suffix@${!variable}"
+            docker pull "$image"
+            docker run --rm -i --network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges --memory=512m --pids-limit=64 --entrypoint node "$image" --input-type=module < scripts/deployment/imageInventory.mjs > "release/$role-inventory.json"
+          done
+          node scripts/deployment/releaseManifest.mjs
+
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "main-$GITHUB_SHA" release/caitlyn-release.json release/caitlyn-installations.json \
+            --target "$GITHUB_SHA" --title "Caitlyn ${GITHUB_SHA:0:12}" --latest \
+            --notes "Main-branch release: bot, broker, FxEmbed and media worker. Exact image digests and installed package versions are attached. The mainframe applies this set together after its database and service checks."

@@ -90,7 +90,7 @@ Run SQL migrations in filename order with the source-time migration runner:
 npx tsx scripts/runMigration.ts <migration_file.sql>
 ```
 
-A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. Migrations `001` through `012` are documented in the [project README](../README.md#database-migrations). Migration `009` matches the legacy birthday table and is safe when that table already exists. Migration `010` adds the unique Discord-ID index required by upserts and stops rather than deleting duplicate birthdays. Migrations `011`/`012` persist private logging settings, exact type selection, and the main-server reservation. Historical migrations `001` through `008` remain unchanged.
+A migration filename resolves from the repository's `migrations/` directory even if the command is launched with a different working directory. The migration sequence is in the [setup guide](setup.md#database). Migration `009` matches the legacy birthday table and is safe when that table already exists. Migration `010` adds the unique Discord-ID index required by upserts and stops rather than deleting duplicate birthdays. Migrations `011`/`012` persist private logging settings, exact type selection, and the main-server reservation. Historical migrations `001` through `008` remain unchanged.
 
 The runner does not track applied migrations. Run the full sequence only on a new database; on restored databases, apply only missing migrations. In particular, replaying `002` replaces the embedding column and its data.
 
@@ -108,7 +108,7 @@ For private channel setup, owner-only `/logs levels`, delivery limits, and comma
 
 [Birthday recovery](birthday-recovery.md) adds migration `013`, startup/five-minute checks, unique occurrence reservations, and conservative delivery reconciliation. Test sends must use injected Discord substitutes, not the live bot. The PostgreSQL suite checks batching, concurrent reservations/claims, persisted backoff, rollback, and migration replay without modifying stored birthday dates. Keep its delivery bookkeeping and short database transactions separate from Discord requests.
 
-[Social delivery](social-delivery.md) adds migration `014`, a local Unix worker transport, durable X preview jobs, and administrator channel opt-ins. Both the master switch and new channels default off. The ordinary suite uses synthetic worker/Discord substitutes; the disposable PostgreSQL suite checks settings, replay, concurrency, lease fencing, cancellation, and uncertainty transitions. Local real media checks use the existing dedicated image without logging in to Discord. Broker scripts remain source-time tooling, not part of the compiled bot image.
+[Social delivery](social-delivery.md) adds migration `014`, a local Unix worker transport, durable X preview jobs, and administrator channel opt-ins. Both the master switch and new channels default off. The ordinary suite uses synthetic worker/Discord substitutes; the disposable PostgreSQL suite checks settings, replay, concurrency, lease fencing, cancellation, and uncertainty transitions. Local real media checks use the existing dedicated image without logging in to Discord. The production broker is compiled separately using `scripts/deployment/tsconfig.json` and starts in its own container.
 
 Apply migration `015` before running the updated voice tracker. It preserves ambiguous open voice history behind `needs_reconciliation` and adds a partial unique index for future active sessions. Never infer historical leave times or credit quarantined durations. The disposable PostgreSQL suite verifies replay, preservation, cross-guild separation, and concurrent new sessions; see [resilience](resilience.md#database-rollout).
 
@@ -122,3 +122,5 @@ Create future feature branches from `caitlyn-3.0`. The integration branch was re
 Do not target or update `main` without an explicit release decision because pushes to `main` deploy to the homeserver.
 
 Keep new commits on `caitlyn-3.0` local unless a separate instruction explicitly authorizes publishing them. Renaming the GitHub branch did not push the local feature commits. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. This branch rename does not change package versions or deployment targets.
+
+The current [release workflow](automatic-deployment.md) checks the source, builds all four images and publishes a complete release before the mainframe updater acts. Never build releases with the local `--working-overlays` option or accidentally stage parked feature files. Keep database migrations under separate review; a changed migration fingerprint pauses automatic server updates.

@@ -1,0 +1,17 @@
+# @file Dockerfile.media
+# @description Bootstraps the pinned media extractor and verified gateway on an AMD64 production host.
+# @module deploymentMediaContainer
+
+FROM node:24-alpine@sha256:83f1c388c31fb2e51f7cbd4dea949b96260798c98f206e8e4696bc93bd964e3a
+RUN apk add --no-cache python3 py3-pip ffmpeg \
+    && python3 -m venv /opt/extractor
+COPY requirements.txt /opt/requirements.txt
+RUN /opt/extractor/bin/pip install --no-cache-dir --require-hashes -r /opt/requirements.txt \
+    && mkdir /ipc && chown node:node /ipc
+COPY --chmod=644 gateway.ts worker.ts xPostWorker.ts xMetadata.py socialXPost.ts socialFxPost.ts tikTokPostWorker.ts tikTokMedia.py socialTikTokPost.ts instagramPostWorker.ts instagramMedia.py socialInstagramPost.ts videoCompression.ts videoDelivery.ts /opt/probe/
+RUN chmod 755 /opt/probe
+USER node
+RUN node --input-type=module -e "await import('/opt/probe/worker.ts')" \
+    && /opt/extractor/bin/python -B -c "import sys; sys.path.insert(0, '/opt/probe'); import instagramMedia"
+WORKDIR /tmp
+CMD ["node", "/opt/probe/worker.ts"]

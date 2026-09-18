@@ -102,6 +102,9 @@
     ✔ Persist source cleanup intent with migration 016; verify self-delete and uncertain-delete recovery without losing previews
     ☐ Complete manual Discord command retest and preview/playback/edit/delete checks after fixes
     ☐ Complete remaining platform adapters and production deployment/service configuration before full replacement rollout
+    ✔ Deploy published X/TikTok/Instagram and logging code on mainframe with protected restart credentials; preserve and verify original database
+    ☐ Choose/copy logging and social channel settings for the original mainframe database, then perform owner Discord acceptance checks
+    ☐ Tune long-video compression on mainframe; investigate temporary worker-volume cleanup timing under load
 
 ☐ Add personality to the bot
     ☐ Commissioned banner

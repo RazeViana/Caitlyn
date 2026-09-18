@@ -1,0 +1,22 @@
+# @file Dockerfile.fxembed
+# @description Builds the pinned FxEmbed source with an AMD64 base and private restart-safe configuration.
+# @module deploymentFxEmbedContainer
+
+FROM node:24.19.0-bookworm-slim@sha256:e5a8dee7bc1e6a215d224a7ef8206f7e77271bc3cabd5febf2beafac0674f174
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/atmosphere/package.json ./packages/atmosphere/package.json
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY src ./src
+COPY i18n ./i18n
+COPY packages/atmosphere ./packages/atmosphere
+COPY branding.example.json entry.mjs service.mjs bootstrap.mjs healthcheck.mjs build.mjs wrangler.toml LICENSE ./
+RUN npm run build:atmosphere && node build.mjs
+# Git archives and private staging directories may carry restrictive host modes.
+# These are public source files; runtime secret mounts keep their separate 0600/0700 permissions.
+RUN chmod 644 package.json package-lock.json branding.example.json branding.json entry.mjs service.mjs bootstrap.mjs healthcheck.mjs build.mjs wrangler.toml LICENSE packages/atmosphere/package.json \
+    && chmod 755 packages packages/atmosphere
+ENV SSL_CERT_FILE=/app/ca-certificates.pem WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=/tmp/wrangler.log XDG_CONFIG_HOME=/tmp/config
+USER node
+RUN node --input-type=module -e "await import('./bootstrap.mjs'); await import('./service.mjs')"
+CMD ["node", "/app/bootstrap.mjs"]

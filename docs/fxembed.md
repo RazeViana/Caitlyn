@@ -14,6 +14,10 @@ The former VX-derived Python extractor, request profiles, session-file loader, V
 
 Metadata-only requests stop after step 3. FxEmbed's web pages, other platform routes, redirects, search, profiles and public API hosting are deliberately not exposed by the local wrapper. This is the X slice of Caitlyn's replacement; TikTok/Reddit/Instagram adapters remain separate work. Polls, articles, rich cards, oversized media and nested quotes are still marked partial where Caitlyn cannot fully render them.
 
+## Mainframe production deployment
+
+The AMD64 TrueNAS deployment uses protected file-mounted X configuration that is loaded on every container start, with no interactive 1Password session. See [mainframe deployment and recovery](mainframe-deployment.md) and [the exact installed container packages](mainframe-installations.md). The local Mac instructions below remain a separate test setup; never start a second bot with the production token.
+
 ## Build and start
 
 Existing Node 24/tsx and a local Docker engine are required. No Cloudflare account, deployment, login, account cookie, paid API or new slash command is needed for public-post testing. These commands install dependencies only inside the FxEmbed image, not into the bot project or macOS:
@@ -40,7 +44,7 @@ LOG_LEVEL=INFO node --import tsx scripts/socialWorker/server.ts
 
 The socket directory must already be owned by the operator, mode 0700. The bot uses the same socket with `SOCIAL_MEDIA_ENABLED=true`, plus existing guild/channel opt-in. AI remains disabled by default. Keep the homeserver bot inactive while using the same token on the Mac.
 
-Backend health: `GET http://127.0.0.1:8787/__caitlyn/health` checks local runtime/cache access only, not X access. Broker health is separately documented in [the private API guide](self-hosted-media-api.md). No autostart or cloud deployment is configured.
+Backend health: `GET http://127.0.0.1:8787/__caitlyn/health` checks local runtime/cache access only, not X access. Broker health is separately documented in [the private API guide](self-hosted-media-api.md). This local launcher does not configure autostart; mainframe supervision is documented above.
 
 ## Local compatibility and privacy
 

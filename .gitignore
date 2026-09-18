@@ -26,6 +26,8 @@ Thumbs.db
 # Build files
 dist/
 build/
+__pycache__/
+*.pyc
 
 # Test files
 dbtest.js
