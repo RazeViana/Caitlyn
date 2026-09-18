@@ -30,6 +30,20 @@ The selected types persist across restarts. A change clears the old queued outpu
 
 Console `LOG_LEVEL` remains independent. You can show debug logs in Discord while the console stays at INFO or ERROR, without editing `.env` or restarting the bot. Error stacks and timestamps come from the same application logger.
 
+## Activity and data logging
+
+Routine collection details use DEBUG: message receipt/counting, voice sessions and counted time, AI memory operations, social metadata and command handling. Birthday and setting changes use INFO. Logs say whether data was received, read or successfully saved; they do not include message text or birth dates. See [coverage, privacy and examples](data-logging.md). Enable DEBUG alongside the other selected levels with `/logs levels types:all` in the private logging channel. Console settings remain separate.
+
+## Log wording
+
+Use simple words in application log messages: explain what happened, what Caitlyn will do next, and whether the owner needs to act. For example:
+
+- “Found the social preview already in Discord; no second copy sent” instead of “delivery reconciled”.
+- “Discord connection interrupted; trying to reconnect” instead of “gateway interrupted; awaiting library recovery”.
+- “Could not confirm whether parts of the log were sent” when Discord may have received them; do not call them lost or promise to resend them.
+
+Long log entries can be split into several parts to fit Discord's message limit, so missing-log counts refer to **parts of the log**, not whole entries. Keep useful IDs, error codes, durations and raw error details for troubleshooting, but give them a plain-language explanation. Internal database fields and status codes keep their existing names. This wording pass covers connection handling, private log delivery, birthday checks, social previews and conflicting voice-session records; third-party error text may still use technical terms.
+
 ## Privacy and ownership
 
 Only one main-server destination is allowed. Ordinary server administrators cannot configure logging, inspect the destination, or change the selected types. Ownership is checked through Discord's live application metadata, not a hard-coded user ID. Runtime checks protect the commands even if a stale command registration exists elsewhere.
@@ -40,12 +54,22 @@ The channel must be hidden from `@everyone`; this is checked during setup and be
 
 - Discord uses the saved type selection; console output still uses `LOG_LEVEL`. Timestamps, severity labels, message formatting, and error stack traces originate from the same logger.
 - Discord copies strip terminal colors, neutralize code fences, suppress embeds and mentions, and redact configured token/password/API-key values, bearer credentials, and URL user information. Redaction is a safeguard, not a guarantee that arbitrary log content is safe to publish.
-- The subscription begins after Discord client creation. Up to 100 startup records are buffered until settings first load. Very early validation/client-creation failures, direct third-party stdout/stderr, standalone operational-script output, and the forwarder's own diagnostic warnings remain console-only. Birthday-job failures are explicitly sent through the application logger as well as observed by the scheduler.
-- Messages are batched every two seconds, below Discord's 2,000-character limit, with no overlapping send for the destination. Discord.js handles API rate limits. At most 200 queued chunks are retained; older chunks are discarded on overflow. An omission warning accompanies later delivery if warning output is enabled. Individual log records are capped at 16,000 characters in Discord with an ellipsis.
-- Missing channels, revoked permissions, a now-public console destination, failed API requests, and timeouts preserve console logging. Delivery waits at most ten seconds before backing off for thirty seconds. An unresolved send remains marked in-flight so more sends cannot accumulate behind it. Failed batches are not blindly retried because delivery may be uncertain.
-- Destination changes discard its old queued output. Disabling during channel lookup cancels that pending send; a request already accepted by Discord cannot be recalled.
+- The subscription begins after Discord client creation. Up to 100 startup records are buffered until settings first load. Very early validation/client-creation failures, unadapted third-party stdout/stderr, standalone operational-script output, and the forwarder's own diagnostic warnings remain console-only. Birthday scheduler diagnostics now use the application logger; reminder failures remain observed by the scheduler without being logged twice.
+- Messages are batched every two seconds, below Discord's 2,000-character limit, with no overlapping send for the destination. Discord.js handles API rate limits. At most 200 waiting chunks plus one frozen batch (under 1,900 content characters) are retained in memory; older waiting chunks are discarded on overflow. Individual log records remain capped at 16,000 characters with an ellipsis.
+- Failures **before message creation** (including channel/permission lookup) retain the complete frozen batch and nonce. Definitive rate-limit rejections may retry too. Backoff is 30/60/120/240 seconds, at most five attempts, with a 15-minute retention limit for retryable batches. Privacy and current destination settings are rechecked for each attempt. Other definitive API 4xx rejections retire the batch; 408/network/5xx outcomes are treated conservatively as unconfirmed.
+- The ten-second confirmation deadline does not cancel the underlying request or authorize a retry. An unresolved send remains in flight without overlap. Late success is acknowledged without reporting false loss; late rejection is classified before any retry. Ambiguous POST outcomes are **not** automatically replayed. All attempts use a stable nonce and Discord's `enforceNonce`, but uncertain replay safety does not depend on Discord retaining that nonce indefinitely.
+- Later warnings distinguish exact counts of queue-overflow chunks, definitively undelivered chunks, and unconfirmed chunks. A six-chunk failed batch is no longer reported as one lost chunk. Notices obey the selected WARN level; recovery confirmations obey SUCCESS. Internal diagnostics contain closed outcomes/counts, not raw transport errors or credentials.
+- Destination/level changes discard old queued and retryable output. Disabling or replacing a destination during channel lookup fences that pending send; late completion callbacks cannot change the new destination's state. A request already accepted by Discord cannot be recalled.
 - A database outage after initialization keeps cached destinations working. Startup configuration failures fall back to console logging and retry loading settings every minute. No automatic schema creation happens during bot startup.
 - Shutdown stops subscriptions and timers and attempts one final batch before Discord disconnects, within the existing lifecycle deadlines. Delivery is best-effort, not a durable log archive; crashes, outages, startup-buffer overflow, and a final backlog can omit Discord copies. Console output remains available at its independently configured level.
+
+## Gateway and scheduled recovery
+
+- Known handshake/network interruptions use grouped WARN messages (at most one per minute per gateway shard), with reconnect-attempt details at DEBUG. Unknown errors remain ERROR. Each continuing outage escalates once after five minutes; an unrecoverable gateway close reports its code and the need for operator action immediately.
+- A successful resume or fresh ready event logs one SUCCESS with outage duration, attempts and failure count. Initial healthy readiness does not produce a misleading recovery message. Timers/listeners are removed when the client is destroyed. Discord.js remains responsible for reconnection; Caitlyn does not start a competing login/reconnect loop.
+- Login and actual `clientReady` now share a 30-second startup deadline. Jobs start only after readiness, eliminating the observed initial birthday-check skip. A timeout/rejection removes the temporary listener and propagates to existing startup cleanup.
+- Birthday missed-execution events coalesce into one current-day check. If Discord is disconnected or another check is active, recovery waits for readiness/completion. It retains the existing same-day cutoff, durable claims and duplicate protection; yesterday's birthdays are not replayed. Shutdown removes deferred work and listeners. Delay diagnostics do not assume CPU overload or sleep without evidence.
+- The owner's September 15/16 handshake timeouts coincided exactly with macOS background wakes (22:12:08 and 11:33:20 Amsterdam time). Sleep-related network interruption is the likely trigger; a sleeping laptop cannot provide continuous bot availability. These changes improve handling/visibility, not the host's availability.
 
 ## Database and command rollout
 
@@ -80,6 +104,6 @@ This feature keeps **logging private to the main server**; it does not migrate e
 
 ## Verification
 
-`tests/discordLogging.test.js` covers ownership, main-server/channel restrictions, private command publication, exact level selection, redaction, buffering, failures, and lifecycle cleanup. `tests/logger.test.js` verifies independent Discord/console filtering. `tests/databaseMigrations.test.js` verifies persistence, migration replay, channel-bound level updates, and the disabled main-server reservation in a disposable PostgreSQL database.
+`tests/discordLogging.test.js` covers ownership, main-server/channel restrictions, private command publication, exact level selection, redaction, transport classification and lifecycle cleanup. `tests/discordLogRecovery.test.js` covers six-chunk failure accounting, backoff/exhaustion/expiry, uncertainty, late acknowledgement, overflow and stale destinations. `tests/discordRecovery.test.js` covers gateway diagnostics and startup readiness; `tests/birthdayScheduleRecovery.test.js` covers missed-tick coalescing and scheduler logging. `tests/logger.test.js` verifies independent Discord/console filtering. `tests/databaseMigrations.test.js` verifies persistence and migration behavior in a disposable PostgreSQL database.
 
 No live Discord login, command publication, channel setup, or homeserver deployment was performed while developing this feature.

@@ -9,6 +9,7 @@
 import "./loadEnvironment.js";
 
 import logger from "./logger.js";
+import { dataErrorReason, logData } from "./dataLog.js";
 import type { ChatMessage, OpenWebUIResponse } from "../types/models.js";
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
@@ -60,7 +61,7 @@ async function chat(
 	}
 
 	if (!messages.length) throw new Error("Chat requires at least one message");
-	logger.debug("Sending request to Open WebUI");
+	logData("Sending messages to the AI service; text is not included in logs", { count: messages.length });
 
 	try {
 		const response = await dependencies.fetch(WEBUI_CHAT_ENDPOINT, {
@@ -88,12 +89,12 @@ async function chat(
 
 		const reply = data.choices[0].message.content.replace(/^caitlyn:\s*/i, "").trim();
 		if (!reply) throw new Error("Open WebUI returned an empty reply");
-		logger.debug("Received response from Open WebUI");
+		logData("Received a reply from the AI service; text is not included in logs", { characters: reply.length });
 
 		return reply;
 	}
 	catch (error) {
-		logger.error("Error communicating with Open WebUI:", error);
+		logData("Could not get a reply from the AI service", { reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }

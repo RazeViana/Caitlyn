@@ -11,6 +11,7 @@ import { socialDeliveryStore } from "../../core/socialDeliveryStore.js";
 import { socialRuntimes } from "../../core/socialRuntime.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 
 export const category = "utility";
 export const requiresDatabase = true;
@@ -46,7 +47,8 @@ export async function execute(interaction: ChatInputCommandInteraction, store = 
 			return;
 		}
 		await store.configure(interaction.guildId, action === "disable-server" ? null : interaction.channelId!, action === "enable");
-		logger.info("Social preview configuration updated", action, interaction.channelId);
+		logData("Saved social preview settings", { server: interaction.guildId, channel: action === "disable-server" ? null : interaction.channelId,
+			actor: interaction.user?.id, action, enabled: action === "enable", fields: "server ID, channel ID, preview setting" }, logger.info);
 		await interaction.editReply(action === "enable" ? "X, TikTok and Instagram previews enabled here. Complete replacements mention the sender and remove the original (requires Manage Messages). Failed/partial previews, unsupported posts, or extra source attachments keep the original."
 			: "New previews disabled and pending jobs cancelled. Existing completed previews are left in place.");
 	}

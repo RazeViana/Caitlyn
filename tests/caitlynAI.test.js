@@ -227,5 +227,8 @@ test("AI errors send the existing user-facing fallback", async () => {
 	assert.deepEqual(sentMessages, [
 		"Sorry, I encountered an error processing your message. Please try again.",
 	]);
-	assert.deepEqual(loggedErrors, [["Error processing AI message:", failure]]);
+	assert.equal(loggedErrors.length, 1);
+	assert.equal(loggedErrors[0][0], "Could not finish the AI reply");
+	assert.match(loggedErrors[0][1], /channel: "channel-id".*user: "user-id".*message: "message-id"/);
+	assert.ok(!loggedErrors.flat().includes(failure));
 });

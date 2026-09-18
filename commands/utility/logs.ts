@@ -13,6 +13,7 @@ import { isBotOperator } from "../../core/operatorAccess.js";
 import { describeLogTypes, parseLogTypes } from "../../core/logLevels.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 
 export const category = "utility";
 export const requiresDatabase = true;
@@ -58,6 +59,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		}
 		const saved = await guildSettings.setLevels(interaction.guildId, interaction.channelId, levels, true);
 		logForwarders.get(interaction.client)?.update(saved);
+		logData("Saved the selected Discord log types", { server: interaction.guildId, channel: interaction.channelId,
+			actor: interaction.user.id, levels: describeLogTypes(saved.log_levels) }, logger.info);
 		await interaction.editReply(`Showing: ${describeLogTypes(saved.log_levels)}. Saved for future restarts; console LOG_LEVEL is unchanged.`);
 	}
 	catch (error) {

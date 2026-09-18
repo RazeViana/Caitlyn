@@ -14,6 +14,7 @@ import {
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 
 interface BirthdayQueryResult {
@@ -50,6 +51,10 @@ export async function execute(
 		const result = await dependencies.query(
 			"DELETE FROM discord.birthdays WHERE discord_id = $1 RETURNING discord_id", [user.id],
 		);
+		logData(result.rows.length ? "Deleted saved birthday details" : "No saved birthday found to delete", {
+			server: interaction.guildId, user: user.id, username: user.username, actor: interaction.user?.id,
+			count: result.rows.length, fields: "user ID, username, date of birth",
+		}, result.rows.length ? logger.info : logger.debug);
 		await interaction.editReply({
 			content: result.rows.length
 				? `Birthday reminder for ${userMention(user.id)} has been deleted.`

@@ -12,6 +12,7 @@ import { logChannel, logForwarders } from "../../core/discordLogForwarder.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { withTimeout } from "../../core/asyncTools.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 import { isBotOperator } from "../../core/operatorAccess.js";
 import { describeLogTypes } from "../../core/logLevels.js";
 
@@ -64,7 +65,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		if (action !== "logs" && action !== "disable") throw new Error("Unknown setup action");
 		const settings = await guildSettings.save(interaction.guildId, channelId, true);
 		logForwarders.get(interaction.client)?.update(settings);
-		logger.info(action === "disable" ? "Private Discord logging disabled" : "Private main-server logging configured");
+		logData(action === "disable" ? "Private Discord logging turned off" : "Saved private Discord logging settings", {
+			server: interaction.guildId, channel: channelId, actor: interaction.user.id,
+			fields: "main server ID, log channel ID, selected log types", levels: describeLogTypes(settings.log_levels),
+		}, logger.info);
 		await interaction.editReply(channelId
 			? `Logs will be sent only to <#${channelId}> in this main server. Showing: ${describeLogTypes(settings.log_levels)}. Run /logs levels in that channel to choose what appears. Keep access limited to trusted staff.`
 			: "Discord forwarding is disabled. This main server remains reserved; other servers cannot enable logging. Console logging continues.");

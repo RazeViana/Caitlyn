@@ -21,6 +21,7 @@ process.env.PGUSER = "dummy_user";
 
 const { pool } = await import("../core/createPGPool.ts");
 const { default: logger } = await import("../core/logger.ts");
+const { subscribeLogs } = await import("../core/logger.ts");
 const { clearOldMessages, getConversationContext, storeMessage } = await import("../core/messageStore.ts");
 
 const originalPoolQuery = pool.query.bind(pool);
@@ -121,6 +122,26 @@ test("old-message cleanup preserves its exact SQL, arguments, default, and row-c
 	assert.equal(logs.length, 2);
 	assert.equal(logs[0], "Cleared 7 old messages from channel default-channel");
 	assert.equal(logs[1], "Cleared 0 old messages from channel custom-channel");
+});
+
+test("AI memory records saved fields and counts without text, vectors or failed-save claims", async (context) => {
+	const records = [];
+	context.after(subscribeLogs((record) => records.push(record)));
+	context.mock.method(console, "log", () => undefined);
+	context.mock.method(console, "error", () => undefined);
+	const input = { channelId: "222", messageId: "333", userId: "444", username: "Fixture", role: "user", content: "PRIVATE_STORED_TEXT" };
+	pool.query = async () => ({ rows: [{ id: 42 }] });
+	await storeMessage(input);
+	const saved = records.find((record) => record.message.startsWith("Saved message to AI memory"));
+	assert.equal(saved.level, "DEBUG");
+	assert.match(saved.message, /channel: "222".*user: "444".*message: "333".*saved record: 42/);
+	assert.ok(records.some((record) => record.message.includes("count: 768")));
+	assert.ok(records.every((record) => !record.message.includes(input.content) && !record.message.includes(vectorString)));
+	const previous = records.length;
+	pool.query = async () => { throw new Error(`Database rejected PRIVATE_STORED_TEXT ${vectorString}`); };
+	await assert.rejects(storeMessage(input));
+	assert.ok(!records.slice(previous).some((record) => record.message.startsWith("Saved message to AI memory")));
+	assert.ok(records.every((record) => !record.message.includes(input.content) && !record.message.includes(vectorString)));
 });
 
 test("old-message cleanup logs and rethrows the database error", async () => {

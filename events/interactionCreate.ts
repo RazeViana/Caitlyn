@@ -13,6 +13,7 @@ import { Collection, Events, PermissionFlagsBits, type Interaction } from "disco
 import logger from "../core/logger.js";
 import { respondWithError, skipUnavailableInteraction } from "../core/interactionResponse.js";
 import { getFeatureConfiguration } from "../core/environment.js";
+import { logData } from "../core/dataLog.js";
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction: Interaction): Promise<unknown> {
@@ -38,6 +39,9 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 	// Check if the interaction is a command
 	if (!interaction.isChatInputCommand()) return;
 	if (skipUnavailableInteraction(interaction)) return;
+	const details = { server: interaction.guildId, channel: interaction.channelId, user: interaction.user?.id,
+		username: interaction.user?.username, command: interaction.commandName };
+	logData("Received a command; option values are not included in logs", details);
 	if (["reload", "toggleai", "setup", "logs"].includes(interaction.commandName)
 		&& !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
 		await respondWithError(interaction, "Only server administrators can use this command.");
@@ -98,6 +102,8 @@ export async function execute(interaction: Interaction): Promise<unknown> {
 	// Try to execute the command
 	try {
 		await command.execute(interaction);
+		// A handler can return after a refusal or a handled error: do not claim the feature succeeded here.
+		logData("Finished handling the command", details);
 	}
 	catch (error) {
 		if (skipUnavailableInteraction(interaction, error)) return;

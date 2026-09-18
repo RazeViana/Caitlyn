@@ -9,6 +9,7 @@
  */
 
 import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
+import { logData } from "../../core/dataLog.js";
 
 export const cooldown = 5;
 export const category = "utility";
@@ -20,4 +21,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	await interaction.reply(
 		`This server is ${interaction.guild!.name} and has ${interaction.guild!.memberCount} members.`,
 	);
+	logData("Displayed Discord server details; no new database record created", {
+		server: interaction.guildId, actor: interaction.user?.id, count: interaction.guild!.memberCount, fields: "server name, member count",
+	});
 }

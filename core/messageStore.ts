@@ -9,6 +9,7 @@
 import { pool } from "./createPGPool.js";
 import { generateEmbedding } from "./embeddingService.js";
 import logger from "./logger.js";
+import { dataErrorReason, logData } from "./dataLog.js";
 import type { MessageContext, StoredMessage } from "../types/models.js";
 
 export interface StoreMessageInput {
@@ -79,12 +80,15 @@ async function storeMessage({
 		const result = await pool.query<{ id: number }>(query, values);
 
 		const id = result.rows[0].id;
-		logger.debug(`Stored message ${content.substring(0, 20)} from ${username}`);
+		logData("Saved message to AI memory; text and search numbers are not included in logs", {
+			channel: channelId, message: messageId, user: userId, username, role, record: id, characters: content.length,
+			fields: "channel ID, message ID, user ID, username, role, text, search numbers",
+		});
 
 		return id;
 	}
 	catch (error) {
-		logger.error("Error storing message:", error);
+		logData("Could not save the message to AI memory", { channel: channelId, user: userId, message: messageId, reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }
@@ -114,11 +118,11 @@ async function searchSimilarMessages({
 			[vectorString, channelId, threshold, limit],
 		);
 
-		logger.debug(`Found ${result.rows.length} similar messages`);
+		logData("Read similar messages from AI memory; text is not included in logs", { channel: channelId, count: result.rows.length });
 		return result.rows;
 	}
 	catch (error) {
-		logger.error("Error searching similar messages:", error);
+		logData("Could not search AI memory for similar messages", { channel: channelId, reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }
@@ -139,11 +143,11 @@ async function getRecentMessages(
 			[channelId, limit],
 		);
 
-		logger.debug(`Retrieved ${result.rows.length} recent messages`);
+		logData("Read recent messages from AI memory; text is not included in logs", { channel: channelId, count: result.rows.length });
 		return result.rows;
 	}
 	catch (error) {
-		logger.error("Error getting recent messages:", error);
+		logData("Could not read recent messages from AI memory", { channel: channelId, reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }
@@ -196,11 +200,11 @@ async function getConversationContext({
 			(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
 		);
 
-		logger.debug(`Built context with ${context.length} messages`);
+		logData("Selected saved messages to help with the AI reply", { channel: channelId, count: context.length });
 		return context;
 	}
 	catch (error) {
-		logger.error("Error getting conversation context:", error);
+		logData("Could not prepare saved messages for the AI reply", { channel: channelId, reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }

@@ -46,7 +46,7 @@ test("idle queue polling logs at most once every five minutes", async () => {
 	assert.equal(f.logs.length, 1);
 	await f.runtime.tick();
 	assert.equal(f.logs.length, 2);
-	assert.equal(f.logs[0][2], "Social queue idle");
+	assert.equal(f.logs[0][2], "No social posts waiting to be processed");
 });
 
 test("render diagnostics stay guild-scoped and content-free, including incomplete text-only cards", async () => {
@@ -55,10 +55,14 @@ test("render diagnostics stay guild-scoped and content-free, including incomplet
 		f.result.post.text = "private caption content";
 		f.result.post.textComplete = textComplete;
 		await f.runtime.tick();
-		assert.deepEqual(f.logs.find((entry) => entry[2] === "Social preview rendered"),
-			["debug", "111", "Social preview rendered", f.job.id, "embeds=1", "files=0", "text_attachment=false", `complete=${textComplete}`]);
+		assert.deepEqual(f.logs.find((entry) => entry[2] === "Social preview prepared"),
+			["debug", "111", "Social preview prepared", f.job.id, "cards: 1", "files: 0", "text saved in a file: false", `complete: ${textComplete}`]);
 		assert.ok(!JSON.stringify(f.logs).includes(f.result.post.text));
-		assert.equal(f.logs.some((entry) => entry[2] === "Social preview is partial"), !textComplete);
+		const collected = f.logs.find((entry) => entry[2].startsWith("Collected social post details"));
+		assert.deepEqual(collected.slice(0, 2), ["debug", "111"]);
+		assert.match(collected[3], /channel: "222".*user: "444".*message: "333"/);
+		assert.match(collected[3], /images: 0.*videos: 0.*files: 0.*media bytes: 0/);
+		assert.equal(f.logs.some((entry) => entry[2] === "Social preview is missing some content; original message will be kept"), !textComplete);
 		assert.equal(f.calls.find(([name]) => name === "beginSend")[2], textComplete);
 		const payload = f.calls.find(([name]) => name === "send")[2];
 		assert.equal(payload.embeds[0].footer.text, "Caitlyn preview");
@@ -94,8 +98,8 @@ test("compressed-video diagnostics remain guild-scoped and only complete preview
 			f.result.mediaFailures = ["compression_incomplete"];
 		}
 		await f.runtime.tick();
-		assert.deepEqual(f.logs.find((entry) => entry[2] === "Social video compressed to upload budget"),
-			["info", "111", "Social video compressed to upload budget", f.job.id]);
+		assert.deepEqual(f.logs.find((entry) => entry[2] === "Video made smaller to fit Discord's upload limit"),
+			["info", "111", "Video made smaller to fit Discord's upload limit", f.job.id]);
 		assert.ok(!JSON.stringify(f.logs).includes(f.result.post.text));
 		assert.ok(!JSON.stringify(f.logs).includes("https://"));
 		assert.equal(f.calls.find(([name]) => name === "beginSend")[2], complete);
@@ -128,7 +132,7 @@ test("TikTok sends only after canonical alias resolution and reuses confirmed si
 		assert.equal(f.calls.some(([name]) => name === "beginSend"), resolution === "send");
 		if (resolution === "send") assert.equal(f.calls.find(([name]) => name === "beginSend")[2], false);
 		if (resolution === "blocked") assert.deepEqual(f.finished().at(-1), ["failed", "duplicate_unconfirmed"]);
-		assert.ok(f.logs.some((entry) => entry.includes("mode=tiktok")));
+		assert.ok(f.logs.some((entry) => entry.includes("TikTok")));
 	}
 });
 
@@ -138,9 +142,9 @@ test("provider selection is logged privately using only trusted modes on success
 			const f = fixture();
 			f.dependencies.worker = async () => failed ? { outcome: "restricted", provider } : { ...f.result, provider };
 			await f.runtime.tick();
-			const mode = f.logs.find((entry) => entry[2] === "Social extraction provider mode");
+			const mode = f.logs.find((entry) => entry[2] === "Social post checked using");
 			if (provider === "fxembed") {
-				assert.deepEqual(mode, ["info", "111", "Social extraction provider mode", f.job.id, `mode=${provider}`]);
+				assert.deepEqual(mode, ["info", "111", "Social post checked using", f.job.id, "FxEmbed (X posts)"]);
 			}
 			else {
 				assert.equal(mode, undefined);
@@ -296,6 +300,9 @@ test("uncertain sends reconcile or remain uncertain without calling the worker o
 		assert.ok(!f.calls.some(([name]) => ["send", "worker"].includes(name)));
 		if (confirmed) assert.equal(f.calls.at(-1)[0], "sent");
 		else assert.deepEqual(f.finished(), [["uncertain", "send_not_confirmed"]]);
+		assert.deepEqual(f.logs.at(-1), [confirmed ? "success" : "warn", "111", confirmed
+			? "Found the social preview already in Discord; no second copy sent"
+			: "Could not confirm whether the social preview was sent; no second copy will be sent", f.job.id]);
 	}
 	const f = fixture();
 	f.dependencies.delivery.send = async () => { throw new Error("network reset after acceptance"); };
@@ -353,7 +360,7 @@ test("Instagram failure logs use only allowlisted reasons and never leak provide
 		f.dependencies.worker = async () => ({ outcome: "unavailable", provider: "instagram", instagramReason: reason });
 		await f.runtime.tick();
 		assert.equal(f.calls.some(([name]) => name === "send" || name === "deleteSource"), false);
-		const warning = f.logs.find((entry) => entry[2] === "Social extraction unavailable; original preserved");
+		const warning = f.logs.find((entry) => entry[2] === "Could not get the social post; original message kept");
 		assert.equal(warning[1], "111");
 		assert.equal(warning.some((entry) => typeof entry === "string" && entry.startsWith("instagram_reason=")), ["page_metadata_missing", "http_429"].includes(reason));
 		assert.ok(!JSON.stringify(f.logs).includes("secret provider text"));
@@ -528,7 +535,7 @@ test("cooking feedback failure cannot change preview outcomes and timing logs st
 	};
 	await f.runtime.tick();
 	assert.ok(f.calls.some(([name]) => name === "sent"));
-	assert.ok(f.logs.some((entry) => entry.includes("duration_ms=1234")));
-	assert.ok(f.logs.some((entry) => entry.includes("send_ms=266")));
+	assert.ok(f.logs.some((entry) => entry.includes("time taken: 1234 ms")));
+	assert.ok(f.logs.some((entry) => entry.includes("time to send: 266 ms")));
 	assert.ok(!JSON.stringify(f.logs).includes("private Discord request"));
 });

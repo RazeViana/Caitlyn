@@ -217,7 +217,7 @@ test("birthday scheduling checks at startup and every five minutes", async () =>
 
 	assert.equal(scheduled.length, 1);
 	assert.equal(scheduled[0].expression, "*/5 * * * *");
-	assert.match(logs[0][0], /checking on startup and every five minutes; due after 9 AM/);
+	assert.match(logs[0][0], /checking now and every five minutes; greetings are sent after 9 AM/);
 	await new Promise((resolve) => setImmediate(resolve));
 	assert.deepEqual(reminders, [client]);
 

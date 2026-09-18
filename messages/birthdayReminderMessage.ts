@@ -41,13 +41,13 @@ export function createBirthdayReminder(dependencies: BirthdayReminderDependencie
 			return;
 		}
 		const prepared = await store.prepare(dependencies.guildId(), dependencies.channelId(), window.date);
-		if (prepared.created) logger.info(`Birthday recovery queued ${prepared.created} recipient(s) for ${window.date} (${timezone})`);
-		if (prepared.expired) logger.warn(`Birthday recovery expired ${prepared.expired} unsent announcement(s); older birthdays will not be replayed`);
+		if (prepared.created) logger.info(`Birthday greetings added for ${prepared.created} person(s) on ${window.date} (${timezone})`);
+		if (prepared.expired) logger.warn(`Skipped ${prepared.expired} unsent birthday message(s) from earlier days; only today's birthdays will be sent`);
 		const pending = await store.pending(dependencies.guildId(), window.date);
-		logger.debug(`Birthday check ${window.date}: ${pending.length} due delivery/reconciliation batch(es)`);
+		logger.debug(`Birthday check ${window.date}: ${pending.length} message group(s) to send or check for an earlier send`);
 		for (const delivery of pending) {
 			if (!canSend()) break;
-			const label = `Birthday delivery ${delivery.id} (${delivery.occurrence_date})`;
+			const label = `Birthday message ${delivery.id} (${delivery.occurrence_date})`;
 			// Recovery claims never become send claims, even when history has no match.
 			if (delivery.status !== "ready" && !await store.claimRecovery(delivery.id)) continue;
 			let channel: BirthdayChannel;
@@ -56,7 +56,7 @@ export function createBirthdayReminder(dependencies: BirthdayReminderDependencie
 			}
 			catch (error) {
 				if (delivery.status === "ready") await store.defer(delivery.id);
-				logger.warn(`${label}: channel unavailable; retry is delayed`, error);
+				logger.warn(`${label}: could not access the channel; will try again later`, error);
 				continue;
 			}
 			if (!canSend()) break;
@@ -64,24 +64,24 @@ export function createBirthdayReminder(dependencies: BirthdayReminderDependencie
 				try {
 					const messageId = await channel.find(delivery);
 					if (messageId) {
-						if (await store.sent(delivery.id, messageId)) logger.success(`${label}: recovered an existing Discord message; no duplicate sent`);
+						if (await store.sent(delivery.id, messageId)) logger.success(`${label}: found the message already in Discord; no second copy sent`);
 					}
 					else {
-						logger.warn(`${label}: delivery remains uncertain; no matching message in the bounded history scan. Automatic resend withheld; operator review may be needed`);
+						logger.warn(`${label}: could not find the message in recent Discord history. It may still have been sent, so no second copy will be sent. Please check the channel`);
 					}
 				}
 				catch (error) {
-					logger.error(`${label}: reconciliation failed; automatic resend remains blocked`, error);
+					logger.error(`${label}: could not check whether the message was already sent; no second copy will be sent`, error);
 				}
 				continue;
 			}
 			if (!await store.claim(delivery.id)) {
-				logger.debug(`${label}: already claimed or completed by another worker`);
+				logger.debug(`${label}: already being handled or already sent; skipping this attempt`);
 				continue;
 			}
 			if (!canSend()) {
 				await store.releaseUnsent(delivery.id);
-				logger.warn(`${label}: unsent claim released because the delivery window closed or the bot stopped; only same-day retry is allowed`);
+				logger.warn(`${label}: not sent because the bot is stopping, Discord is not ready, or the birthday has passed; can only try again today`);
 				continue;
 			}
 			logger.info(`${label}: sending ${delivery.recipient_ids.length} birthday greeting(s)`);
@@ -91,18 +91,18 @@ export function createBirthdayReminder(dependencies: BirthdayReminderDependencie
 					if (await store.sent(delivery.id, messageId)) logger.success(`${label}: sent successfully (message ${messageId})`);
 				}
 				catch (error) {
-					logger.error(`${label}: Discord accepted message ${messageId}, but recording delivery failed; history reconciliation is required`, error);
+					logger.error(`${label}: Discord received message ${messageId}, but the database could not save that it was sent; the next check will look for it in Discord`, error);
 				}
 			}, async (error: unknown) => {
-				logger.error(`${label}: Discord send failed; delivery is uncertain and will be checked before any further action`, error);
+				logger.error(`${label}: sending failed, but Discord may have received it; will check Discord before doing anything else`, error);
 				try { await store.uncertain(delivery.id); }
-				catch (failure) { logger.error(`${label}: unable to record uncertain status; the persisted send claim still blocks duplicates`, failure); }
+				catch (failure) { logger.error(`${label}: could not save the send result; the saved record still prevents a second copy`, failure); }
 			});
 			try {
 				await withTimeout(completion, dependencies.deliveryTimeout, "Birthday delivery");
 			}
 			catch (error) {
-				logger.warn(`${label}: delivery deadline reached; no automatic resend`, error);
+				logger.warn(`${label}: Discord took too long to confirm the send; no second copy will be sent`, error);
 				await store.uncertain(delivery.id);
 			}
 		}

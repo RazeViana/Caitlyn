@@ -14,6 +14,7 @@ import {
 } from "discord.js";
 import { pool } from "../../core/createPGPool.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { birthdayDate } from "../../core/birthdayDate.js";
 
@@ -92,6 +93,8 @@ export async function execute(
 			"INSERT INTO discord.birthdays (discord_id, name, dob) VALUES ($1, $2, $3) ON CONFLICT (discord_id) DO UPDATE SET name = EXCLUDED.name, dob = EXCLUDED.dob",
 			[user.id, user.username, dob],
 		);
+		logData("Saved birthday details; date of birth is not included in logs", { server: interaction.guildId,
+			user: user.id, username: user.username, actor: interaction.user?.id, fields: "user ID, username, date of birth" }, logger.info);
 		await interaction.editReply({ content: `Birthday saved for ${userMention(user.id)}!` });
 	}
 	catch (error) {

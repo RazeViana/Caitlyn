@@ -21,6 +21,7 @@ import {
 	differenceInCalendarDays,
 } from "date-fns";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 import { nextBirthday } from "../../core/birthdayDate.js";
 import { truncate } from "../../core/textLimits.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
@@ -120,6 +121,9 @@ export async function execute(
 			}
 
 			randomGIF = giphyData.data?.images?.original?.url;
+			logData("Checked for a birthday GIF; link and image content are not included in logs", {
+				server: interaction.guildId, count: randomGIF ? 1 : 0,
+			});
 		}
 	}
 	catch {
@@ -129,6 +133,9 @@ export async function execute(
 	try {
 		// Fetch all birthdays from the database
 		const res = await dependencies.query("SELECT discord_id, name, dob::text FROM discord.birthdays");
+		logData("Read saved birthdays for the birthday list; dates are not included in logs", {
+			server: interaction.guildId, actor: interaction.user?.id, count: res.rows.length,
+		});
 		// If no birthdays are found, return a message
 		if (res.rows.length === 0) {
 			await interaction.editReply("😢 No birthdays found!");

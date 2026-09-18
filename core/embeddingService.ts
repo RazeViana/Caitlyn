@@ -9,6 +9,7 @@
 import "./loadEnvironment.js";
 
 import logger from "./logger.js";
+import { dataErrorReason, logData } from "./dataLog.js";
 import type { EmbeddingResponse } from "../types/models.js";
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL;
@@ -32,9 +33,7 @@ async function generateEmbedding(
 	}
 
 	try {
-		logger.debug(
-			`Generating embedding for text: "${text.substring(0, 20)}..."`,
-		);
+		logData("Sending text to the AI memory search service; text is not included in logs", { characters: text.length });
 
 		const response = await dependencies.fetch(EMBEDDING_ENDPOINT, {
 			signal: AbortSignal.timeout(10_000),
@@ -65,11 +64,11 @@ async function generateEmbedding(
 			throw new Error("Invalid embedding response format");
 		}
 
-		logger.debug("Generated embedding");
+		logData("Received the numbers used to search AI memory; values are not included in logs", { count: embedding.length });
 		return embedding;
 	}
 	catch (error) {
-		logger.error("Error generating embedding:", error);
+		logData("AI memory search service could not process the text", { reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }
@@ -100,7 +99,7 @@ async function generateEmbeddings(
 		return embeddings;
 	}
 	catch (error) {
-		logger.error("Error generating batch embeddings:", error);
+		logData("AI memory search service could not process the group of messages", { reason: dataErrorReason(error) }, logger.error);
 		throw error;
 	}
 }

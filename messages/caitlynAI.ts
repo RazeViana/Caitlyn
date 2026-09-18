@@ -10,6 +10,7 @@
 import type { Message, SendableChannels } from "discord.js";
 import { isAIEnabled } from "../core/aiState.js";
 import logger from "../core/logger.js";
+import { dataErrorReason, logData } from "../core/dataLog.js";
 import { getConversationContext, storeMessage } from "../core/messageStore.js";
 import { chat } from "../core/ollama.js";
 import { messageChunks } from "../core/textLimits.js";
@@ -49,15 +50,20 @@ async function caitlynAI(
 	message: Message,
 	dependencies: CaitlynAIDependencies = defaultCaitlynAIDependencies,
 ): Promise<void> {
-	if (!dependencies.isAIEnabled() || !message.content.trim()) return;
+	const details = { server: message.guildId, channel: message.channelId ?? message.channel?.id, user: message.author.id, message: message.id };
+	if (!dependencies.isAIEnabled() || !message.content.trim()) {
+		logData("AI message not processed; AI is turned off or the message has no text", details, dependencies.logger.debug);
+		return;
+	}
 	const channel = message.channel as SendableChannels;
 	if (activeChannels.has(channel.id) || activeChannels.size >= 4) {
-		dependencies.logger.debug("Skipping AI message while capacity is exhausted");
+		logData("AI message skipped; already replying in this channel or busy in other channels", details, dependencies.logger.debug);
 		return;
 	}
 	activeChannels.add(channel.id);
 	let replyAttempted = false;
 	const memoryEnabled = dependencies.memoryEnabled?.() !== false;
+	logData(memoryEnabled ? "Preparing an AI reply with saved conversation memory" : "Preparing an AI reply without saving conversation memory", details, dependencies.logger.debug);
 	try {
 		let context: MessageContext[] = [];
 		try {
@@ -69,7 +75,7 @@ async function caitlynAI(
 			}) : [];
 		}
 		catch (error) {
-			dependencies.logger.error("AI memory unavailable; continuing without stored context:", error);
+			logData("Could not read AI memory; continuing without saved messages", { ...details, reason: dataErrorReason(error) }, dependencies.logger.error);
 		}
 		const messages: ChatMessage[] = context.map((entry) => ({
 			role: entry.role,
@@ -83,6 +89,7 @@ async function caitlynAI(
 			replyAttempted = true;
 			await channel.send({ content, allowedMentions: { parse: [] } });
 		}
+		logData("Sent the AI reply; text is not included in logs", { ...details, count: chunks.length, characters: chunks.join("").length }, dependencies.logger.debug);
 		try {
 			if (memoryEnabled) {
 				await dependencies.storeMessage({
@@ -96,17 +103,17 @@ async function caitlynAI(
 			}
 		}
 		catch (error) {
-			dependencies.logger.error("Reply delivered but AI memory could not be saved:", error);
+			logData("AI reply sent, but the conversation could not be saved to memory", { ...details, reason: dataErrorReason(error) }, dependencies.logger.error);
 		}
 	}
 	catch (error) {
-		dependencies.logger.error("Error processing AI message:", error);
+		logData("Could not finish the AI reply", { ...details, reason: dataErrorReason(error) }, dependencies.logger.error);
 		if (!replyAttempted) {
 			try {
 				await channel.send("Sorry, I encountered an error processing your message. Please try again.");
 			}
 			catch (sendError) {
-				dependencies.logger.error("Could not send AI error response:", sendError);
+				logData("Could not send the AI error message to Discord", { ...details, reason: dataErrorReason(sendError) }, dependencies.logger.error);
 			}
 		}
 	}

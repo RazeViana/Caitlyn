@@ -82,7 +82,7 @@ test("Discord login stays pending until completion and propagates rejection", as
 	process.env.TOKEN = "dummy-call-time-token";
 	try {
 		let settled = false;
-		const login = loginClient({ login: (token) => {
+		const login = loginClient({ isReady: () => false, once: () => undefined, off: () => undefined, login: (token) => {
 			assert.equal(token, "dummy-call-time-token");
 			return promise;
 		} });

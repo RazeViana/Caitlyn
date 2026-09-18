@@ -10,6 +10,7 @@ import { Events, type VoiceState } from "discord.js";
 import { trackVoiceJoin, trackVoiceLeave } from "../core/activityTracker.js";
 import logger from "../core/logger.js";
 import { getFeatureConfiguration } from "../core/environment.js";
+import { logData } from "../core/dataLog.js";
 
 export const name = Events.VoiceStateUpdate;
 
@@ -37,9 +38,13 @@ export interface VoiceStateDependencies {
 
 const defaultVoiceStateDependencies: VoiceStateDependencies = {
 	logger,
-	trackVoiceJoin: async (...args) => { if (getFeatureConfiguration().database.enabled) await trackVoiceJoin(...args); },
+	trackVoiceJoin: async (...args) => {
+		if (getFeatureConfiguration().database.enabled) await trackVoiceJoin(...args);
+		else logData("Voice join not saved; database feature is turned off", { server: args[0], user: args[1], channel: args[3] });
+	},
 	trackVoiceLeave: async (guildId, userId, username, channelId) => {
 		if (getFeatureConfiguration().database.enabled) await trackVoiceLeave(guildId, userId, username, undefined, channelId);
+		else logData("Voice leave not saved; database feature is turned off", { server: guildId, user: userId, channel: channelId });
 	},
 };
 
@@ -61,7 +66,8 @@ export async function execute(
 
 		// User joined a voice channel
 		if (!oldChannel && newChannel) {
-			dependencies.logger.debug(`${member.user.username} joined voice channel ${newChannel.name}`);
+			logData("User joined a voice channel", { server: guild.id, user: member.id, username: member.user.username,
+				channel: newChannel.id, channelName: newChannel.name }, dependencies.logger.debug);
 			await dependencies.trackVoiceJoin(
 				guild.id,
 				member.id,
@@ -72,12 +78,14 @@ export async function execute(
 		}
 		// User left a voice channel
 		else if (oldChannel && !newChannel) {
-			dependencies.logger.debug(`${member.user.username} left voice channel ${oldChannel.name}`);
+			logData("User left a voice channel", { server: guild.id, user: member.id, username: member.user.username,
+				channel: oldChannel.id, channelName: oldChannel.name }, dependencies.logger.debug);
 			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username, oldChannel.id);
 		}
 		// User moved between voice channels
 		else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
-			dependencies.logger.debug(`${member.user.username} moved from ${oldChannel.name} to ${newChannel.name}`);
+			logData("User moved between voice channels", { server: guild.id, user: member.id, username: member.user.username,
+				previousChannel: oldChannel.id, channel: newChannel.id, channelName: newChannel.name }, dependencies.logger.debug);
 			// Track as leave from old channel
 			await dependencies.trackVoiceLeave(guild.id, member.id, member.user.username, oldChannel.id);
 			// Track as join to new channel

@@ -21,6 +21,12 @@
     ☐ Choose a project license and align README/package metadata
 
 ☐ Features and improvements
+    ✔ Add grouped gateway outage/recovery diagnostics and wait for actual Discord readiness before starting jobs
+    ✔ Retain definitely-unsent log batches with bounded backoff; count overflow/failure/uncertainty separately and observe late acknowledgements
+    ✔ Route birthday scheduler diagnostics through private logging and coalesce missed checks without replaying older birthdays
+    ✔ Use plain-language messages for connection, log delivery, birthday and social preview checks; explain duplicate prevention without “reconciliation”
+    ✔ Add metadata-only DEBUG collection logs across message/voice activity, commands, AI memory and social previews; INFO for birthday/settings changes; remove AI text snippets
+    ☐ Activate and observe the logging/recovery and metadata-only collection changes locally after owner confirmation
     ✔ Park Reddit at the owner's request; preserve offline work and the live-access approval gate
     ✔ Connect public Instagram photo/reel/carousel normalization, isolated delivery, shared compression, transport, cards and private logging in source
     ✔ Resolve Instagram public-page hydration and URL-only image candidates; both owner examples pass real isolated delivery checks with no account

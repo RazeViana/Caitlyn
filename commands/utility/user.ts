@@ -13,6 +13,7 @@ import {
 	type ChatInputCommandInteraction,
 	type GuildMember,
 } from "discord.js";
+import { logData } from "../../core/dataLog.js";
 
 export const cooldown = 5;
 export const category = "utility";
@@ -25,4 +26,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 	await interaction.reply(
 		`This command was run by ${interaction.user.username}, who joined on ${(interaction.member as GuildMember).joinedAt}.`,
 	);
+	logData("Displayed Discord user details; no new database record created", {
+		server: interaction.guildId, user: interaction.user.id, username: interaction.user.username, fields: "username, server join date",
+	});
 }

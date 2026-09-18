@@ -11,6 +11,7 @@ import { pool } from "./createPGPool.js";
 import { withTransaction } from "./transaction.js";
 import type { SocialChannelSetting, SocialJob } from "../types/socialDelivery.js";
 import { parseSocialLink } from "./socialLinks.js";
+import { logData } from "./dataLog.js";
 
 type NewSocialJob = Pick<SocialJob, "guild_id" | "channel_id" | "source_id" | "author_id" | "source_hash" | "post_id" | "url">;
 
@@ -143,10 +144,15 @@ export function createSocialDeliveryStore(database = pool) {
 			[job.guild_id, job.channel_id, job.source_id, outcome, `source_${outcome}`, job.id, job.lease_token]);
 		},
 		async cancelSource(guildId: string, channelId: string, sourceId: string): Promise<void> {
-			await database.query(`UPDATE discord.social_jobs SET cancel_requested = TRUE, updated_at = NOW(),
+			const result = await database.query(`UPDATE discord.social_jobs SET cancel_requested = TRUE, updated_at = NOW(),
 				status = CASE WHEN status IN ('queued', 'processing') THEN 'cancelled' WHEN status = 'sent' THEN 'removing' ELSE status END,
 				next_attempt_at = CASE WHEN status = 'sent' THEN NOW() ELSE next_attempt_at END
 				WHERE guild_id = $1 AND channel_id = $2 AND source_id = $3 AND source_cleanup NOT IN ('deleting', 'deleted')`, [guildId, channelId, sourceId]);
+			if (result.rowCount) {
+				logData("Saved requests to stop or remove linked social previews", {
+					server: guildId, channel: channelId, message: sourceId, count: result.rowCount,
+				});
+			}
 		},
 	};
 }

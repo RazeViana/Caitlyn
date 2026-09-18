@@ -117,7 +117,7 @@ test("channel/permission failures back off before sending and recover on a later
 	f.dependencies.channel = async () => f.channel;
 	await f.run();
 	assert.equal(f.calls.sends, 1);
-	assert.ok(f.logs.some((record) => record.level === "WARN" && /retry is delayed/.test(record.message)));
+	assert.ok(f.logs.some((record) => record.level === "WARN" && /could not access the channel; will try again later/.test(record.message)));
 });
 
 test("midnight during channel lookup prevents sending yesterday's birthday", async (context) => {
@@ -158,7 +158,7 @@ test("send failure is persisted as uncertain, then reconciled without a second s
 	await f.run();
 	assert.equal(f.row.status, "sent");
 	assert.equal(f.calls.sends, 1);
-	assert.ok(f.logs.some((record) => /recovered an existing Discord message/.test(record.message)));
+	assert.ok(f.logs.some((record) => /found the message already in Discord; no second copy sent/.test(record.message)));
 });
 
 test("missing history match or history access failure never authorizes a resend", async (context) => {
@@ -169,8 +169,8 @@ test("missing history match or history access failure never authorizes a resend"
 	f.channel.find = async () => { throw new Error("history unavailable"); };
 	await f.run();
 	assert.equal(f.calls.sends, 0);
-	assert.ok(f.logs.some((record) => /Automatic resend withheld/.test(record.message)));
-	assert.ok(f.logs.some((record) => /reconciliation failed/.test(record.message)));
+	assert.ok(f.logs.some((record) => /It may still have been sent, so no second copy will be sent\. Please check the channel/.test(record.message)));
+	assert.ok(f.logs.some((record) => /could not check whether the message was already sent; no second copy will be sent/.test(record.message)));
 });
 
 test("accepted send with a failed database acknowledgement recovers from history", async (context) => {
@@ -179,7 +179,7 @@ test("accepted send with a failed database acknowledgement recovers from history
 	f.store.sent = async () => { throw new Error("database offline after send"); };
 	await f.run();
 	assert.equal(f.row.status, "sending");
-	assert.ok(f.logs.some((record) => /recording delivery failed/.test(record.message)));
+	assert.ok(f.logs.some((record) => /the database could not save that it was sent; the next check will look for it in Discord/.test(record.message)));
 	f.store.sent = sent;
 	f.channel.find = async () => "789";
 	await f.run();
@@ -281,7 +281,7 @@ test("startup recovery errors are logged and contained while subsequent checks c
 		birthdayReminderMessage: async () => { if (++attempts === 1) throw new Error("database offline"); },
 	});
 	await new Promise((resolve) => setImmediate(resolve));
-	assert.ok(f.logs.some((record) => record.level === "ERROR" && /retry on the next five-minute check/.test(record.message)));
+	assert.ok(f.logs.some((record) => record.level === "ERROR" && /will try again at the next five-minute check/.test(record.message)));
 	await callback();
 	assert.equal(attempts, 2);
 	await stop();

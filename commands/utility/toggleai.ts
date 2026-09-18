@@ -14,6 +14,7 @@ import {
 } from "discord.js";
 import { isAIEnabled, toggleAI } from "../../core/aiState.js";
 import logger from "../../core/logger.js";
+import { logData } from "../../core/dataLog.js";
 import { respondWithError } from "../../core/interactionResponse.js";
 import { getFeatureConfiguration } from "../../core/environment.js";
 
@@ -32,15 +33,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			await respondWithError(interaction, "AI is disabled because its configuration is missing or invalid. Ask the operator to check the startup logs and restart after updating it.");
 			return;
 		}
-		const previousState = isAIEnabled();
 		const newState = toggleAI();
 
 		const statusEmoji = newState ? "✅" : "❌";
 		const statusText = newState ? "enabled" : "disabled";
 
-		logger.info(
-			`AI toggled ${previousState ? "OFF" : "ON"} by ${interaction.user.username}`,
-		);
+		logData("Changed AI reply setting for this running bot", { server: interaction.guildId,
+			actor: interaction.user.id, username: interaction.user.username, enabled: newState }, logger.info);
 
 		await interaction.reply({
 			content: `${statusEmoji} Caitlyn AI is now **${statusText}**`,

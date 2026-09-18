@@ -8,10 +8,10 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ChannelType, MessageFlags, PermissionFlagsBits } from "discord.js";
+import { ChannelType, DiscordAPIError, MessageFlags, PermissionFlagsBits } from "discord.js";
 import logger, { subscribeLogs } from "../core/logger.ts";
 import { withLogGuild, eventLogGuild } from "../core/logContext.ts";
-import { createDiscordLogForwarder, logForwarders, redactLog } from "../core/discordLogForwarder.ts";
+import { createDiscordLogForwarder, logForwarders, redactLog, LogDeliveryFailure } from "../core/discordLogForwarder.ts";
 import { guildSettings } from "../core/guildSettings.ts";
 import { execute as setup, data } from "../commands/utility/setup.ts";
 import { execute as logs } from "../commands/utility/logs.ts";
@@ -117,7 +117,7 @@ test("queue overflow, send failures, cooldown, and configuration changes are bou
 	const forwarding = createDiscordLogForwarder(fixture.client, {
 		...fixture.dependencies,
 		send: async (...args) => {
-			if (fail) throw new Error("missing permission");
+			if (fail) throw new LogDeliveryFailure("retryable");
 			await fixture.dependencies.send(...args);
 		},
 	});
@@ -130,7 +130,7 @@ test("queue overflow, send failures, cooldown, and configuration changes are bou
 	fail = false;
 	fixture.advance(30_001);
 	await forwarding.flush();
-	assert.match(fixture.sent[0].content, /omitted during congestion or failed delivery/);
+	assert.match(fixture.sent[0].content, /Too many logs were waiting to be sent; dropped parts of the log: 50/);
 	forwarding.update(settings("111", "113"));
 	fixture.capture("new channel only", "111");
 	await forwarding.flush();
@@ -282,12 +282,57 @@ test("actual delivery disables mentions, checks guild membership, and stops forw
 	receive(record("@everyone test"));
 	await forwarding.flush();
 	assert.deepEqual(fixture.replies[0].allowedMentions, { parse: [] });
+	assert.equal(fixture.replies[0].enforceNonce, true);
+	assert.match(fixture.replies[0].nonce, /^[a-f0-9]{24}$/);
 	fixture.channel.permissionsFor = () => ({ has: () => true });
 	receive(record("must not reach a public channel"));
 	await forwarding.flush();
 	assert.equal(fixture.replies.length, 1);
 	assert.equal(warnings.length, 1);
 	await forwarding.stop();
+});
+
+test("real log transport distinguishes read failures, definite API rejections and uncertain POST outcomes", async () => {
+	for (const kind of ["preflight", "rate_limit", "forbidden", "server_error", "network"]) {
+		const fixture = setupFixture();
+		let receive;
+		let fail = true;
+		let now = 0;
+		const diagnostics = [];
+		const attempts = [];
+		fixture.guild.channels.fetch = async () => {
+			if (fail && kind === "preflight") throw new Error("private read failure");
+			return fixture.channel;
+		};
+		fixture.channel.send = async (options) => {
+			attempts.push(options);
+			if (!fail) return;
+			if (kind === "network") throw new Error("private transport failure");
+			const status = kind === "forbidden" ? 403 : kind === "rate_limit" ? 429 : 500;
+			throw new DiscordAPIError({ message: "synthetic", code: 50013 }, 50013, status, "POST", "https://discord.invalid/fixture", {});
+		};
+		const forwarding = createDiscordLogForwarder(fixture.client, {
+			settings: { list: async () => [settings("111", "222")] },
+			subscribe: (listener) => { receive = listener; return () => undefined; },
+			now: () => now,
+			diagnostic: (message) => diagnostics.push(message),
+		});
+		await forwarding.refresh();
+		for (let index = 0; index < 6; index++) receive(record(`transport-original-${index}`));
+		await forwarding.flush();
+		fail = false;
+		now = 30001;
+		await forwarding.flush();
+		if (["preflight", "rate_limit"].includes(kind)) {
+			assert.match(attempts.at(-1).content, /transport-original-0[\s\S]*transport-original-5/);
+		}
+		else {
+			assert.doesNotMatch(attempts.at(-1).content, /transport-original/);
+			assert.match(attempts.at(-1).content, kind === "forbidden" ? /Could not send parts of the log: 6/ : /Could not confirm whether parts of the log were sent: 6/);
+		}
+		assert.doesNotMatch(diagnostics.join(" "), /private (read|transport) failure/);
+		await forwarding.stop();
+	}
 });
 
 test("joining other servers never posts logging setup instructions or chooses a destination", async (context) => {
