@@ -34,7 +34,7 @@ CMD ["node", "dist/main.js"]
 FROM bot AS broker
 USER root
 RUN apk add --no-cache docker-cli
-COPY --chmod=644 scripts/deployment/startBroker.mjs scripts/deployment/brokerHealth.mjs ./scripts/deployment/
+COPY --chmod=644 scripts/deployment/startBroker.mjs scripts/deployment/brokerHealth.mjs scripts/deployment/fxConnectionWatchdog.mjs ./scripts/deployment/
 RUN chmod 755 /app/scripts /app/scripts/deployment
 ENV HOME=/tmp
 USER node

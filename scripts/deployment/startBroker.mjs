@@ -2,6 +2,7 @@
  * @file startBroker.mjs
  * @description Starts the compiled broker after checking for a stale owner-only socket from a stopped process.
  * Refuses live or ambiguous sockets and leaves orphaned Docker resources for explicit operator review.
+ * Restarts the broker after sustained local FxEmbed connection loss to rejoin its network namespace.
  *
  * @module startBroker
  */
@@ -11,6 +12,7 @@ import { lstat, unlink } from "node:fs/promises";
 import { createConnection } from "node:net";
 import { dirname, isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
+import { watchFxConnection } from "./fxConnectionWatchdog.mjs";
 
 export async function removeStaleSocket(file) {
 	if (typeof file !== "string" || !isAbsolute(file) || Buffer.byteLength(file) > 100 || /[\p{Cc}]/u.test(file)) throw new Error("invalid_worker_socket");
@@ -45,9 +47,30 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	try {
 		if (await removeStaleSocket(process.env.SOCIAL_WORKER_SOCKET)) console.log("Removed a stale private worker socket; no active listener found");
 		const child = spawn(process.execPath, ["/app/dist/scripts/socialWorker/server.js"], { stdio: "inherit" });
-		for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => { child.kill(signal); });
-		child.once("error", () => { process.exitCode = 1; });
-		child.once("exit", (code) => { process.exitCode = code ?? 1; });
+		let recovering = false;
+		const stopWatch = process.env.SOCIAL_FXEMBED_URL ? watchFxConnection({
+			origin: process.env.SOCIAL_FXEMBED_URL,
+			onUnavailable: () => {
+				recovering = true;
+				console.warn("Local FxEmbed connection lost for three checks; restarting broker to rejoin its network");
+				// The worker stops accepting jobs and cleans up active work before Docker restarts us.
+				child.kill("SIGTERM");
+			},
+		}) : undefined;
+		for (const signal of ["SIGTERM", "SIGINT"]) {
+			process.once(signal, () => {
+				stopWatch?.();
+				child.kill(signal);
+			});
+		}
+		child.once("error", () => {
+			stopWatch?.();
+			process.exitCode = 1;
+		});
+		child.once("exit", (code) => {
+			stopWatch?.();
+			process.exitCode = recovering ? 1 : code ?? 1;
+		});
 	}
 	catch {
 		console.error("Media worker could not start; check its private socket and existing worker processes");
