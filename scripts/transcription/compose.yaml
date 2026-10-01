@@ -1,0 +1,24 @@
+# @file compose.yaml
+# @description Defines the local speech worker; attach Caitlyn to this internal network during deployment.
+# @module transcriptionCompose
+services:
+  transcription:
+    build:
+      context: .
+      args:
+        WHISPER_MODEL: base.en
+    image: caitlyn-transcription:base-en
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 2
+    mem_limit: 1g
+    pids_limit: 64
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    networks: [transcription]
+networks:
+  transcription:
+    name: caitlyn-transcription
+    internal: true

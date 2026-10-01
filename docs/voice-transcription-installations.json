@@ -1,0 +1,1986 @@
+{
+  "verifiedDate": "2026-10-01",
+  "timezone": "Europe/Amsterdam",
+  "hostPackagesInstalled": [],
+  "workspace": "/mnt/Datashare/home/raze/Development/caitlyn-dev",
+  "development": {
+    "reusedToolchainImage": "caitlyn-validation:20260924",
+    "npmPackages": [
+      {
+        "name": "@cacheable/memory",
+        "version": "2.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@cacheable/memory"
+      },
+      {
+        "name": "@cacheable/utils",
+        "version": "2.5.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@cacheable/utils"
+      },
+      {
+        "name": "@discordjs/builders",
+        "version": "1.14.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/builders"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "1.5.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@discordjs/formatters",
+        "version": "0.6.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/formatters"
+      },
+      {
+        "name": "@discordjs/rest",
+        "version": "2.6.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/rest"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "2.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/rest/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@discordjs/util",
+        "version": "1.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/util"
+      },
+      {
+        "name": "@discordjs/voice",
+        "version": "0.19.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/voice"
+      },
+      {
+        "name": "prism-media",
+        "version": "1.3.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/voice/node_modules/prism-media"
+      },
+      {
+        "name": "@discordjs/ws",
+        "version": "1.2.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/ws"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "2.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@discordjs/ws/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@esbuild/linux-x64",
+        "version": "0.28.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@esbuild/linux-x64"
+      },
+      {
+        "name": "@eslint-community/eslint-utils",
+        "version": "4.10.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint-community/eslint-utils"
+      },
+      {
+        "name": "eslint-visitor-keys",
+        "version": "3.4.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint-community/eslint-utils/node_modules/eslint-visitor-keys"
+      },
+      {
+        "name": "@eslint-community/regexpp",
+        "version": "4.12.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint-community/regexpp"
+      },
+      {
+        "name": "@eslint/config-array",
+        "version": "0.23.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/config-array"
+      },
+      {
+        "name": "@eslint/config-helpers",
+        "version": "0.7.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/config-helpers"
+      },
+      {
+        "name": "@eslint/core",
+        "version": "1.2.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/core"
+      },
+      {
+        "name": "@eslint/js",
+        "version": "10.0.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/js"
+      },
+      {
+        "name": "@eslint/object-schema",
+        "version": "3.0.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/object-schema"
+      },
+      {
+        "name": "@eslint/plugin-kit",
+        "version": "0.7.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@eslint/plugin-kit"
+      },
+      {
+        "name": "@humanfs/core",
+        "version": "0.19.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@humanfs/core"
+      },
+      {
+        "name": "@humanfs/node",
+        "version": "0.16.8",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@humanfs/node"
+      },
+      {
+        "name": "@humanfs/types",
+        "version": "0.15.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@humanfs/types"
+      },
+      {
+        "name": "@humanwhocodes/module-importer",
+        "version": "1.0.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@humanwhocodes/module-importer"
+      },
+      {
+        "name": "@humanwhocodes/retry",
+        "version": "0.4.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@humanwhocodes/retry"
+      },
+      {
+        "name": "@keyv/bigmap",
+        "version": "1.3.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@keyv/bigmap"
+      },
+      {
+        "name": "@keyv/serialize",
+        "version": "1.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@keyv/serialize"
+      },
+      {
+        "name": "@sapphire/async-queue",
+        "version": "1.5.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@sapphire/async-queue"
+      },
+      {
+        "name": "@sapphire/shapeshift",
+        "version": "4.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@sapphire/shapeshift"
+      },
+      {
+        "name": "@sapphire/snowflake",
+        "version": "3.5.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@sapphire/snowflake"
+      },
+      {
+        "name": "@snazzah/davey",
+        "version": "0.1.12",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@snazzah/davey"
+      },
+      {
+        "name": "@snazzah/davey-linux-x64-musl",
+        "version": "0.1.12",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@snazzah/davey-linux-x64-musl"
+      },
+      {
+        "name": "@types/esrecurse",
+        "version": "4.3.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/esrecurse"
+      },
+      {
+        "name": "@types/estree",
+        "version": "1.0.9",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/estree"
+      },
+      {
+        "name": "@types/json-schema",
+        "version": "7.0.15",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/json-schema"
+      },
+      {
+        "name": "@types/node",
+        "version": "24.13.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/node"
+      },
+      {
+        "name": "@types/pg",
+        "version": "8.23.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/pg"
+      },
+      {
+        "name": "@types/ws",
+        "version": "8.18.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@types/ws"
+      },
+      {
+        "name": "@typescript-eslint/eslint-plugin",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/eslint-plugin"
+      },
+      {
+        "name": "ignore",
+        "version": "7.0.8",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/eslint-plugin/node_modules/ignore"
+      },
+      {
+        "name": "@typescript-eslint/parser",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/parser"
+      },
+      {
+        "name": "@typescript-eslint/project-service",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/project-service"
+      },
+      {
+        "name": "@typescript-eslint/scope-manager",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/scope-manager"
+      },
+      {
+        "name": "@typescript-eslint/tsconfig-utils",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/tsconfig-utils"
+      },
+      {
+        "name": "@typescript-eslint/type-utils",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/type-utils"
+      },
+      {
+        "name": "@typescript-eslint/types",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/types"
+      },
+      {
+        "name": "@typescript-eslint/typescript-estree",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/typescript-estree"
+      },
+      {
+        "name": "@typescript-eslint/utils",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/utils"
+      },
+      {
+        "name": "@typescript-eslint/visitor-keys",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript-eslint/visitor-keys"
+      },
+      {
+        "name": "typescript",
+        "version": "7.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript/native"
+      },
+      {
+        "name": "typescript",
+        "version": "6.0.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript/old"
+      },
+      {
+        "name": "@typescript/typescript-linux-x64",
+        "version": "7.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@typescript/typescript-linux-x64"
+      },
+      {
+        "name": "@vladfrangu/async_event_emitter",
+        "version": "2.4.7",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/@vladfrangu/async_event_emitter"
+      },
+      {
+        "name": "acorn",
+        "version": "8.18.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/acorn"
+      },
+      {
+        "name": "acorn-jsx",
+        "version": "5.3.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/acorn-jsx"
+      },
+      {
+        "name": "ajv",
+        "version": "6.15.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ajv"
+      },
+      {
+        "name": "balanced-match",
+        "version": "4.0.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/balanced-match"
+      },
+      {
+        "name": "brace-expansion",
+        "version": "5.0.9",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/brace-expansion"
+      },
+      {
+        "name": "cacheable",
+        "version": "2.5.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/cacheable"
+      },
+      {
+        "name": "cross-spawn",
+        "version": "7.0.6",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/cross-spawn"
+      },
+      {
+        "name": "date-fns",
+        "version": "4.4.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/date-fns"
+      },
+      {
+        "name": "debug",
+        "version": "4.4.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/debug"
+      },
+      {
+        "name": "deep-is",
+        "version": "0.1.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/deep-is"
+      },
+      {
+        "name": "discord-api-types",
+        "version": "0.38.55",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/discord-api-types"
+      },
+      {
+        "name": "discord.js",
+        "version": "14.27.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/discord.js"
+      },
+      {
+        "name": "dotenv",
+        "version": "16.6.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/dotenv"
+      },
+      {
+        "name": "esbuild",
+        "version": "0.28.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/esbuild"
+      },
+      {
+        "name": "escape-string-regexp",
+        "version": "4.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/escape-string-regexp"
+      },
+      {
+        "name": "eslint",
+        "version": "10.10.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/eslint"
+      },
+      {
+        "name": "eslint-scope",
+        "version": "9.1.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/eslint-scope"
+      },
+      {
+        "name": "eslint-visitor-keys",
+        "version": "5.0.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/eslint-visitor-keys"
+      },
+      {
+        "name": "espree",
+        "version": "11.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/espree"
+      },
+      {
+        "name": "esquery",
+        "version": "1.7.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/esquery"
+      },
+      {
+        "name": "esrecurse",
+        "version": "4.3.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/esrecurse"
+      },
+      {
+        "name": "estraverse",
+        "version": "5.3.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/estraverse"
+      },
+      {
+        "name": "esutils",
+        "version": "2.0.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/esutils"
+      },
+      {
+        "name": "fast-deep-equal",
+        "version": "3.1.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/fast-deep-equal"
+      },
+      {
+        "name": "fast-json-stable-stringify",
+        "version": "2.1.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/fast-json-stable-stringify"
+      },
+      {
+        "name": "fast-levenshtein",
+        "version": "2.0.6",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/fast-levenshtein"
+      },
+      {
+        "name": "fdir",
+        "version": "6.5.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/fdir"
+      },
+      {
+        "name": "file-entry-cache",
+        "version": "11.1.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/file-entry-cache"
+      },
+      {
+        "name": "find-up",
+        "version": "5.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/find-up"
+      },
+      {
+        "name": "flat-cache",
+        "version": "6.1.23",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/flat-cache"
+      },
+      {
+        "name": "flatted",
+        "version": "3.4.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/flatted"
+      },
+      {
+        "name": "glob-parent",
+        "version": "6.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/glob-parent"
+      },
+      {
+        "name": "hashery",
+        "version": "1.5.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/hashery"
+      },
+      {
+        "name": "hookified",
+        "version": "1.15.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/hookified"
+      },
+      {
+        "name": "ignore",
+        "version": "5.3.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ignore"
+      },
+      {
+        "name": "imurmurhash",
+        "version": "0.1.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/imurmurhash"
+      },
+      {
+        "name": "is-extglob",
+        "version": "2.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/is-extglob"
+      },
+      {
+        "name": "is-glob",
+        "version": "4.0.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/is-glob"
+      },
+      {
+        "name": "isexe",
+        "version": "2.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/isexe"
+      },
+      {
+        "name": "json-schema-traverse",
+        "version": "0.4.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/json-schema-traverse"
+      },
+      {
+        "name": "json-stable-stringify-without-jsonify",
+        "version": "1.0.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/json-stable-stringify-without-jsonify"
+      },
+      {
+        "name": "keyv",
+        "version": "5.6.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/keyv"
+      },
+      {
+        "name": "levn",
+        "version": "0.4.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/levn"
+      },
+      {
+        "name": "locate-path",
+        "version": "6.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/locate-path"
+      },
+      {
+        "name": "lodash",
+        "version": "4.18.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/lodash"
+      },
+      {
+        "name": "lodash.snakecase",
+        "version": "4.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/lodash.snakecase"
+      },
+      {
+        "name": "magic-bytes.js",
+        "version": "1.13.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/magic-bytes.js"
+      },
+      {
+        "name": "minimatch",
+        "version": "10.2.6",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/minimatch"
+      },
+      {
+        "name": "ms",
+        "version": "2.1.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ms"
+      },
+      {
+        "name": "natural-compare",
+        "version": "1.4.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/natural-compare"
+      },
+      {
+        "name": "node-cron",
+        "version": "4.6.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/node-cron"
+      },
+      {
+        "name": "optionator",
+        "version": "0.9.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/optionator"
+      },
+      {
+        "name": "opusscript",
+        "version": "0.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/opusscript"
+      },
+      {
+        "name": "p-limit",
+        "version": "3.1.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/p-limit"
+      },
+      {
+        "name": "p-locate",
+        "version": "5.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/p-locate"
+      },
+      {
+        "name": "path-exists",
+        "version": "4.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/path-exists"
+      },
+      {
+        "name": "path-key",
+        "version": "3.1.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/path-key"
+      },
+      {
+        "name": "pg",
+        "version": "8.23.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg"
+      },
+      {
+        "name": "pg-cloudflare",
+        "version": "1.4.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-cloudflare"
+      },
+      {
+        "name": "pg-connection-string",
+        "version": "2.14.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-connection-string"
+      },
+      {
+        "name": "pg-int8",
+        "version": "1.0.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-int8"
+      },
+      {
+        "name": "pg-pool",
+        "version": "3.14.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-pool"
+      },
+      {
+        "name": "pg-protocol",
+        "version": "1.16.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-protocol"
+      },
+      {
+        "name": "pg-types",
+        "version": "2.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pg-types"
+      },
+      {
+        "name": "pgpass",
+        "version": "1.0.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/pgpass"
+      },
+      {
+        "name": "picomatch",
+        "version": "4.0.7",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/picomatch"
+      },
+      {
+        "name": "postgres-array",
+        "version": "2.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/postgres-array"
+      },
+      {
+        "name": "postgres-bytea",
+        "version": "1.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/postgres-bytea"
+      },
+      {
+        "name": "postgres-date",
+        "version": "1.0.7",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/postgres-date"
+      },
+      {
+        "name": "postgres-interval",
+        "version": "1.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/postgres-interval"
+      },
+      {
+        "name": "prelude-ls",
+        "version": "1.2.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/prelude-ls"
+      },
+      {
+        "name": "punycode",
+        "version": "2.3.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/punycode"
+      },
+      {
+        "name": "qified",
+        "version": "0.10.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/qified"
+      },
+      {
+        "name": "hookified",
+        "version": "2.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/qified/node_modules/hookified"
+      },
+      {
+        "name": "semver",
+        "version": "7.8.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/semver"
+      },
+      {
+        "name": "shebang-command",
+        "version": "2.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/shebang-command"
+      },
+      {
+        "name": "shebang-regex",
+        "version": "3.0.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/shebang-regex"
+      },
+      {
+        "name": "split2",
+        "version": "4.2.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/split2"
+      },
+      {
+        "name": "tinyglobby",
+        "version": "0.2.17",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/tinyglobby"
+      },
+      {
+        "name": "ts-api-utils",
+        "version": "2.5.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ts-api-utils"
+      },
+      {
+        "name": "ts-mixer",
+        "version": "6.0.4",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ts-mixer"
+      },
+      {
+        "name": "tslib",
+        "version": "2.8.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/tslib"
+      },
+      {
+        "name": "tsx",
+        "version": "4.23.13",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/tsx"
+      },
+      {
+        "name": "type-check",
+        "version": "0.4.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/type-check"
+      },
+      {
+        "name": "@typescript/typescript6",
+        "version": "6.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/typescript"
+      },
+      {
+        "name": "typescript-eslint",
+        "version": "8.69.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/typescript-eslint"
+      },
+      {
+        "name": "undici",
+        "version": "6.28.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/undici"
+      },
+      {
+        "name": "undici-types",
+        "version": "7.18.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/undici-types"
+      },
+      {
+        "name": "uri-js",
+        "version": "4.4.1",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/uri-js"
+      },
+      {
+        "name": "which",
+        "version": "2.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/which"
+      },
+      {
+        "name": "word-wrap",
+        "version": "1.2.5",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/word-wrap"
+      },
+      {
+        "name": "ws",
+        "version": "8.21.3",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/ws"
+      },
+      {
+        "name": "xtend",
+        "version": "4.0.2",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/xtend"
+      },
+      {
+        "name": "yocto-queue",
+        "version": "0.1.0",
+        "path": "/mnt/Datashare/home/raze/Development/caitlyn-dev/node_modules/yocto-queue"
+      }
+    ]
+  },
+  "images": {
+    "bot": {
+      "tag": "caitlyn-voice:dev",
+      "id": "sha256:e99f4c37660793037219036ac82b7e02599ac9094fbf8f9121bbe72cae4b904c",
+      "architecture": "x64",
+      "node": "v24.21.0",
+      "nodePath": "/usr/local/bin/node",
+      "npmVersion": "11.19.0",
+      "yarnVersion": "1.22.22",
+      "dockerCli": null,
+      "python": null,
+      "ffmpeg": null,
+      "pip": null,
+      "osFamily": "Alpine",
+      "osPackages": [
+        "alpine-baselayout-3.7.2-r1",
+        "alpine-baselayout-data-3.7.2-r1",
+        "alpine-keys-2.6-r0",
+        "alpine-release-3.24.2-r0",
+        "apk-tools-3.0.8-r0",
+        "busybox-1.37.0-r31",
+        "busybox-binsh-1.37.0-r31",
+        "ca-certificates-bundle-20260909-r0",
+        "libapk-3.0.8-r0",
+        "libcrypto3-3.5.8-r0",
+        "libgcc-15.2.0-r5",
+        "libssl3-3.5.8-r0",
+        "libstdc++-15.2.0-r5",
+        "musl-1.2.6-r2",
+        "musl-utils-1.2.6-r2",
+        "scanelf-1.3.9-r1",
+        "ssl_client-1.37.0-r31",
+        "zlib-1.3.2-r0"
+      ],
+      "npmPackages": [
+        {
+          "name": "@discordjs/builders",
+          "version": "1.14.1",
+          "path": "/app/node_modules/@discordjs/builders"
+        },
+        {
+          "name": "@discordjs/collection",
+          "version": "1.5.3",
+          "path": "/app/node_modules/@discordjs/collection"
+        },
+        {
+          "name": "@discordjs/formatters",
+          "version": "0.6.2",
+          "path": "/app/node_modules/@discordjs/formatters"
+        },
+        {
+          "name": "@discordjs/rest",
+          "version": "2.6.3",
+          "path": "/app/node_modules/@discordjs/rest"
+        },
+        {
+          "name": "@discordjs/collection",
+          "version": "2.1.1",
+          "path": "/app/node_modules/@discordjs/rest/node_modules/@discordjs/collection"
+        },
+        {
+          "name": "@discordjs/util",
+          "version": "1.2.0",
+          "path": "/app/node_modules/@discordjs/util"
+        },
+        {
+          "name": "@discordjs/voice",
+          "version": "0.19.2",
+          "path": "/app/node_modules/@discordjs/voice"
+        },
+        {
+          "name": "prism-media",
+          "version": "1.3.5",
+          "path": "/app/node_modules/@discordjs/voice/node_modules/prism-media"
+        },
+        {
+          "name": "@discordjs/ws",
+          "version": "1.2.3",
+          "path": "/app/node_modules/@discordjs/ws"
+        },
+        {
+          "name": "@discordjs/collection",
+          "version": "2.1.1",
+          "path": "/app/node_modules/@discordjs/ws/node_modules/@discordjs/collection"
+        },
+        {
+          "name": "@sapphire/async-queue",
+          "version": "1.5.5",
+          "path": "/app/node_modules/@sapphire/async-queue"
+        },
+        {
+          "name": "@sapphire/shapeshift",
+          "version": "4.0.0",
+          "path": "/app/node_modules/@sapphire/shapeshift"
+        },
+        {
+          "name": "@sapphire/snowflake",
+          "version": "3.5.5",
+          "path": "/app/node_modules/@sapphire/snowflake"
+        },
+        {
+          "name": "@snazzah/davey",
+          "version": "0.1.12",
+          "path": "/app/node_modules/@snazzah/davey"
+        },
+        {
+          "name": "@snazzah/davey-linux-x64-musl",
+          "version": "0.1.12",
+          "path": "/app/node_modules/@snazzah/davey-linux-x64-musl"
+        },
+        {
+          "name": "@types/node",
+          "version": "24.13.3",
+          "path": "/app/node_modules/@types/node"
+        },
+        {
+          "name": "@types/ws",
+          "version": "8.18.1",
+          "path": "/app/node_modules/@types/ws"
+        },
+        {
+          "name": "@vladfrangu/async_event_emitter",
+          "version": "2.4.7",
+          "path": "/app/node_modules/@vladfrangu/async_event_emitter"
+        },
+        {
+          "name": "date-fns",
+          "version": "4.4.0",
+          "path": "/app/node_modules/date-fns"
+        },
+        {
+          "name": "discord-api-types",
+          "version": "0.38.55",
+          "path": "/app/node_modules/discord-api-types"
+        },
+        {
+          "name": "discord.js",
+          "version": "14.27.0",
+          "path": "/app/node_modules/discord.js"
+        },
+        {
+          "name": "dotenv",
+          "version": "16.6.1",
+          "path": "/app/node_modules/dotenv"
+        },
+        {
+          "name": "fast-deep-equal",
+          "version": "3.1.3",
+          "path": "/app/node_modules/fast-deep-equal"
+        },
+        {
+          "name": "lodash",
+          "version": "4.18.1",
+          "path": "/app/node_modules/lodash"
+        },
+        {
+          "name": "lodash.snakecase",
+          "version": "4.1.1",
+          "path": "/app/node_modules/lodash.snakecase"
+        },
+        {
+          "name": "magic-bytes.js",
+          "version": "1.13.1",
+          "path": "/app/node_modules/magic-bytes.js"
+        },
+        {
+          "name": "node-cron",
+          "version": "4.6.0",
+          "path": "/app/node_modules/node-cron"
+        },
+        {
+          "name": "opusscript",
+          "version": "0.1.1",
+          "path": "/app/node_modules/opusscript"
+        },
+        {
+          "name": "pg",
+          "version": "8.23.0",
+          "path": "/app/node_modules/pg"
+        },
+        {
+          "name": "pg-cloudflare",
+          "version": "1.4.0",
+          "path": "/app/node_modules/pg-cloudflare"
+        },
+        {
+          "name": "pg-connection-string",
+          "version": "2.14.0",
+          "path": "/app/node_modules/pg-connection-string"
+        },
+        {
+          "name": "pg-int8",
+          "version": "1.0.1",
+          "path": "/app/node_modules/pg-int8"
+        },
+        {
+          "name": "pg-pool",
+          "version": "3.14.0",
+          "path": "/app/node_modules/pg-pool"
+        },
+        {
+          "name": "pg-protocol",
+          "version": "1.16.0",
+          "path": "/app/node_modules/pg-protocol"
+        },
+        {
+          "name": "pg-types",
+          "version": "2.2.0",
+          "path": "/app/node_modules/pg-types"
+        },
+        {
+          "name": "pgpass",
+          "version": "1.0.5",
+          "path": "/app/node_modules/pgpass"
+        },
+        {
+          "name": "postgres-array",
+          "version": "2.0.0",
+          "path": "/app/node_modules/postgres-array"
+        },
+        {
+          "name": "postgres-bytea",
+          "version": "1.0.0",
+          "path": "/app/node_modules/postgres-bytea"
+        },
+        {
+          "name": "postgres-date",
+          "version": "1.0.7",
+          "path": "/app/node_modules/postgres-date"
+        },
+        {
+          "name": "postgres-interval",
+          "version": "1.2.0",
+          "path": "/app/node_modules/postgres-interval"
+        },
+        {
+          "name": "split2",
+          "version": "4.2.0",
+          "path": "/app/node_modules/split2"
+        },
+        {
+          "name": "ts-mixer",
+          "version": "6.0.4",
+          "path": "/app/node_modules/ts-mixer"
+        },
+        {
+          "name": "tslib",
+          "version": "2.8.1",
+          "path": "/app/node_modules/tslib"
+        },
+        {
+          "name": "undici",
+          "version": "6.28.1",
+          "path": "/app/node_modules/undici"
+        },
+        {
+          "name": "undici-types",
+          "version": "7.18.2",
+          "path": "/app/node_modules/undici-types"
+        },
+        {
+          "name": "ws",
+          "version": "8.21.3",
+          "path": "/app/node_modules/ws"
+        },
+        {
+          "name": "xtend",
+          "version": "4.0.2",
+          "path": "/app/node_modules/xtend"
+        },
+        {
+          "name": "corepack",
+          "version": "0.36.0",
+          "path": "/usr/local/lib/node_modules/corepack"
+        },
+        {
+          "name": "npm",
+          "version": "11.19.0",
+          "path": "/usr/local/lib/node_modules/npm"
+        },
+        {
+          "name": "@gar/promise-retry",
+          "version": "1.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@gar/promise-retry"
+        },
+        {
+          "name": "@isaacs/fs-minipass",
+          "version": "4.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@isaacs/fs-minipass"
+        },
+        {
+          "name": "@isaacs/string-locale-compare",
+          "version": "1.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@isaacs/string-locale-compare"
+        },
+        {
+          "name": "@npmcli/agent",
+          "version": "4.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/agent"
+        },
+        {
+          "name": "@npmcli/arborist",
+          "version": "9.9.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist"
+        },
+        {
+          "name": "@npmcli/config",
+          "version": "10.12.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/config"
+        },
+        {
+          "name": "@npmcli/fs",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/fs"
+        },
+        {
+          "name": "@npmcli/git",
+          "version": "7.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/git"
+        },
+        {
+          "name": "@npmcli/installed-package-contents",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/installed-package-contents"
+        },
+        {
+          "name": "@npmcli/map-workspaces",
+          "version": "5.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/map-workspaces"
+        },
+        {
+          "name": "@npmcli/metavuln-calculator",
+          "version": "9.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/metavuln-calculator"
+        },
+        {
+          "name": "@npmcli/name-from-folder",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/name-from-folder"
+        },
+        {
+          "name": "@npmcli/node-gyp",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/node-gyp"
+        },
+        {
+          "name": "@npmcli/package-json",
+          "version": "7.0.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/package-json"
+        },
+        {
+          "name": "@npmcli/promise-spawn",
+          "version": "9.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/promise-spawn"
+        },
+        {
+          "name": "@npmcli/query",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/query"
+        },
+        {
+          "name": "@npmcli/redact",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/redact"
+        },
+        {
+          "name": "@npmcli/run-script",
+          "version": "10.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/run-script"
+        },
+        {
+          "name": "@sigstore/bundle",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/bundle"
+        },
+        {
+          "name": "@sigstore/core",
+          "version": "3.2.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/core"
+        },
+        {
+          "name": "@sigstore/protobuf-specs",
+          "version": "0.5.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/protobuf-specs"
+        },
+        {
+          "name": "@sigstore/sign",
+          "version": "4.1.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/sign"
+        },
+        {
+          "name": "@sigstore/tuf",
+          "version": "4.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/tuf"
+        },
+        {
+          "name": "@sigstore/verify",
+          "version": "3.1.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/verify"
+        },
+        {
+          "name": "@tufjs/canonical-json",
+          "version": "2.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@tufjs/canonical-json"
+        },
+        {
+          "name": "@tufjs/models",
+          "version": "4.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/@tufjs/models"
+        },
+        {
+          "name": "abbrev",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/abbrev"
+        },
+        {
+          "name": "agent-base",
+          "version": "7.1.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/agent-base"
+        },
+        {
+          "name": "aproba",
+          "version": "2.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/aproba"
+        },
+        {
+          "name": "archy",
+          "version": "1.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/archy"
+        },
+        {
+          "name": "balanced-match",
+          "version": "4.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/balanced-match"
+        },
+        {
+          "name": "bin-links",
+          "version": "6.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/bin-links"
+        },
+        {
+          "name": "binary-extensions",
+          "version": "3.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/binary-extensions"
+        },
+        {
+          "name": "brace-expansion",
+          "version": "5.0.7",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/brace-expansion"
+        },
+        {
+          "name": "cacache",
+          "version": "20.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/cacache"
+        },
+        {
+          "name": "chalk",
+          "version": "5.6.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/chalk"
+        },
+        {
+          "name": "chownr",
+          "version": "3.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/chownr"
+        },
+        {
+          "name": "ci-info",
+          "version": "4.4.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ci-info"
+        },
+        {
+          "name": "cidr-regex",
+          "version": "5.0.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/cidr-regex"
+        },
+        {
+          "name": "cmd-shim",
+          "version": "8.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/cmd-shim"
+        },
+        {
+          "name": "common-ancestor-path",
+          "version": "2.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/common-ancestor-path"
+        },
+        {
+          "name": "cssesc",
+          "version": "3.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/cssesc"
+        },
+        {
+          "name": "debug",
+          "version": "4.4.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/debug"
+        },
+        {
+          "name": "diff",
+          "version": "8.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/diff"
+        },
+        {
+          "name": "env-paths",
+          "version": "2.2.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/env-paths"
+        },
+        {
+          "name": "exponential-backoff",
+          "version": "3.1.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/exponential-backoff"
+        },
+        {
+          "name": "fastest-levenshtein",
+          "version": "1.0.16",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/fastest-levenshtein"
+        },
+        {
+          "name": "fs-minipass",
+          "version": "3.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/fs-minipass"
+        },
+        {
+          "name": "glob",
+          "version": "13.0.6",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/glob"
+        },
+        {
+          "name": "graceful-fs",
+          "version": "4.2.11",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/graceful-fs"
+        },
+        {
+          "name": "hosted-git-info",
+          "version": "9.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/hosted-git-info"
+        },
+        {
+          "name": "http-cache-semantics",
+          "version": "4.2.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/http-cache-semantics"
+        },
+        {
+          "name": "http-proxy-agent",
+          "version": "7.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/http-proxy-agent"
+        },
+        {
+          "name": "https-proxy-agent",
+          "version": "7.0.6",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/https-proxy-agent"
+        },
+        {
+          "name": "iconv-lite",
+          "version": "0.7.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/iconv-lite"
+        },
+        {
+          "name": "ignore-walk",
+          "version": "8.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ignore-walk"
+        },
+        {
+          "name": "ini",
+          "version": "6.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ini"
+        },
+        {
+          "name": "init-package-json",
+          "version": "8.2.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/init-package-json"
+        },
+        {
+          "name": "ip-address",
+          "version": "10.2.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ip-address"
+        },
+        {
+          "name": "is-cidr",
+          "version": "6.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/is-cidr"
+        },
+        {
+          "name": "isexe",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/isexe"
+        },
+        {
+          "name": "json-parse-even-better-errors",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/json-parse-even-better-errors"
+        },
+        {
+          "name": "json-stringify-nice",
+          "version": "1.1.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/json-stringify-nice"
+        },
+        {
+          "name": "jsonparse",
+          "version": "1.3.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/jsonparse"
+        },
+        {
+          "name": "just-diff",
+          "version": "6.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/just-diff"
+        },
+        {
+          "name": "just-diff-apply",
+          "version": "5.5.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/just-diff-apply"
+        },
+        {
+          "name": "libnpmaccess",
+          "version": "10.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmaccess"
+        },
+        {
+          "name": "libnpmdiff",
+          "version": "8.1.12",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmdiff"
+        },
+        {
+          "name": "libnpmexec",
+          "version": "10.3.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmexec"
+        },
+        {
+          "name": "libnpmfund",
+          "version": "7.0.26",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmfund"
+        },
+        {
+          "name": "libnpmorg",
+          "version": "8.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmorg"
+        },
+        {
+          "name": "libnpmpack",
+          "version": "9.1.12",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmpack"
+        },
+        {
+          "name": "libnpmpublish",
+          "version": "11.2.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmpublish"
+        },
+        {
+          "name": "libnpmsearch",
+          "version": "9.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmsearch"
+        },
+        {
+          "name": "libnpmteam",
+          "version": "8.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmteam"
+        },
+        {
+          "name": "libnpmversion",
+          "version": "8.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmversion"
+        },
+        {
+          "name": "lru-cache",
+          "version": "11.5.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/lru-cache"
+        },
+        {
+          "name": "make-fetch-happen",
+          "version": "15.0.6",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/make-fetch-happen"
+        },
+        {
+          "name": "minimatch",
+          "version": "10.2.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minimatch"
+        },
+        {
+          "name": "minipass",
+          "version": "7.1.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass"
+        },
+        {
+          "name": "minipass-collect",
+          "version": "2.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-collect"
+        },
+        {
+          "name": "minipass-fetch",
+          "version": "5.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-fetch"
+        },
+        {
+          "name": "minipass-flush",
+          "version": "1.0.6",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-flush"
+        },
+        {
+          "name": "minipass-pipeline",
+          "version": "1.2.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline"
+        },
+        {
+          "name": "minipass",
+          "version": "3.3.6",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline/node_modules/minipass"
+        },
+        {
+          "name": "yallist",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline/node_modules/yallist"
+        },
+        {
+          "name": "minipass-sized",
+          "version": "2.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-sized"
+        },
+        {
+          "name": "minizlib",
+          "version": "3.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/minizlib"
+        },
+        {
+          "name": "ms",
+          "version": "2.1.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ms"
+        },
+        {
+          "name": "mute-stream",
+          "version": "3.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/mute-stream"
+        },
+        {
+          "name": "negotiator",
+          "version": "1.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/negotiator"
+        },
+        {
+          "name": "node-gyp",
+          "version": "12.4.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/node-gyp"
+        },
+        {
+          "name": "nopt",
+          "version": "9.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/nopt"
+        },
+        {
+          "name": "npm-audit-report",
+          "version": "7.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-audit-report"
+        },
+        {
+          "name": "npm-bundled",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-bundled"
+        },
+        {
+          "name": "npm-install-checks",
+          "version": "8.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-install-checks"
+        },
+        {
+          "name": "npm-normalize-package-bin",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-normalize-package-bin"
+        },
+        {
+          "name": "npm-package-arg",
+          "version": "13.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-package-arg"
+        },
+        {
+          "name": "npm-packlist",
+          "version": "10.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-packlist"
+        },
+        {
+          "name": "npm-pick-manifest",
+          "version": "11.0.3",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-pick-manifest"
+        },
+        {
+          "name": "npm-profile",
+          "version": "12.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-profile"
+        },
+        {
+          "name": "npm-registry-fetch",
+          "version": "19.1.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-registry-fetch"
+        },
+        {
+          "name": "npm-user-validate",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/npm-user-validate"
+        },
+        {
+          "name": "p-map",
+          "version": "7.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/p-map"
+        },
+        {
+          "name": "pacote",
+          "version": "21.5.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/pacote"
+        },
+        {
+          "name": "parse-conflict-json",
+          "version": "5.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/parse-conflict-json"
+        },
+        {
+          "name": "path-scurry",
+          "version": "2.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/path-scurry"
+        },
+        {
+          "name": "postcss-selector-parser",
+          "version": "7.1.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/postcss-selector-parser"
+        },
+        {
+          "name": "proc-log",
+          "version": "6.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/proc-log"
+        },
+        {
+          "name": "proggy",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/proggy"
+        },
+        {
+          "name": "promise-all-reject-late",
+          "version": "1.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/promise-all-reject-late"
+        },
+        {
+          "name": "promise-call-limit",
+          "version": "3.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/promise-call-limit"
+        },
+        {
+          "name": "promzard",
+          "version": "3.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/promzard"
+        },
+        {
+          "name": "qrcode-terminal",
+          "version": "0.12.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/qrcode-terminal"
+        },
+        {
+          "name": "read",
+          "version": "5.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/read"
+        },
+        {
+          "name": "read-cmd-shim",
+          "version": "6.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/read-cmd-shim"
+        },
+        {
+          "name": "safer-buffer",
+          "version": "2.1.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/safer-buffer"
+        },
+        {
+          "name": "semver",
+          "version": "7.8.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/semver"
+        },
+        {
+          "name": "signal-exit",
+          "version": "4.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/signal-exit"
+        },
+        {
+          "name": "sigstore",
+          "version": "4.1.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/sigstore"
+        },
+        {
+          "name": "smart-buffer",
+          "version": "4.2.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/smart-buffer"
+        },
+        {
+          "name": "socks",
+          "version": "2.8.9",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/socks"
+        },
+        {
+          "name": "socks-proxy-agent",
+          "version": "8.0.5",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/socks-proxy-agent"
+        },
+        {
+          "name": "spdx-exceptions",
+          "version": "2.5.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-exceptions"
+        },
+        {
+          "name": "spdx-expression-parse",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-expression-parse"
+        },
+        {
+          "name": "spdx-license-ids",
+          "version": "3.0.23",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-license-ids"
+        },
+        {
+          "name": "ssri",
+          "version": "13.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/ssri"
+        },
+        {
+          "name": "supports-color",
+          "version": "10.2.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/supports-color"
+        },
+        {
+          "name": "tar",
+          "version": "7.5.19",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tar"
+        },
+        {
+          "name": "text-table",
+          "version": "0.2.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/text-table"
+        },
+        {
+          "name": "tiny-relative-date",
+          "version": "2.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tiny-relative-date"
+        },
+        {
+          "name": "tinyglobby",
+          "version": "0.2.17",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby"
+        },
+        {
+          "name": "fdir",
+          "version": "6.5.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/fdir"
+        },
+        {
+          "name": "picomatch",
+          "version": "4.0.4",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch"
+        },
+        {
+          "name": "treeverse",
+          "version": "3.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/treeverse"
+        },
+        {
+          "name": "tuf-js",
+          "version": "4.1.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/tuf-js"
+        },
+        {
+          "name": "undici",
+          "version": "6.27.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/undici"
+        },
+        {
+          "name": "util-deprecate",
+          "version": "1.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/util-deprecate"
+        },
+        {
+          "name": "validate-npm-package-name",
+          "version": "7.0.2",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/validate-npm-package-name"
+        },
+        {
+          "name": "walk-up-path",
+          "version": "4.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/walk-up-path"
+        },
+        {
+          "name": "which",
+          "version": "6.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/which"
+        },
+        {
+          "name": "write-file-atomic",
+          "version": "7.0.1",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/write-file-atomic"
+        },
+        {
+          "name": "yallist",
+          "version": "5.0.0",
+          "path": "/usr/local/lib/node_modules/npm/node_modules/yallist"
+        }
+      ]
+    },
+    "speechWorker": {
+      "tag": "caitlyn-transcription:dev-base-en",
+      "id": "sha256:da8614f3f3a7c7b1d73c761f400776e04e19c5a5cb0f6ff457bc58c1d9b2c87e",
+      "model": {
+        "name": "Systran/faster-whisper-base.en",
+        "revision": "3d3d5dee26484f91867d81cb899cfcf72b96be6c",
+        "path": "/models/whisper"
+      },
+      "python": "3.11.16",
+      "pythonPath": "/usr/local/bin/python",
+      "packages": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "av",
+          "version": "18.1.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "ctranslate2",
+          "version": "4.8.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "faster-whisper",
+          "version": "1.2.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "filelock",
+          "version": "4.0.8",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "flatbuffers",
+          "version": "25.12.19",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.9.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.6.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "1.33.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "numpy",
+          "version": "2.4.6",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "onnxruntime",
+          "version": "1.30.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "pip",
+          "version": "24.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "protobuf",
+          "version": "7.36.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "setuptools",
+          "version": "79.0.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tokenizers",
+          "version": "0.23.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "wheel",
+          "version": "0.46.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        }
+      ],
+      "osPackages": [
+        "adduser\t3.152",
+        "apt\t3.0.3",
+        "base-files\t13.8+deb13u7",
+        "base-passwd\t3.6.7",
+        "bash\t5.2.37-2+b10",
+        "bsdutils\t1:2.41.5-0+deb13u1",
+        "ca-certificates\t20250419",
+        "coreutils\t9.7-3",
+        "dash\t0.5.12-12",
+        "debconf\t1.5.91",
+        "debian-archive-keyring\t2025.1",
+        "debianutils\t5.23.2",
+        "diffutils\t1:3.10-4",
+        "dpkg\t1.22.22",
+        "findutils\t4.10.0-3",
+        "gcc-14-base:amd64\t14.2.0-19",
+        "grep\t3.11-4",
+        "gzip\t1.13-1+deb13u1",
+        "hostname\t3.25",
+        "init-system-helpers\t1.69~deb13u1",
+        "libacl1:amd64\t2.3.2-2+b1",
+        "libapt-pkg7.0:amd64\t3.0.3",
+        "libattr1:amd64\t1:2.5.2-3",
+        "libaudit-common\t1:4.0.2-2+deb13u1",
+        "libaudit1:amd64\t1:4.0.2-2+deb13u1",
+        "libblkid1:amd64\t2.41.5-0+deb13u1",
+        "libbsd0:amd64\t0.12.2-2",
+        "libbz2-1.0:amd64\t1.0.8-6",
+        "libc-bin\t2.41-12+deb13u4",
+        "libc6:amd64\t2.41-12+deb13u4",
+        "libcap-ng0:amd64\t0.8.5-4+b1",
+        "libcap2:amd64\t1:2.75-10+deb13u1+b3",
+        "libcrypt1:amd64\t1:4.4.38-1",
+        "libdb5.3t64:amd64\t5.3.28+dfsg2-9",
+        "libdebconfclient0:amd64\t0.280",
+        "libffi8:amd64\t3.4.8-2",
+        "libgcc-s1:amd64\t14.2.0-19",
+        "libgdbm6t64:amd64\t1.24-2",
+        "libgmp10:amd64\t2:6.3.0+dfsg-3",
+        "libhogweed6t64:amd64\t3.10.1-1",
+        "liblastlog2-2:amd64\t2.41.5-0+deb13u1",
+        "liblz4-1:amd64\t1.10.0-4",
+        "liblzma5:amd64\t5.8.1-1+deb13u1",
+        "libmd0:amd64\t1.1.0-2+b1",
+        "libmount1:amd64\t2.41.5-0+deb13u1",
+        "libncursesw6:amd64\t6.5+20250216-2",
+        "libnettle8t64:amd64\t3.10.1-1",
+        "libpam-modules:amd64\t1.7.0-5",
+        "libpam-modules-bin\t1.7.0-5",
+        "libpam-runtime\t1.7.0-5",
+        "libpam0g:amd64\t1.7.0-5",
+        "libpcre2-8-0:amd64\t10.46-1~deb13u2",
+        "libreadline8t64:amd64\t8.2-6",
+        "libseccomp2:amd64\t2.6.0-2",
+        "libselinux1:amd64\t3.8.1-1",
+        "libsemanage-common\t3.8.1-1",
+        "libsemanage2:amd64\t3.8.1-1",
+        "libsepol2:amd64\t3.8.1-1",
+        "libsmartcols1:amd64\t2.41.5-0+deb13u1",
+        "libsqlite3-0:amd64\t3.46.1-7+deb13u2",
+        "libssl3t64:amd64\t3.5.7-1~deb13u2",
+        "libstdc++6:amd64\t14.2.0-19",
+        "libsystemd0:amd64\t257.13-1~deb13u1",
+        "libtinfo6:amd64\t6.5+20250216-2",
+        "libudev1:amd64\t257.13-1~deb13u1",
+        "libuuid1:amd64\t2.41.5-0+deb13u1",
+        "libxxhash0:amd64\t0.8.3-2",
+        "libzstd1:amd64\t1.5.7+dfsg-1",
+        "login\t1:4.16.0-2+really2.41.5-0+deb13u1",
+        "login.defs\t1:4.17.4-2",
+        "mawk\t1.3.4.20250131-1",
+        "mount\t2.41.5-0+deb13u1",
+        "ncurses-base\t6.5+20250216-2",
+        "ncurses-bin\t6.5+20250216-2",
+        "netbase\t6.5",
+        "openssl\t3.5.7-1~deb13u2",
+        "openssl-provider-legacy\t3.5.7-1~deb13u2",
+        "passwd\t1:4.17.4-2",
+        "perl-base\t5.40.1-6+deb13u1",
+        "readline-common\t8.2-6",
+        "sed\t4.9-2+deb13u1",
+        "sqv\t1.3.0-3+b2",
+        "sysvinit-utils\t3.14-4",
+        "tar\t1.35+dfsg-3.1",
+        "tzdata\t2026c-0+deb13u1",
+        "util-linux\t2.41.5-0+deb13u1",
+        "zlib1g:amd64\t1:1.3.dfsg+really1.3.1-1+b1"
+      ]
+    }
+  }
+}

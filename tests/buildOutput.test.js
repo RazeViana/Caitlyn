@@ -50,6 +50,9 @@ const expectedFiles = [
 	"dist/commands/utility/server.js",
 	"dist/commands/utility/streaks.js",
 	"dist/commands/utility/toggleai.js",
+	"dist/commands/utility/transcribe.js",
+	"dist/core/transcriptionRuntime.js",
+	"dist/core/transcriptionVoice.js",
 	"dist/commands/utility/user.js",
 ];
 
@@ -237,6 +240,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"social",
 			"streaks",
 			"toggleai",
+			"transcribe",
 			"user",
 		]);
 		assert.deepEqual(result.listeners.toSorted((a, b) => a.name.localeCompare(b.name)), [
@@ -255,7 +259,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"/applications/compiled-client-id/guilds/compiled-guild-id/commands",
 		);
 		const guildPayload = result.restCalls[0].options.body;
-		assert.equal(guildPayload.length, 14);
+		assert.equal(guildPayload.length, 15);
 		assert.equal(guildPayload.every((command) => {
 			return command !== null && typeof command === "object" && !Array.isArray(command);
 		}), true);
@@ -273,6 +277,7 @@ test("compiled handlers and deployment discover every production command and eve
 			"social",
 			"streaks",
 			"toggleai",
+			"transcribe",
 			"user",
 		]);
 	}

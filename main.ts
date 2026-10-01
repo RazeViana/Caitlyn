@@ -21,6 +21,7 @@ import { commandHandler } from "./handlers/commandHandler.js";
 import { startCronJobs } from "./handlers/cronJobHandler.js";
 import { drainEvents, eventHandler } from "./handlers/eventHandler.js";
 import { configuredSocialRuntime, socialRuntimes, type SocialRuntime } from "./core/socialRuntime.js";
+import { configuredTranscriptionRuntime, transcriptionRuntimes, type TranscriptionRuntime } from "./core/transcriptionRuntime.js";
 
 interface StartBotLogger {
 	error: (...args: unknown[]) => void;
@@ -30,6 +31,7 @@ interface StartBotLogger {
 export interface StartBotDependencies {
 	configuration?: typeof getFeatureConfiguration;
 	createSocialRuntime?: (client: Client) => SocialRuntime | undefined;
+	createTranscriptionRuntime?: (client: Client) => TranscriptionRuntime | undefined;
 	createLogForwarder?: (client: Client) => DiscordLogForwarder | undefined;
 	reportConfiguration?: () => void;
 	closeDatabase: () => Promise<void>;
@@ -46,6 +48,7 @@ export interface StartBotDependencies {
 
 const defaultDependencies: StartBotDependencies = {
 	createSocialRuntime: configuredSocialRuntime,
+	createTranscriptionRuntime: configuredTranscriptionRuntime,
 	configuration: getFeatureConfiguration,
 	createLogForwarder: createDiscordLogForwarder,
 	reportConfiguration: () => logFeatureConfiguration(logger),
@@ -69,6 +72,7 @@ export async function startBot(
 	let stopping: Promise<void> | undefined;
 	let logForwarder: DiscordLogForwarder | undefined;
 	let socialRuntime: SocialRuntime | undefined;
+	let transcriptionRuntime: TranscriptionRuntime | undefined;
 	let databaseEnabled = true;
 	const stop = (): Promise<void> => {
 		stopping ??= (async () => {
@@ -86,6 +90,7 @@ export async function startBot(
 					dependencies.drainEvents(client!),
 					closeJobs?.(),
 					socialRuntime?.stop(),
+					transcriptionRuntime?.stop(),
 				]);
 				const failures = outcomes.filter((outcome) => outcome.status === "rejected");
 				if (failures.length) throw new AggregateError(failures.map((failure) => failure.reason), "Work drain failed");
@@ -93,6 +98,7 @@ export async function startBot(
 			await cleanup("log forwarding shutdown", async () => { await logForwarder?.stop(); });
 			logForwarders.delete(client);
 			socialRuntimes.delete(client);
+			transcriptionRuntimes.delete(client);
 			await cleanup("Discord shutdown", () => client!.destroy());
 			if (databaseEnabled) await cleanup("database shutdown", dependencies.closeDatabase);
 		})();
@@ -117,6 +123,7 @@ export async function startBot(
 		dependencies.reportConfiguration?.();
 		if (configuration?.socialMedia.enabled !== false) socialRuntime = dependencies.createSocialRuntime?.(client);
 		if (socialRuntime) socialRuntimes.set(client, socialRuntime);
+		if (configuration?.transcription.enabled !== false) transcriptionRuntime = dependencies.createTranscriptionRuntime?.(client);
 
 		// Create a PostgreSQL connection pool
 		if (databaseEnabled) await dependencies.createPGPool();
@@ -130,6 +137,17 @@ export async function startBot(
 		dependencies.logger.info("Logging in to Discord...");
 		await dependencies.loginClient(client);
 		socialRuntime?.start();
+		if (transcriptionRuntime) {
+			try {
+				await transcriptionRuntime.start();
+				transcriptionRuntimes.set(client, transcriptionRuntime);
+			}
+			catch {
+				dependencies.logger.error("Local voice transcription could not start; check its persistent directory and configuration.");
+				await transcriptionRuntime.stop();
+				transcriptionRuntime = undefined;
+			}
+		}
 
 		dependencies.logger.info("Starting cron jobs...");
 		if (configuration?.birthdayReminders.enabled !== false) closeJobs = dependencies.startCronJobs(client);
