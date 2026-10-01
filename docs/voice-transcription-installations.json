@@ -1981,6 +1981,505 @@
         "util-linux\t2.41.5-0+deb13u1",
         "zlib1g:amd64\t1:1.3.dfsg+really1.3.1-1+b1"
       ]
+    },
+    "speechWorkerCpu": {
+      "tag": "caitlyn-transcription:dev-base-en-cpu",
+      "id": "sha256:5a40e294c0db662b7093ececb413dd0f8656c8decf7d315fda888613a923f637",
+      "model": {
+        "name": "Systran/faster-whisper-base.en",
+        "revision": "3d3d5dee26484f91867d81cb899cfcf72b96be6c",
+        "path": "/models/whisper"
+      },
+      "python": "3.11.16",
+      "pythonPath": "/usr/local/bin/python",
+      "packages": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "av",
+          "version": "18.1.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "ctranslate2",
+          "version": "4.8.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "faster-whisper",
+          "version": "1.2.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "filelock",
+          "version": "4.0.8",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "flatbuffers",
+          "version": "25.12.19",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.9.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.6.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "1.33.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "numpy",
+          "version": "2.4.6",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "onnxruntime",
+          "version": "1.30.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "pip",
+          "version": "24.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "protobuf",
+          "version": "7.36.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "setuptools",
+          "version": "79.0.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tokenizers",
+          "version": "0.23.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "wheel",
+          "version": "0.46.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        }
+      ],
+      "osPackages": [
+        "adduser\t3.152",
+        "apt\t3.0.3",
+        "base-files\t13.8+deb13u7",
+        "base-passwd\t3.6.7",
+        "bash\t5.2.37-2+b10",
+        "bsdutils\t1:2.41.5-0+deb13u1",
+        "ca-certificates\t20250419",
+        "coreutils\t9.7-3",
+        "dash\t0.5.12-12",
+        "debconf\t1.5.91",
+        "debian-archive-keyring\t2025.1",
+        "debianutils\t5.23.2",
+        "diffutils\t1:3.10-4",
+        "dpkg\t1.22.22",
+        "findutils\t4.10.0-3",
+        "gcc-14-base:amd64\t14.2.0-19",
+        "grep\t3.11-4",
+        "gzip\t1.13-1+deb13u1",
+        "hostname\t3.25",
+        "init-system-helpers\t1.69~deb13u1",
+        "libacl1:amd64\t2.3.2-2+b1",
+        "libapt-pkg7.0:amd64\t3.0.3",
+        "libattr1:amd64\t1:2.5.2-3",
+        "libaudit-common\t1:4.0.2-2+deb13u1",
+        "libaudit1:amd64\t1:4.0.2-2+deb13u1",
+        "libblkid1:amd64\t2.41.5-0+deb13u1",
+        "libbsd0:amd64\t0.12.2-2",
+        "libbz2-1.0:amd64\t1.0.8-6",
+        "libc-bin\t2.41-12+deb13u4",
+        "libc6:amd64\t2.41-12+deb13u4",
+        "libcap-ng0:amd64\t0.8.5-4+b1",
+        "libcap2:amd64\t1:2.75-10+deb13u1+b3",
+        "libcrypt1:amd64\t1:4.4.38-1",
+        "libdb5.3t64:amd64\t5.3.28+dfsg2-9",
+        "libdebconfclient0:amd64\t0.280",
+        "libffi8:amd64\t3.4.8-2",
+        "libgcc-s1:amd64\t14.2.0-19",
+        "libgdbm6t64:amd64\t1.24-2",
+        "libgmp10:amd64\t2:6.3.0+dfsg-3",
+        "libhogweed6t64:amd64\t3.10.1-1",
+        "liblastlog2-2:amd64\t2.41.5-0+deb13u1",
+        "liblz4-1:amd64\t1.10.0-4",
+        "liblzma5:amd64\t5.8.1-1+deb13u1",
+        "libmd0:amd64\t1.1.0-2+b1",
+        "libmount1:amd64\t2.41.5-0+deb13u1",
+        "libncursesw6:amd64\t6.5+20250216-2",
+        "libnettle8t64:amd64\t3.10.1-1",
+        "libpam-modules:amd64\t1.7.0-5",
+        "libpam-modules-bin\t1.7.0-5",
+        "libpam-runtime\t1.7.0-5",
+        "libpam0g:amd64\t1.7.0-5",
+        "libpcre2-8-0:amd64\t10.46-1~deb13u2",
+        "libreadline8t64:amd64\t8.2-6",
+        "libseccomp2:amd64\t2.6.0-2",
+        "libselinux1:amd64\t3.8.1-1",
+        "libsemanage-common\t3.8.1-1",
+        "libsemanage2:amd64\t3.8.1-1",
+        "libsepol2:amd64\t3.8.1-1",
+        "libsmartcols1:amd64\t2.41.5-0+deb13u1",
+        "libsqlite3-0:amd64\t3.46.1-7+deb13u2",
+        "libssl3t64:amd64\t3.5.7-1~deb13u2",
+        "libstdc++6:amd64\t14.2.0-19",
+        "libsystemd0:amd64\t257.13-1~deb13u1",
+        "libtinfo6:amd64\t6.5+20250216-2",
+        "libudev1:amd64\t257.13-1~deb13u1",
+        "libuuid1:amd64\t2.41.5-0+deb13u1",
+        "libxxhash0:amd64\t0.8.3-2",
+        "libzstd1:amd64\t1.5.7+dfsg-1",
+        "login\t1:4.16.0-2+really2.41.5-0+deb13u1",
+        "login.defs\t1:4.17.4-2",
+        "mawk\t1.3.4.20250131-1",
+        "mount\t2.41.5-0+deb13u1",
+        "ncurses-base\t6.5+20250216-2",
+        "ncurses-bin\t6.5+20250216-2",
+        "netbase\t6.5",
+        "openssl\t3.5.7-1~deb13u2",
+        "openssl-provider-legacy\t3.5.7-1~deb13u2",
+        "passwd\t1:4.17.4-2",
+        "perl-base\t5.40.1-6+deb13u1",
+        "readline-common\t8.2-6",
+        "sed\t4.9-2+deb13u1",
+        "sqv\t1.3.0-3+b2",
+        "sysvinit-utils\t3.14-4",
+        "tar\t1.35+dfsg-3.1",
+        "tzdata\t2026c-0+deb13u1",
+        "util-linux\t2.41.5-0+deb13u1",
+        "zlib1g:amd64\t1:1.3.dfsg+really1.3.1-1+b1"
+      ]
+    },
+    "speechWorkerGpu": {
+      "tag": "caitlyn-transcription:dev-base-en-cuda",
+      "id": "sha256:47a23bc60c23f2506ebe573bd955f5128f4e436e9aaf488db61c71f0d6ae329f",
+      "model": {
+        "name": "Systran/faster-whisper-base.en",
+        "revision": "3d3d5dee26484f91867d81cb899cfcf72b96be6c",
+        "path": "/models/whisper"
+      },
+      "python": "3.11.16",
+      "pythonPath": "/usr/local/bin/python",
+      "packages": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "av",
+          "version": "18.1.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "ctranslate2",
+          "version": "4.8.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "faster-whisper",
+          "version": "1.2.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "filelock",
+          "version": "4.0.8",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "flatbuffers",
+          "version": "25.12.19",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.9.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.6.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpcore",
+          "version": "1.0.9",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "httpx",
+          "version": "0.28.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "1.33.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "numpy",
+          "version": "2.4.6",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "nvidia-cublas-cu12",
+          "version": "12.8.4.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "nvidia-cudnn-cu12",
+          "version": "9.10.2.21",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "onnxruntime",
+          "version": "1.30.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "pip",
+          "version": "24.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "protobuf",
+          "version": "7.36.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "setuptools",
+          "version": "79.0.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tokenizers",
+          "version": "0.23.2",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        },
+        {
+          "name": "wheel",
+          "version": "0.46.3",
+          "path": "/usr/local/lib/python3.11/site-packages"
+        }
+      ],
+      "osPackages": [
+        "adduser\t3.152",
+        "apt\t3.0.3",
+        "base-files\t13.8+deb13u7",
+        "base-passwd\t3.6.7",
+        "bash\t5.2.37-2+b10",
+        "bsdutils\t1:2.41.5-0+deb13u1",
+        "ca-certificates\t20250419",
+        "coreutils\t9.7-3",
+        "dash\t0.5.12-12",
+        "debconf\t1.5.91",
+        "debian-archive-keyring\t2025.1",
+        "debianutils\t5.23.2",
+        "diffutils\t1:3.10-4",
+        "dpkg\t1.22.22",
+        "findutils\t4.10.0-3",
+        "gcc-14-base:amd64\t14.2.0-19",
+        "grep\t3.11-4",
+        "gzip\t1.13-1+deb13u1",
+        "hostname\t3.25",
+        "init-system-helpers\t1.69~deb13u1",
+        "libacl1:amd64\t2.3.2-2+b1",
+        "libapt-pkg7.0:amd64\t3.0.3",
+        "libattr1:amd64\t1:2.5.2-3",
+        "libaudit-common\t1:4.0.2-2+deb13u1",
+        "libaudit1:amd64\t1:4.0.2-2+deb13u1",
+        "libblkid1:amd64\t2.41.5-0+deb13u1",
+        "libbsd0:amd64\t0.12.2-2",
+        "libbz2-1.0:amd64\t1.0.8-6",
+        "libc-bin\t2.41-12+deb13u4",
+        "libc6:amd64\t2.41-12+deb13u4",
+        "libcap-ng0:amd64\t0.8.5-4+b1",
+        "libcap2:amd64\t1:2.75-10+deb13u1+b3",
+        "libcrypt1:amd64\t1:4.4.38-1",
+        "libdb5.3t64:amd64\t5.3.28+dfsg2-9",
+        "libdebconfclient0:amd64\t0.280",
+        "libffi8:amd64\t3.4.8-2",
+        "libgcc-s1:amd64\t14.2.0-19",
+        "libgdbm6t64:amd64\t1.24-2",
+        "libgmp10:amd64\t2:6.3.0+dfsg-3",
+        "libhogweed6t64:amd64\t3.10.1-1",
+        "liblastlog2-2:amd64\t2.41.5-0+deb13u1",
+        "liblz4-1:amd64\t1.10.0-4",
+        "liblzma5:amd64\t5.8.1-1+deb13u1",
+        "libmd0:amd64\t1.1.0-2+b1",
+        "libmount1:amd64\t2.41.5-0+deb13u1",
+        "libncursesw6:amd64\t6.5+20250216-2",
+        "libnettle8t64:amd64\t3.10.1-1",
+        "libpam-modules:amd64\t1.7.0-5",
+        "libpam-modules-bin\t1.7.0-5",
+        "libpam-runtime\t1.7.0-5",
+        "libpam0g:amd64\t1.7.0-5",
+        "libpcre2-8-0:amd64\t10.46-1~deb13u2",
+        "libreadline8t64:amd64\t8.2-6",
+        "libseccomp2:amd64\t2.6.0-2",
+        "libselinux1:amd64\t3.8.1-1",
+        "libsemanage-common\t3.8.1-1",
+        "libsemanage2:amd64\t3.8.1-1",
+        "libsepol2:amd64\t3.8.1-1",
+        "libsmartcols1:amd64\t2.41.5-0+deb13u1",
+        "libsqlite3-0:amd64\t3.46.1-7+deb13u2",
+        "libssl3t64:amd64\t3.5.7-1~deb13u2",
+        "libstdc++6:amd64\t14.2.0-19",
+        "libsystemd0:amd64\t257.13-1~deb13u1",
+        "libtinfo6:amd64\t6.5+20250216-2",
+        "libudev1:amd64\t257.13-1~deb13u1",
+        "libuuid1:amd64\t2.41.5-0+deb13u1",
+        "libxxhash0:amd64\t0.8.3-2",
+        "libzstd1:amd64\t1.5.7+dfsg-1",
+        "login\t1:4.16.0-2+really2.41.5-0+deb13u1",
+        "login.defs\t1:4.17.4-2",
+        "mawk\t1.3.4.20250131-1",
+        "mount\t2.41.5-0+deb13u1",
+        "ncurses-base\t6.5+20250216-2",
+        "ncurses-bin\t6.5+20250216-2",
+        "netbase\t6.5",
+        "openssl\t3.5.7-1~deb13u2",
+        "openssl-provider-legacy\t3.5.7-1~deb13u2",
+        "passwd\t1:4.17.4-2",
+        "perl-base\t5.40.1-6+deb13u1",
+        "readline-common\t8.2-6",
+        "sed\t4.9-2+deb13u1",
+        "sqv\t1.3.0-3+b2",
+        "sysvinit-utils\t3.14-4",
+        "tar\t1.35+dfsg-3.1",
+        "tzdata\t2026c-0+deb13u1",
+        "util-linux\t2.41.5-0+deb13u1",
+        "zlib1g:amd64\t1:1.3.dfsg+really1.3.1-1+b1"
+      ]
     }
+  },
+  "gpuValidation": {
+    "device": "NVIDIA GeForce GTX 1070",
+    "vramMiB": 8192,
+    "driver": "570.172.08",
+    "computeType": "int8_float32",
+    "hostDriverChanged": false,
+    "sampleAudioSeconds": 11,
+    "gpuRequestSeconds": [
+      16.942,
+      0.244,
+      0.284,
+      0.313
+    ],
+    "gpuWarmMedianSeconds": 0.284,
+    "runtimeNetwork": "none",
+    "cpuRequestSeconds": [
+      2.048,
+      1.909,
+      1.954,
+      1.883
+    ],
+    "cpuWarmMedianSeconds": 1.909,
+    "warmSpeedup": 6.72,
+    "matchingTranscriptSha256": "e4e644650803b9dca2d1caaf17fbfa3b5cd835a792b8d53d888c6996f7eb1c5d"
   }
 }

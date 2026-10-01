@@ -33,7 +33,7 @@ The inference backlog is capped at 32 pending chunks. Overload, recognition fail
 
 ## Local speech worker
 
-The worker under `scripts/transcription/` uses faster-whisper 1.2.1 with the English `base.en` model, int8 CPU inference and two CPU threads. Model weights are downloaded **while building the image**. The image pins the model revision and Python package versions. Runtime loads only local model files, enables offline mode, and needs no API key or paid service. The supplied Compose network is internal and publishes no host port; requests and audio remain on Mainframe.
+The worker under `scripts/transcription/` uses faster-whisper 1.2.1 with the English `base.en` model. The default image uses int8 CPU inference with two CPU threads; the optional CUDA image can use Mainframe's NVIDIA GPU. Model weights are downloaded **while building the image**. The image pins the model revision and Python package versions. Runtime loads only local model files, enables offline mode, and needs no API key or paid service. The supplied Compose network is internal and publishes no host port; requests and audio remain on Mainframe.
 
 Build and start this worker as its own stack during activation:
 
@@ -42,7 +42,22 @@ docker compose -f scripts/transcription/compose.yaml build
 docker compose -f scripts/transcription/compose.yaml up -d
 ```
 
-This creates the internal Docker network `caitlyn-transcription`. Attach **only the bot** to it while preserving the bot's current default network. Its endpoint is then `http://transcription:8095/transcribe`. The worker's `GET /health` responds only after the model loads. The worker has a read-only root filesystem, no Docker socket, two CPUs and a 1 GiB memory limit. Python libraries are installed inside the image, not on TrueNAS. The bot uses `@discordjs/voice` for encrypted voice reception and `opusscript` for direct PCM decoding; no host FFmpeg installation is required.
+This creates the internal Docker network `caitlyn-transcription`. Attach **only the bot** to it while preserving the bot's current default network. Its endpoint is then `http://transcription:8095/transcribe`. The worker's `GET /health` responds only after the model loads and reports the selected `device` and `compute_type`. The worker has a read-only root filesystem, no Docker socket, two CPUs and a 1 GiB memory limit. Python libraries are installed inside the image, not on TrueNAS. The bot uses `@discordjs/voice` for encrypted voice reception and `opusscript` for direct PCM decoding; no host FFmpeg installation is required.
+
+### NVIDIA GPU option
+
+Mainframe's GTX 1070 has 8 GiB of VRAM and supports `int8_float32` inference. The GPU Compose override exposes one selected GPU to the speech worker only. It keeps the same English model, memory-only audio handling, private network and daily log behavior.
+
+Use the GPU option for Mainframe: the same 11-second test clip took a median **0.284 seconds on GPU versus 1.909 seconds on CPU** after initialization, about 6.7 times faster, with identical transcript hashes. The first GPU request took 16.942 seconds to initialize libraries. This measures one clean speech sample, not conversation accuracy or total concurrent-speaker capacity. The CPU option remains available for rollback and machines without NVIDIA GPUs.
+
+```sh
+docker compose -f scripts/transcription/compose.yaml -f scripts/transcription/compose.gpu.yaml build
+docker compose -f scripts/transcription/compose.yaml -f scripts/transcription/compose.gpu.yaml up -d
+```
+
+`TRANSCRIPTION_GPU_ID` selects the Docker-visible GPU (default `0`; a GPU UUID can also be used). It is a Compose environment variable, not a setting in the bot's `.env`. The worker uses `TRANSCRIPTION_DEVICE=cuda` and `TRANSCRIPTION_COMPUTE_TYPE=int8_float32`. The default CPU image uses `cpu`/`int8`. CPU threads are independently configurable through `TRANSCRIPTION_CPU_THREADS` (1–32; default 2). Invalid or unsupported device/precision settings fail startup; the worker does not silently switch devices. To return to CPU, recreate the worker using only `compose.yaml`.
+
+The GPU image adds cuBLAS 12.8.4.1 and cuDNN 9.10.2.21 **inside the container**. The existing TrueNAS NVIDIA driver/runtime is reused. These library versions retain Pascal compatibility; do not blindly replace them with a current cuDNN package that has dropped support for this GPU. See [NVIDIA's cuDNN 9.10 support matrix](https://docs.nvidia.com/deeplearning/cudnn/backend/v9.10.2/reference/support-matrix.html) and [CTranslate2 compute types](https://opennmt.net/CTranslate2/quantization.html). GPU access is shared with other host workloads rather than reserved exclusively; recheck usage before activation.
 
 Configuration in the bot environment:
 
@@ -74,5 +89,16 @@ To roll back, restore the saved TrueNAS app configuration and previous bot image
 ## Verification
 
 `npm run check` includes transcript/configuration/audio/queue/lifecycle/command tests and the local worker HTTP tests (Python 3 is needed for the latter). Tests use synthetic Discord clients and temporary directories, with no live token or production database. The Opus test exercises a real encoder/decoder. The worker can be tested with a public speech fixture in a disposable container using `--network none`, which verifies that inference works without external access.
+
+`scripts/transcription/benchmark.py` exercises the actual HTTP handler four times with a supplied local speech file (up to 20 seconds). It reports the first request, a median of the next three requests, and a transcript hash without printing conversation text. For a CUDA image and a fixture already placed in `/path/to/fixtures`:
+
+```sh
+docker run --rm -i --network none --gpus device=0 --cpus 2 --memory 1g \
+  --read-only --tmpfs /tmp:size=16m -v /path/to/fixtures:/fixtures:ro \
+  --entrypoint python caitlyn-transcription:base-en-cuda \
+  - /fixtures/sample.wav < scripts/transcription/benchmark.py
+```
+
+To compare CPU, use the CPU image and omit `--gpus`. Keep model, fixture, resource limits and recognition parameters identical. The benchmark requires no Discord connection or transcription logs.
 
 Discord does not officially document audio reception, so library compatibility needs a real-channel check after Discord voice changes. See the upstream [voice library](https://discordjs.dev/docs/packages/voice/main), [speaker receiver API](https://discordjs.dev/docs/packages/voice/main/VoiceReceiver:Class), and [faster-whisper](https://github.com/SYSTRAN/faster-whisper). Installed versions and development image details are recorded in [the installation inventory](voice-transcription-installations.md).

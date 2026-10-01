@@ -17,6 +17,37 @@ from urllib.parse import parse_qs, urlsplit
 MAX_BYTES = 700_000
 
 
+def model_options(environment=None):
+    environment = os.environ if environment is None else environment
+    device = environment.get("TRANSCRIPTION_DEVICE", "cpu")
+    if device not in ("cpu", "cuda"):
+        raise ValueError("TRANSCRIPTION_DEVICE must be cpu or cuda")
+    compute_type = environment.get("TRANSCRIPTION_COMPUTE_TYPE") or (
+        "int8_float32" if device == "cuda" else "int8"
+    )
+    if compute_type not in ("int8", "int8_float32", "int8_float16", "float16", "float32"):
+        raise ValueError("TRANSCRIPTION_COMPUTE_TYPE is not supported")
+    cpu_threads = int(environment.get("TRANSCRIPTION_CPU_THREADS", "2"))
+    if not 1 <= cpu_threads <= 32:
+        raise ValueError("TRANSCRIPTION_CPU_THREADS must be between 1 and 32")
+    return {"device": device, "compute_type": compute_type, "cpu_threads": cpu_threads,
+            "device_index": 0, "num_workers": 1, "local_files_only": True}
+
+
+def load_model(environment=None, model_factory=None, supported_types=None):
+    options = model_options(environment)
+    if model_factory is None:
+        from faster_whisper import WhisperModel
+        model_factory = WhisperModel
+    if supported_types is None:
+        from ctranslate2 import get_supported_compute_types
+        supported_types = get_supported_compute_types
+    if options["compute_type"] not in supported_types(options["device"], options["device_index"]):
+        raise RuntimeError("Selected transcription compute type is unavailable on this device")
+    model = model_factory("/models/whisper", **options)
+    return model, {"device": options["device"], "compute_type": options["compute_type"]}
+
+
 def validate_audio(audio):
     with wave.open(io.BytesIO(audio), "rb") as wav:
         if (wav.getnchannels(), wav.getsampwidth(), wav.getframerate()) != (1, 2, 16000):
@@ -27,7 +58,7 @@ def validate_audio(audio):
             raise ValueError("Truncated audio")
 
 
-def make_handler(model):
+def make_handler(model, runtime=None):
     inference = threading.Lock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -45,7 +76,10 @@ def make_handler(model):
             self.close_connection = True
 
         def do_GET(self):
-            self.respond(200 if self.path == "/health" else 404, {"ready": self.path == "/health"})
+            if self.path == "/health":
+                self.respond(200, {"ready": True, **(runtime or {})})
+            else:
+                self.respond(404, {"ready": False})
 
         def do_POST(self):
             self.connection.settimeout(10)
@@ -93,15 +127,10 @@ def make_handler(model):
 
 
 def main():
-    from faster_whisper import WhisperModel
-
-    model = WhisperModel(
-        "/models/whisper", device="cpu", compute_type="int8",
-        cpu_threads=int(os.environ.get("TRANSCRIPTION_CPU_THREADS", "2")),
-        num_workers=1, local_files_only=True,
-    )
-    server = ThreadingHTTPServer(("0.0.0.0", 8095), make_handler(model))
-    print("Local transcription worker ready; audio and transcript access logging disabled.", flush=True)
+    model, runtime = load_model()
+    server = ThreadingHTTPServer(("0.0.0.0", 8095), make_handler(model, runtime))
+    print(f"Local transcription worker ready on {runtime['device']} ({runtime['compute_type']}); "
+          "audio and transcript access logging disabled.", flush=True)
     server.serve_forever()
 
 

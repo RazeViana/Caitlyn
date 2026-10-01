@@ -5,6 +5,7 @@ services:
   transcription:
     build:
       context: .
+      target: cpu
       args:
         WHISPER_MODEL: base.en
     image: caitlyn-transcription:base-en
