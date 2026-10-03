@@ -79,6 +79,8 @@ Changing language to `auto`/`nl` also requires rebuilding with an appropriate **
 
 ## Mainframe activation and rollback
 
+For testing with a separate Discord identity and database while production stays online, use the [caitlyn-test instance](caitlyn-test.md).
+
 This feature branch does not activate recording on the running bot. The existing bot is TrueNAS-managed; edit its saved custom Compose configuration through supported TrueNAS middleware, never the generated rendered YAML. Preserve its existing image, credentials, mounts, databases and networks, and back up that configuration before activation.
 
 1. Build the feature bot image and the separate local speech-worker image. Keep the existing bot image digest and saved app configuration for rollback. Keep the worker in its own stack: the automatic updater currently expects exactly the three existing services in the Caitlyn app.
