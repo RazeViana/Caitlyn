@@ -992,7 +992,7 @@
         "path": "/usr/local/lib/node_modules/npm/node_modules/yallist"
       }
     ],
-    "image": "sha256:bc0c7beb1b8cbd00c4110b62cf9f6bc00b2412aada0f4f49e5d54772f0b820ab"
+    "image": "sha256:8a0866389947f65d6a84b2e13a9f4271df93eb9eab86b9779cd7fe8b8585acd6"
   },
   "database": {
     "image": "sha256:5090c7fd921d75d8984233faaf8fb0d8ad18ddc38f912fd1261f9999b5d214a7",
