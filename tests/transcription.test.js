@@ -151,6 +151,27 @@ test("inference preserves overlapping speaker identities, logs failures and boun
 	assert.ok(!JSON.stringify(records).includes("private provider detail"));
 });
 
+test("combined overload gaps cannot grant access across an unproven absence interval", async () => {
+	let release;
+	const held = new Promise((resolve) => { release = resolve; });
+	const records = [];
+	const queue = new TranscriptionQueue(async () => {
+		await held;
+		return "speech";
+	},
+	async (entry) => { records.push(entry); }, () => assert.fail("storage failure"), 1);
+	const chunk = { pcm: Buffer.alloc(640), at: 1, end: 2 };
+	const visible = { ...record, audienceVersion: 1, audienceUserIds: ["789"] };
+	queue.push(chunk, visible);
+	queue.push(chunk, visible);
+	queue.push(chunk, visible);
+	queue.push(chunk, { ...visible, at: "2026-10-02T01:00:00Z" });
+	release();
+	await queue.drain();
+	assert.deepEqual(records.find((entry) => entry.type === "gap").audienceUserIds, []);
+	assert.ok(records.filter((entry) => entry.type === "transcript").every((entry) => entry.audienceUserIds.includes("789")));
+});
+
 test("shutdown cancels inference and records discarded pending audio; storage failure stops the queue", async () => {
 	const records = [];
 	const queue = new TranscriptionQueue(async (_pcm, signal) => new Promise((_resolve, reject) => {

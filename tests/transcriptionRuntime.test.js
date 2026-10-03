@@ -31,7 +31,7 @@ function fixture() {
 		selfMute: false, selfDeaf: false, serverMute: false, serverDeaf: false, streaming: false, selfVideo: false, ...fields });
 	const post = (id, person, fields = {}) => {
 		const message = { id, author: person.user, guildId: guild.id, createdTimestamp: now, content: "A message", attachments: new Collection(), system: false, webhookId: null,
-			channel: { id: "900", name: "general", isThread: () => false }, inGuild() { return this.guildId !== null; }, ...fields };
+			channel: { id: "900", name: "general", isThread: () => false, permissionsFor: () => ({ has: () => true }) }, inGuild() { return this.guildId !== null; }, ...fields };
 		return { ...message, channelId: message.channel.id, url: `https://discord.com/channels/${message.guildId}/${message.channel.id}/${message.id}` };
 	};
 	const first = channel("456");
@@ -259,6 +259,105 @@ test("failed notice or storage closes recording instead of silently continuing",
 			await setImmediate();
 			await f.runtime.reconcile();
 			assert.equal(f.captures[0].closed, true);
+		}
+		finally { await f.runtime.stop(); }
+	}
+});
+
+test("transcript audiences follow join, leave and rejoin boundaries even when inference finishes afterwards", async () => {
+	const f = fixture();
+	let release;
+	const delayed = new Promise((resolve) => { release = resolve; });
+	f.runtime = new TranscriptionRuntime(f.client, f.config, {
+		...f.dependencies, transcribe: async (pcm) => { await delayed; return "speech-" + pcm[0]; },
+	});
+	const carol = f.member("333", "carol");
+	try {
+		await f.runtime.start();
+		await setImmediate();
+		const capture = f.captures[0];
+		capture.packet("111", Buffer.alloc(640, 1), f.now());
+		f.advance(100);
+		f.first.members.set(carol.id, carol);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+		capture.packet("111", Buffer.alloc(640, 2), f.now());
+		f.advance(100);
+		f.first.members.delete(carol.id);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.first), f.voiceState(carol, null));
+		capture.packet("111", Buffer.alloc(640, 3), f.now());
+		f.advance(100);
+		f.first.members.set(carol.id, carol);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+		capture.packet("111", Buffer.alloc(640, 4), f.now());
+		await f.runtime.pause();
+		assert.equal(f.records.filter((entry) => entry.type === "transcript").length, 0);
+		release();
+		await f.runtime.stop();
+		const speech = f.records.filter((entry) => entry.type === "transcript");
+		assert.deepEqual(speech.map((entry) => [entry.text, entry.audienceUserIds]), [
+			["speech-1", ["111"]], ["speech-2", ["111", "333"]], ["speech-3", ["111"]], ["speech-4", ["111", "333"]],
+		]);
+		for (const record of f.records) {
+			assert.equal(record.audienceVersion, 1);
+			assert.ok(record.eventId);
+			assert.ok(!record.audienceUserIds.includes("222"));
+		}
+		assert.equal(new Set(f.records.map((entry) => entry.eventId)).size, f.records.length);
+	}
+	finally { release(); await f.runtime.stop(); }
+});
+
+test("post audiences require both presence at creation and source-channel permissions, including private threads", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	await f.runtime.start();
+	await setImmediate();
+	const beforeArrival = f.now();
+	f.advance(100);
+	const carol = f.member("333", "carol");
+	f.first.members.set(carol.id, carol);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+	const alice = f.first.members.get("111");
+	f.client.emit(Events.MessageCreate, f.post("701", alice));
+	f.client.emit(Events.MessageCreate, f.post("702", alice, { createdTimestamp: beforeArrival }));
+	const privateChannel = {
+		id: "901", name: "restricted", isThread: () => false,
+		permissionsFor: (person) => ({ has: () => person.id === "111" }),
+	};
+	f.client.emit(Events.MessageCreate, f.post("703", alice, { channel: privateChannel }));
+	const thread = {
+		id: "902", name: "private-thread", type: ChannelType.PrivateThread, isThread: () => true,
+		parent: { id: "901", name: "parent" }, members: { cache: new Collection([["111", {}]]) },
+		permissionsFor: () => ({ has: (bits) => Array.isArray(bits) }),
+	};
+	f.client.emit(Events.MessageCreate, f.post("704", alice, { channel: thread }));
+	f.client.emit(Events.MessageCreate, f.post("705", alice, { channel: { ...privateChannel, permissionsFor: () => null } }));
+	await f.runtime.stop();
+	assert.deepEqual(f.records.filter((entry) => entry.type === "message_posted").map((entry) => [entry.messageId, entry.audienceUserIds]), [
+		["701", ["111", "333"]], ["702", ["111"]], ["703", ["111"]], ["704", ["111"]], ["705", []],
+	]);
+});
+
+test("uncertain membership and gateway loss keep buffered speech private", async () => {
+	for (const mode of ["cache", "gateway"]) {
+		const f = fixture();
+		try {
+			await f.runtime.start();
+			await setImmediate();
+			f.captures[0].packet("111", Buffer.alloc(640, 1), f.now());
+			f.advance(50);
+			if (mode === "cache") {
+				f.first.members.delete("111");
+				await f.runtime.reconcile();
+			}
+			else {
+				f.client.emit(Events.ShardDisconnect);
+				await f.runtime.reconcile();
+				assert.equal(f.captures[0].closed, true);
+			}
+			await f.runtime.stop();
+			assert.deepEqual(f.records.find((entry) => entry.type === "transcript").audienceUserIds, []);
+			for (const record of f.records.filter((entry) => entry.type === "left" || entry.type === "gap")) assert.deepEqual(record.audienceUserIds, []);
 		}
 		finally { await f.runtime.stop(); }
 	}

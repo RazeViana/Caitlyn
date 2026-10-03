@@ -105,5 +105,6 @@ See [automatic deployment](docs/automatic-deployment.md) for setup, logs, rollba
 - [Private logging](docs/discord-logging.md) and [what gets logged](docs/data-logging.md)
 - [Feature configuration](docs/feature-configuration.md) and [error handling](docs/resilience.md)
 - [Local voice transcription and daily logs](docs/voice-transcription.md)
+- [Transcript database and participant access for a future website](docs/transcript-database.md)
 - [Development notes](docs/handoff.md) and [task list](docs/.todo)
 - [Vendored FxEmbed licence](docs/licenses/FxEmbed.txt)

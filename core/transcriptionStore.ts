@@ -1,6 +1,6 @@
 /**
  * @file transcriptionStore.ts
- * @description Appends private daily speech and participant activity records, with readable channel and message context.
+ * @description Appends private daily records, preserving event IDs and capture-time audiences for database replay alongside readable logs.
  * @module transcriptionStore
  */
 
@@ -8,6 +8,9 @@ import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface TranscriptRecord {
+	eventId?: string;
+	audienceVersion?: 1;
+	audienceUserIds?: string[];
 	type: "session_started" | "session_stopped" | "present" | "joined" | "left" | "transcript" | "message_posted" | "voice_activity" | "gap";
 	at: string;
 	end?: string;

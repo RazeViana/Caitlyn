@@ -1,6 +1,6 @@
 /**
  * @file transcriptionRuntime.ts
- * @description Follows occupied voice channels and saves username-attributed speech, voice events and participants' message activity in daily logs.
+ * @description Captures username-attributed speech and activity with membership-boundary audiences and optional PostgreSQL replay.
  * @module transcriptionRuntime
  */
 
@@ -12,6 +12,8 @@ import { TranscriptionQueue } from "./transcriptionQueue.js";
 import { TranscriptionStore, type TranscriptRecord } from "./transcriptionStore.js";
 import { connectTranscriptionVoice, type VoiceCapture } from "./transcriptionVoice.js";
 import logger from "./logger.js";
+import { pool } from "./createPGPool.js";
+import { TranscriptionArchive } from "./transcriptionArchive.js";
 
 interface Session {
 	id: string;
@@ -19,11 +21,13 @@ interface Session {
 	capture: VoiceCapture;
 	speakers: Map<string, { name: string; joinedAt: number; buffer: SpeakerBuffer }>;
 	ready: boolean;
+	sharingSafe: boolean;
 	messageIds: Set<string>;
 	startedAt: number;
 }
 
 export interface TranscriptionDependencies {
+	archive?: TranscriptionArchive;
 	store: TranscriptionStore;
 	connect: typeof connectTranscriptionVoice;
 	transcribe: (pcm: Buffer, signal: AbortSignal) => Promise<string>;
@@ -118,20 +122,35 @@ export class TranscriptionRuntime {
 		session.messageIds.add(message.id);
 		if (session.messageIds.size > 2048) session.messageIds.delete(session.messageIds.values().next().value!);
 		const parent = message.channel.isThread() ? message.channel.parent : null;
-		void this.queue.write(this.record(session, "message_posted", {
+		const record = this.record(session, "message_posted", {
 			at: new Date(message.createdTimestamp).toISOString(), userId: message.author.id, speaker: message.author.username,
 			activityChannelId: message.channelId, activityChannelName: message.channel.name,
 			activityParentChannelId: parent?.id, activityParentChannelName: parent?.name,
 			messageId: message.id, messageUrl: message.url, text: message.content,
 			attachmentNames: [...message.attachments.values()].map((attachment) => attachment.name),
-		}));
+		});
+		record.audienceUserIds = record.audienceUserIds!.filter((id) => {
+			const member = session.channel.members.get(id);
+			if (!member) return false;
+			const permissions = message.channel.permissionsFor?.(member);
+			if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory])) return false;
+			return message.channel.type !== ChannelType.PrivateThread || message.channel.members.cache.has(id)
+				|| permissions.has(PermissionFlagsBits.ManageThreads);
+		});
+		void this.queue.write(record);
+	};
+
+	private readonly gatewayLost = (): void => {
+		if (this.session) this.connectionFailed(this.session);
 	};
 
 	async start(): Promise<void> {
 		await this.dependencies.store.initialize();
+		this.dependencies.archive?.start();
 		this.paused = await this.dependencies.store.paused();
 		this.client.on(Events.VoiceStateUpdate, this.voiceChanged);
 		this.client.on(Events.MessageCreate, this.messageCreated);
+		this.client.on(Events.ShardDisconnect, this.gatewayLost);
 		this.timer = setInterval(() => {
 			for (const speaker of this.session?.speakers.values() ?? []) speaker.buffer.idle(this.dependencies.now());
 			void this.reconcile().catch(() => this.dependencies.log.warn("Voice transcription reconciliation failed; will retry."));
@@ -144,8 +163,16 @@ export class TranscriptionRuntime {
 	private allowed(channel: VoiceChannel): boolean { return this.config.channels.includes("*") || this.config.channels.includes(channel.id); }
 
 	private record(session: Session, type: TranscriptRecord["type"], fields: Partial<TranscriptRecord> = {}): TranscriptRecord {
-		return { type, at: new Date(this.dependencies.now()).toISOString(), guildId: this.config.guildId,
-			channelId: session.channel.id, channelName: session.channel.name, sessionId: session.id, ...fields };
+		const at = fields.at ?? new Date(this.dependencies.now()).toISOString();
+		const audience = session.sharingSafe && this.client.isReady()
+			? [...session.speakers].filter(([, speaker]) => speaker.joinedAt <= Date.parse(at)).map(([id]) => id) : [];
+		return { eventId: randomUUID(), type, at, guildId: this.config.guildId,
+			channelId: session.channel.id, channelName: session.channel.name, sessionId: session.id,
+			audienceVersion: 1, audienceUserIds: audience, ...fields };
+	}
+
+	private flushSpeakers(session: Session): void {
+		for (const speaker of session.speakers.values()) speaker.buffer.flush();
 	}
 
 	private addSpeaker(session: Session, member: GuildMember, type: "joined" | "present", at: number, reason?: string): void {
@@ -154,6 +181,8 @@ export class TranscriptionRuntime {
 			existing.name = member.user.username;
 			return;
 		}
+		// Flush before changing membership. Inference keeps this immutable audience even if it finishes later.
+		this.flushSpeakers(session);
 		const speaker = { name: member.user.username, joinedAt: at, buffer: new SpeakerBuffer(this.config.timezone, (chunk) => {
 			this.queue.push(chunk, this.record(session, "transcript", { at: new Date(chunk.at).toISOString(), end: new Date(chunk.end).toISOString(),
 				userId: member.id, speaker: speaker.name }));
@@ -162,18 +191,28 @@ export class TranscriptionRuntime {
 		void this.queue.write(this.record(session, type, { at: new Date(at).toISOString(), userId: member.id, speaker: speaker.name, text: reason }));
 	}
 
-	private removeSpeaker(session: Session, userId: string, at: number, reason?: string): void {
+	private removeSpeaker(session: Session, userId: string, at: number, reason?: string, verified = true): void {
 		const speaker = session.speakers.get(userId);
 		if (!speaker) return;
-		speaker.buffer.flush();
+		this.flushSpeakers(session);
+		void this.queue.write(this.record(session, "left", { at: new Date(at).toISOString(), userId, speaker: speaker.name, text: reason,
+			...(verified ? {} : { audienceUserIds: [] }),
+		}));
 		session.speakers.delete(userId);
-		void this.queue.write(this.record(session, "left", { at: new Date(at).toISOString(), userId, speaker: speaker.name, text: reason }));
 	}
 
 	private syncSpeakers(session: Session): void {
 		const members = this.humans(session.channel);
+		const changed = [...session.speakers.keys()].some((id) => !members.some((member) => member.id === id))
+			|| members.some((member) => !session.speakers.has(member.id));
+		if (changed) {
+			// A cache correction cannot establish the exact boundary: buffered speech stays operator-only.
+			session.sharingSafe = false;
+			this.flushSpeakers(session);
+			session.sharingSafe = this.client.isReady();
+		}
 		for (const id of session.speakers.keys()) {
-			if (!members.some((member) => member.id === id)) this.removeSpeaker(session, id, this.dependencies.now(), "Membership reconciled; the exact departure time is unavailable.");
+			if (!members.some((member) => member.id === id)) this.removeSpeaker(session, id, this.dependencies.now(), "Membership reconciled; the exact departure time is unavailable.", false);
 		}
 		for (const member of members) {
 			const arrival = this.pendingJoins.get(member.id);
@@ -186,6 +225,7 @@ export class TranscriptionRuntime {
 
 	private connectionFailed(session: Session): void {
 		if (this.session !== session) return;
+		session.sharingSafe = false;
 		this.retryAt = this.dependencies.now() + 15_000;
 		// Stop packet receipt now; the serialized cleanup also writes the failure interval.
 		session.capture.close();
@@ -201,7 +241,10 @@ export class TranscriptionRuntime {
 		this.reconciling = this.serialize(async () => {
 			if (this.stopping || this.paused) return;
 			const guild = this.client.guilds.cache.get(this.config.guildId);
-			if (!guild || !this.client.isReady()) return;
+			if (!guild || !this.client.isReady()) {
+				if (this.session) this.connectionFailed(this.session);
+				return;
+			}
 			if (this.session) {
 				this.syncSpeakers(this.session);
 				if (this.humans(this.session.channel).length) {
@@ -220,9 +263,14 @@ export class TranscriptionRuntime {
 				let session: Session | undefined;
 				try {
 					const capture = this.dependencies.connect(channel, (userId, pcm, at) => {
-						if (session && this.session === session && !this.paused && !this.stopping) session.speakers.get(userId)?.buffer.push(pcm, at);
+						if (!session || this.session !== session || this.paused || this.stopping) return;
+						if (!this.client.isReady()) {
+							this.connectionFailed(session);
+							return;
+						}
+						session.speakers.get(userId)?.buffer.push(pcm, at);
 					}, () => { if (session) this.connectionFailed(session); });
-					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, messageIds: new Set(), startedAt: this.dependencies.now() };
+					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, sharingSafe: true, messageIds: new Set(), startedAt: this.dependencies.now() };
 					this.session = session;
 					// Install listeners before awaiting the voice handshake so the first speech is captured.
 					this.syncSpeakers(session);
@@ -266,6 +314,7 @@ export class TranscriptionRuntime {
 			"",
 			"**Daily logs**",
 			`Timezone: **${this.config.timezone}**`,
+			this.dependencies.archive ? `**Database archive:** ${this.dependencies.archive.status()}` : "**Database archive:** disabled",
 			"Speech recognition runs locally. Logs stay private on **Mainframe**.",
 			"Includes voice joins/leaves, voice activity, and participants' message text and links.",
 			"",
@@ -302,9 +351,11 @@ export class TranscriptionRuntime {
 		if (this.timer) clearInterval(this.timer);
 		this.client.off(Events.VoiceStateUpdate, this.voiceChanged);
 		this.client.off(Events.MessageCreate, this.messageCreated);
+		this.client.off(Events.ShardDisconnect, this.gatewayLost);
 		await this.serialize(() => this.closeSession("Caitlyn is shutting down."));
 		await this.queue.stop();
 		await this.dependencies.store.drain();
+		await this.dependencies.archive?.stop();
 	}
 }
 
@@ -312,5 +363,8 @@ export const transcriptionRuntimes = new WeakMap<Client, TranscriptionRuntime>()
 
 export function configuredTranscriptionRuntime(client: Client): TranscriptionRuntime | undefined {
 	const settings = transcriptionSettings();
-	return settings.enabled ? new TranscriptionRuntime(client, settings.config) : undefined;
+	if (!settings.enabled) return undefined;
+	const archive = settings.config.databaseEnabled
+		? new TranscriptionArchive(pool, settings.config.directory, settings.config.guildId, logger) : undefined;
+	return new TranscriptionRuntime(client, settings.config, { archive });
 }

@@ -55,6 +55,7 @@ See [database checks](development.md#database-work), [birthday recovery](birthda
 | `SOCIAL_WORKER_SOCKET` | Absolute path to the media broker's private Unix socket. |
 | `LOG_LEVEL` | Console threshold: `DEBUG`, `INFO`, `WARN` or `ERROR`. Defaults to `INFO`. Discord levels are set separately with `/logs levels`. |
 | `TRANSCRIPTION_ENABLED` | Enable automatic local voice recording; defaults to `false`. Requires the local worker and persistent log storage. |
+| `TRANSCRIPTION_DATABASE_ENABLED` | Replay private logs into the existing PostgreSQL database; defaults to `false`. Apply migration `017` first. See [database and member access](transcript-database.md). |
 | `TRANSCRIPTION_ENDPOINT`, `TRANSCRIPTION_DIRECTORY` | Local speech-worker URL and absolute persistent transcript directory. See [voice setup](voice-transcription.md). |
 | `TRANSCRIPTION_CHANNEL_IDS` | `*` for all ordinary voice channels in `GUILD_ID`, or comma-separated IDs. One channel is recorded at a time. |
 | `TRANSCRIPTION_LANGUAGE`, `TRANSCRIPTION_TIMEZONE` | Defaults to English (`en`) and `Europe/Amsterdam`; daily logs follow capture time. |

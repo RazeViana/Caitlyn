@@ -8,6 +8,7 @@ import { isAbsolute } from "node:path";
 import { isIP } from "node:net";
 
 export interface TranscriptionConfig {
+	databaseEnabled?: boolean;
 	guildId: string;
 	directory: string;
 	endpoint: string;
@@ -33,6 +34,7 @@ export function localTranscriptionEndpoint(value: string): boolean {
 export function transcriptionSettings(environment: Record<string, string | undefined> = process.env) {
 	const problems: string[] = [];
 	const config: TranscriptionConfig = {
+		databaseEnabled: environment.TRANSCRIPTION_DATABASE_ENABLED === "true",
 		guildId: environment.GUILD_ID ?? "",
 		directory: environment.TRANSCRIPTION_DIRECTORY ?? "",
 		endpoint: environment.TRANSCRIPTION_ENDPOINT ?? "",
@@ -41,6 +43,7 @@ export function transcriptionSettings(environment: Record<string, string | undef
 		language: environment.TRANSCRIPTION_LANGUAGE ?? "en",
 	};
 	if (environment.TRANSCRIPTION_ENABLED !== undefined && !["true", "false"].includes(environment.TRANSCRIPTION_ENABLED)) problems.push("TRANSCRIPTION_ENABLED must be true or false");
+	if (environment.TRANSCRIPTION_DATABASE_ENABLED !== undefined && !["true", "false"].includes(environment.TRANSCRIPTION_DATABASE_ENABLED)) problems.push("TRANSCRIPTION_DATABASE_ENABLED must be true or false");
 	if (!/^[1-9]\d*$/.test(config.guildId)) problems.push("GUILD_ID must be a numeric Discord ID");
 	if (!isAbsolute(config.directory)) problems.push("TRANSCRIPTION_DIRECTORY must be an absolute persistent directory");
 	if (!localTranscriptionEndpoint(config.endpoint)) problems.push("TRANSCRIPTION_ENDPOINT must be a local HTTP service URL without credentials or query parameters");

@@ -116,6 +116,8 @@ Apply `016` before starting the social runtime from this checkout. Existing jobs
 
 Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 
+Migration `017` adds the transcript event archive, private import checkpoints, indexed text search and participant row security. Enable replay only after applying it. The transcript PostgreSQL test uses its own disposable database and restricted role; the ordinary suite remains offline. See the [website integration contract](transcript-database.md) before adding any viewer, export or API.
+
 ## Branch base
 
 Create future feature branches from `2.2.0`, the current development branch for Caitlyn 2.2.0, local GPU voice transcription and FxEmbed connection recovery. It replaces `feat/voice-transcription-daily-logs`. The recovery commit `ec56850` from `fix/fxembed-network-recovery` is merged into `2.2.0`; remove that old branch after publishing the merge. The older `caitlyn-3.0` and `codex/social-media-replacement` branches are fully merged into `main` at `8608331` and can also be removed. The owner explicitly approved deleting `caitlyn-memory` at `ef4a50b` without merging its two old commits. Publish `2.2.0` before deleting old remote branches, and preserve `main`. Historical integration plans retain the names used at the time.

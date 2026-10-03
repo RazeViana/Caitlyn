@@ -43,6 +43,8 @@ export class TranscriptionQueue {
 			const key = record.channelId;
 			const previous = this.dropped.get(key);
 			this.dropped.set(key, { ...record, at: previous?.at ?? record.at, type: "gap", userId: undefined, speaker: undefined,
+				// A combined gap may cross a leave/rejoin boundary; keep it operator-only.
+				audienceUserIds: previous ? [] : record.audienceUserIds,
 				text: "Local transcription queue full; speech from one or more participants was lost during this interval." });
 			return;
 		}

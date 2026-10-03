@@ -27,6 +27,8 @@ This records new message posts; it does not backfill message history or track ed
 
 ## Files and retention
 
+The optional [PostgreSQL archive](transcript-database.md) makes these events searchable while preserving the files as a durable local log. New records include stable event IDs and capture-time viewer IDs. Speech is split whenever membership changes; the database's member reader limits every result to its recorded audience. Historical records without verified audiences stay operator-only. Apply migration `017` and set `TRANSCRIPTION_DATABASE_ENABLED=true` to enable replay.
+
 Set `TRANSCRIPTION_DIRECTORY` to a writable persistent volume. Paths are:
 
 ```text
