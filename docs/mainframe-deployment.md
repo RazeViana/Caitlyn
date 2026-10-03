@@ -2,6 +2,12 @@
 
 For ongoing main-branch updates, use [automatic deployment](automatic-deployment.md). The image IDs and checks below record the initial manual rollout, not the latest registry release.
 
+## FxEmbed recovery verification (2026-10-03)
+
+A read-only check confirmed that production uses `caitlyn-broker:20260924-fx-network-recovery`, image `sha256:1971bdf3b9b2144b167d80476a53bc27ae2405a7f01afb79beb45401ae6f1747`. The running broker is healthy, starts through `startBroker.mjs`, has a local FxEmbed endpoint configured, and includes connection monitoring and restart handling equivalent to commit `ec56850`. Source differences are comments, formatting and equivalent shutdown callbacks. The image's revision label still names base commit `8608331`, so the label alone does not identify the applied fix.
+
+The fix is merged into development branch `2.2.0` to preserve this behavior in future builds. That merge does not deploy version 2.2.0 or activate voice transcription. Production containers and configuration were unchanged by this verification.
+
 ## Approved rollout: original database (2026-09-18)
 
 The owner approved deployment and selected the **original mainframe database**. The older assessment below is historical. No local activity, birthday records or counters were copied over it. Parked Reddit source is excluded from the production images; `main` remains unchanged.
@@ -45,6 +51,10 @@ AMD64 contexts were assembled from exact published commit `bcde78a` plus allowli
 Deployment tests cover private configuration files, permission/symlink rejection, closed errors, stale/live socket handling, service isolation and verified-backup enforcement. The full development checkout passed 443 tests plus one optional PostgreSQL skip, typecheck, lint and build. The clean published snapshot plus initial deployment tests passed 399 tests plus one skip. Production images passed non-root module import checks; all 10 offline Instagram fixtures passed. A bot-image probe connected to the original database without logging into Discord and confirmed AI off. Existing guild registration already contains all 14 commands and the updated Instagram `/social` description; no registration change was necessary.
 
 The broker only removes a provably stale, private, owned Unix socket after checking there is no listener. Uncertain sockets and orphaned worker containers/volumes fail closed for operator review. Do not broadly prune Docker resources or delete a live socket. Service health checks are local, not a guarantee of upstream X/Instagram/TikTok availability. Restart only the `caitlyn` app; do not reboot the mainframe or affect unrelated apps for a bot rollout.
+
+The broker shares FxEmbed's network namespace. If FxEmbed restarts independently, the broker can retain the old namespace and report `worker_unavailable` for X posts even while its Unix socket is healthy. The broker now probes the configured local FxEmbed TCP listener every ten seconds. After three consecutive failures it gracefully stops its worker, allowing Docker's existing restart policy to rejoin FxEmbed's current namespace. A successful probe resets the failure count; shutdown cancels monitoring. The broker health check also requires the local listener. These probes send no HTTP requests, post content or credentials.
+
+On 24 September 2026 this failure followed FxEmbed container memory-limit crashes. An isolated Docker test reproduced the namespace replacement and verified automatic recovery. A production dry run then fetched and completely rendered the previously failed X video without sending a Discord message. Automatic reconnection does not fix FxEmbed's underlying memory usage or guarantee upstream availability. Previously failed preview jobs still require a fresh Discord message after exhausting their retries.
 
 Live mainframe checks, without Discord test messages: X video and the previously restricted X example returned verified video; both owner-supplied Instagram photo/reel examples returned complete media. After restarting, authenticated X returned 1,769,698 bytes with no omissions; the Instagram reel at a diagnostic 1 MiB cap compressed to 905,859 bytes, with audio and a complete rendered card. The 654-second TikTok example returned `partial` / `compression_timeout`, with no attachment. **Long-video mainframe compression performance remains a follow-up**; the bot must preserve originals on incomplete delivery. No deadline/resource restriction was silently removed.
 
