@@ -1,6 +1,6 @@
 /**
  * @file transcriptionRuntime.ts
- * @description Automatically follows occupied voice channels and persists speaker-attributed daily conversations.
+ * @description Automatically follows occupied voice channels and saves daily conversations attributed to Discord usernames and user IDs.
  * @module transcriptionRuntime
  */
 
@@ -99,10 +99,10 @@ export class TranscriptionRuntime {
 		}
 		for (const member of members) {
 			if (session.speakers.has(member.id)) {
-				session.speakers.get(member.id)!.name = member.displayName;
+				session.speakers.get(member.id)!.name = member.user.username;
 				continue;
 			}
-			const speaker = { name: member.displayName, buffer: new SpeakerBuffer(this.config.timezone, (chunk) => {
+			const speaker = { name: member.user.username, buffer: new SpeakerBuffer(this.config.timezone, (chunk) => {
 				this.queue.push(chunk, this.record(session, "transcript", { at: new Date(chunk.at).toISOString(), end: new Date(chunk.end).toISOString(),
 					userId: member.id, speaker: speaker.name }));
 			}) };

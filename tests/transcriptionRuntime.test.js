@@ -1,6 +1,6 @@
 /**
  * @file transcriptionRuntime.test.js
- * @description Tests automatic voice selection, speaker lifecycle, durable pause and recovery using synthetic Discord.
+ * @description Tests automatic voice selection, Discord username attribution, speaker lifecycle, durable pause and recovery using synthetic Discord.
  * @module transcriptionRuntime.test
  */
 
@@ -26,7 +26,7 @@ function fixture() {
 		guild.channels.cache.set(id, value);
 		return value;
 	};
-	const member = (id, name = "Speaker", bot = false) => ({ id, displayName: name, user: { bot } });
+	const member = (id, username = "Speaker", bot = false) => ({ id, displayName: `Server nickname ${username}`, user: { bot, username, globalName: `Display name ${username}` } });
 	const first = channel("456");
 	const second = channel("457", 1);
 	first.members.set("111", member("111", "Alice"));
@@ -74,6 +74,8 @@ test("automatic recording sticks with a conversation, captures joiners separatel
 	assert.equal(f.captures[1].room.id, "457");
 	await f.runtime.stop();
 	assert.deepEqual(f.records.filter((entry) => entry.type === "transcript").map((entry) => [entry.userId, entry.speaker, entry.text]), [["111", "Alice", "speech-1"], ["333", "Carol", "speech-2"]]);
+	const usernames = { "111": "Alice", "222": "Bob", "333": "Carol" };
+	for (const entry of f.records.filter((record) => record.userId)) assert.equal(entry.speaker, usernames[entry.userId]);
 	assert.equal(f.client.listenerCount(Events.VoiceStateUpdate), 0);
 });
 

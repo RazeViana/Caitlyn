@@ -2,7 +2,7 @@
 
 Caitlyn can automatically transcribe conversations in the configured server's ordinary voice channels. There is no participant opt-in step. The bot appears in the voice channel, posts a recording notice in its text chat, and saves speaker-labelled daily logs on Mainframe. It does not post transcripts to Discord or feed them into the existing AI chat/memory system. Text-channel archiving is not included in this feature.
 
-Each Discord user's audio stream is transcribed separately. Speaker names come from their server display name and their stable Discord user ID, including when people talk over each other. This identifies the Discord account transmitting audio; it cannot distinguish multiple people sharing one microphone.
+Each Discord user's audio stream is transcribed separately. New speaker labels use the account's Discord username (`user.username`) and stable Discord user ID, including when people talk over each other. Server nicknames and global display names are not used. This identifies the Discord account transmitting audio; it cannot distinguish multiple people sharing one microphone.
 
 ## Recording behavior
 
@@ -25,7 +25,7 @@ Set `TRANSCRIPTION_DIRECTORY` to a writable persistent volume. Paths are:
 <directory>/<guild-id>/<voice-channel-id>/2026-10-01.txt
 ```
 
-JSONL is the authoritative append-only record, with UTC capture timestamps, channel and session identities, speaker display names/IDs, transcript text, and session/join/leave/gap events. Each completed append is flushed to disk. The text file is a readable view with the local time and UTC offset. Entries are appended as work completes; use the JSONL `at` timestamp when reconstructing chronological order across speakers and lifecycle events. Each chunk belongs to its capture date, even if inference finishes after midnight. The default daily boundary is `Europe/Amsterdam`, including daylight-saving changes.
+JSONL is the authoritative append-only record, with UTC capture timestamps, channel and session identities, speaker usernames/IDs, transcript text, and session/join/leave/gap events. Older entries retain the labels captured before username attribution was deployed. Each completed append is flushed to disk. The text file is a readable view with the local time and UTC offset. Entries are appended as work completes; use the JSONL `at` timestamp when reconstructing chronological order across speakers and lifecycle events. Each chunk belongs to its capture date, even if inference finishes after midnight. The default daily boundary is `Europe/Amsterdam`, including daylight-saving changes.
 
 New directories use mode `0700`; new files use `0600`. Provision the parent bind mount with the bot's container UID and private permissions. The code does not change permissions on an existing directory. Files remain until an operator removes them; there is no automatic retention deletion. Back up transcripts according to the desired retention policy. Do not place actual transcripts in the repository: `transcripts/` is excluded from Git and image build contexts.
 
