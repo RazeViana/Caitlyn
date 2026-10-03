@@ -148,7 +148,7 @@ test("transcription command checks administrator and guild access before mutatio
 	assert.match(replies[1], /disabled/);
 	interaction.guildId = "123";
 	await execute(interaction);
-	assert.match(replies[2].content, /paused/);
+	assert.match(replies[2].embeds[0].data.description, /paused/);
 	assert.ok(!JSON.stringify(replies).includes("speech-"));
 });
 

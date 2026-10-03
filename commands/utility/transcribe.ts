@@ -1,10 +1,10 @@
 /**
  * @file transcribe.ts
- * @description Lets administrators pause, resume and inspect local voice transcription without exposing transcripts.
+ * @description Formats private administrator controls and status cards for local voice transcription without exposing transcripts.
  * @module transcribe
  */
 
-import { ChannelType, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
+import { ChannelType, EmbedBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
 import { deferInteraction, respondWithError } from "../../core/interactionResponse.js";
 import { transcriptionRuntimes } from "../../core/transcriptionRuntime.js";
 
@@ -19,13 +19,13 @@ export const data = new SlashCommandBuilder().setName("transcribe").setDescripti
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
 	if (!interaction.guild || !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-		await respondWithError(interaction, "Only server administrators can control voice transcription.");
+		await respondWithError(interaction, "**Administrator access required**\nOnly server administrators can control voice transcription.");
 		return;
 	}
 	if (!await deferInteraction(interaction, { flags: MessageFlags.Ephemeral })) return;
 	const runtime = transcriptionRuntimes.get(interaction.client);
 	if (!runtime || runtime.config.guildId !== interaction.guildId) {
-		await interaction.editReply("Local voice transcription is disabled in this server. Configure the local speech worker and TRANSCRIPTION_* settings first.");
+		await interaction.editReply("**Voice transcription unavailable**\nLocal recording is disabled in this server. Ask the bot operator to enable it.");
 		return;
 	}
 	try {
@@ -35,14 +35,23 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 		else if (action === "start") {
 			const member = await interaction.guild.members.fetch(interaction.user.id);
 			if (member.voice.channel?.type !== ChannelType.GuildVoice) {
-				await interaction.editReply("Join an ordinary voice channel first.");
+				await interaction.editReply("**No voice channel selected**\nJoin an ordinary voice channel first, then run `/transcribe start`.");
 				return;
 			}
 			await runtime.resume(member.voice.channel.id);
 		}
-		await interaction.editReply({ content: runtime.status(), allowedMentions: { parse: [] } });
+		const title = action === "stop" ? "⏸️ Transcription paused"
+			: action === "start" || action === "resume" ? "🎙️ Automatic transcription enabled"
+				: "🎙️ Voice transcription";
+		const embed = new EmbedBuilder()
+			.setColor(0x5865f2)
+			.setTitle(title)
+			.setDescription(runtime.status())
+			.setFooter({ text: "One voice channel at a time · Raw audio is not saved" })
+			.setTimestamp();
+		await interaction.editReply({ content: "", embeds: [embed], allowedMentions: { parse: [] } });
 	}
 	catch {
-		await respondWithError(interaction, "Could not change voice transcription. Check local log storage and the speech worker. To change channels, stop the current recording first, then use /transcribe start.");
+		await respondWithError(interaction, "**Could not update voice transcription**\nTo change channels, use `/transcribe stop`, join the new channel, then use `/transcribe start`.\nIf the problem continues, ask the bot operator to check local log storage and the speech service.");
 	}
 }

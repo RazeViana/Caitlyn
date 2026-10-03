@@ -186,7 +186,22 @@ export class TranscriptionRuntime {
 
 	status(): string {
 		const state = this.paused ? "paused" : this.session ? `${this.session.ready ? "recording" : "connecting to"} <#${this.session.channel.id}>` : "waiting for an occupied voice channel";
-		return `Voice transcription: ${state}. Pending speech chunks: ${this.queue.pending}. Failed or dropped chunks since startup: ${this.queue.lost}. Daily logs use ${this.config.timezone}. One voice channel can be recorded at a time. Logs and speech recognition stay on Mainframe.`;
+		return [
+			`**Status:** ${state}`,
+			`**Automatic recording:** ${this.paused ? "paused until resumed" : "enabled"}`,
+			"",
+			"**Speech processing**",
+			`Pending segments: **${this.queue.pending}**`,
+			`Failed or dropped segments: **${this.queue.lost}** (since bot startup)`,
+			"",
+			"**Daily logs**",
+			`Timezone: **${this.config.timezone}**`,
+			"Speech recognition runs locally. Logs stay private on **Mainframe**.",
+			"",
+			this.paused
+				? "Use `/transcribe resume` to resume automatic recording, or `/transcribe start` to select your voice channel."
+				: "Use `/transcribe stop` to pause recording. The pause is saved across restarts.",
+		].join("\n");
 	}
 
 	async pause(): Promise<void> {

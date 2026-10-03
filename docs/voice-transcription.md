@@ -13,6 +13,8 @@ Each Discord user's audio stream is transcribed separately. Speaker names come f
 - `/transcribe stop` immediately stops capture and saves a paused setting that survives restarts. Previously received audio may finish transcription. `/transcribe resume` clears that setting. `/transcribe start` prioritizes the administrator's current channel; stop an existing recording before selecting another one.
 - All four command actions require Administrator permission. Commands are guild-only, and runtime access is restricted to the configured `GUILD_ID`. Commands never expose transcript content.
 
+Command replies are private Discord cards with separate recording state, speech-processing counters and daily-log information. Start, resume and stop show an action-specific title; the status distinguishes connecting, recording, waiting and paused. Failed/dropped counts cover the current bot process and reset when it restarts. Replies include the appropriate pause/resume command and explain that pauses persist across restarts.
+
 ## Files and retention
 
 Set `TRANSCRIPTION_DIRECTORY` to a writable persistent volume. Paths are:
