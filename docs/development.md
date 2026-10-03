@@ -118,9 +118,9 @@ Keep database dumps and private environment snapshots under `backups/`. Both Git
 
 ## Branch base
 
-Create future feature branches from `caitlyn-3.0`. The integration branch was renamed from `caitlyn-2.0` locally and on GitHub on 2026-09-06; historical integration plans retain the former name.
+Create future feature branches from `2.2.0`, the current development branch for Caitlyn 2.2.0 and local GPU voice transcription. It replaces `feat/voice-transcription-daily-logs`. The older `caitlyn-3.0` and `codex/social-media-replacement` branches are fully merged into `main` at `8608331` and can be removed during branch cleanup. Historical integration plans retain the names used at the time. Keep `caitlyn-memory` and `fix/fxembed-network-recovery` until their unmerged work is reviewed.
 Do not target or update `main` without an explicit release decision because pushes to `main` deploy to the homeserver.
 
-Keep new commits on `caitlyn-3.0` local unless a separate instruction explicitly authorizes publishing them. Renaming the GitHub branch did not push the local feature commits. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. This branch rename does not change package versions or deployment targets.
+The owner authorized publishing `2.2.0` with package version `2.2.0`. Keep subsequent work local unless publishing is authorized for that task. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. Pushing `2.2.0` does not deploy the bot.
 
 The current [release workflow](automatic-deployment.md) checks the source, builds all four images and publishes a complete release before the mainframe updater acts. Never build releases with the local `--working-overlays` option or accidentally stage parked feature files. Keep database migrations under separate review; a changed migration fingerprint pauses automatic server updates.

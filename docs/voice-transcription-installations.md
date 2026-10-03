@@ -1,6 +1,6 @@
 # Voice transcription development inventory
 
-Verified on Mainframe on 2026-10-01 (Europe/Amsterdam). Work is in `/mnt/Datashare/home/raze/Development/caitlyn-dev` on `feat/voice-transcription-daily-logs`, based on the shared `main`/`caitlyn-3.0` commit `8608331`. No host packages were installed, and the running TrueNAS Caitlyn app was not changed. Temporary tests used no Discord token or production database.
+Verified on Mainframe on 2026-10-01 (Europe/Amsterdam). Work is in `/mnt/Datashare/home/raze/Development/caitlyn-dev` on `2.2.0` (originally `feat/voice-transcription-daily-logs`), based on the shared `main`/`caitlyn-3.0` commit `8608331`. The package version is now `2.2.0`; the image inventories below describe the earlier development builds. No host packages were installed, and the running TrueNAS Caitlyn app was not changed. Temporary tests used no Discord token or production database.
 
 The complete [machine-readable inventory](voice-transcription-installations.json) lists every installed workspace npm dependency and every package/version/path inspected in the development images, including inherited OS/toolchain packages. The lockfile records the npm dependency resolution; the speech worker's [requirements](../scripts/transcription/requirements.txt) and [CUDA requirements](../scripts/transcription/requirements-cuda.txt) pin all Python dependencies.
 
