@@ -36,3 +36,9 @@ The compiled bot image loaded its runtime, initialized the real Opus decoder, an
 The images are local development artifacts, not published releases. Follow [activation and rollback](voice-transcription.md#mainframe-activation-and-rollback) before replacing the live bot. Raw audio/transcripts from real conversations were neither accessed nor generated during development.
 
 The owner's selected deployment mode is GPU. `scripts/transcription/compose.yaml` and the Dockerfile's default final stage select CUDA; `compose.cpu.yaml` is a standalone CPU alternative. Selecting this default changes the feature branch configuration, not the running TrueNAS app.
+
+## Repository publication tooling (2026-10-03)
+
+Installed the standalone [GitHub CLI 2.102.0](https://github.com/cli/cli/releases/tag/v2.102.0) binary at `/mnt/Datashare/home/raze/.local/share/caitlyn-tools/gh/2.102.0/gh`, with a command symlink at `/mnt/Datashare/home/raze/.local/bin/gh`, for the owner-approved GitHub login and branch publication. This is a user-local host binary, not a container package or a TrueNAS system-package installation. No additional dependency packages were installed. The official Linux AMD64 archive matched both its release metadata and published checksum: SHA-256 `bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386`.
+
+Existing Git configuration was backed up under the private, Git-internal `.git/caitlyn-auth-backup/` directory before login. Device login codes and authentication tokens must not be added to the repository or installation inventory.
