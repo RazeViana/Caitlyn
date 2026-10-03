@@ -1,6 +1,6 @@
 /**
  * @file transcription.test.js
- * @description Exercises local-only configuration, daily files, continuous audio boundaries and bounded inference.
+ * @description Exercises local-only configuration, private daily speech/activity files, continuous audio boundaries and bounded inference.
  * @module transcription.test
  */
 
@@ -51,6 +51,32 @@ test("daily logs use capture date across midnight/DST and preserve speaker IDs w
 	assert.equal(text.trim().split("\n").length, 1);
 	assert.equal(transcriptDay("2026-10-25T01:30:00Z", "Europe/Amsterdam"), "2026-10-25");
 	await assert.rejects(store.append({ ...record, channelId: "../elsewhere" }), /identity/);
+});
+
+test("daily activity logs name voice and post channels while preserving full message text in JSONL", async (context) => {
+	const directory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-activity-transcripts-"));
+	context.after(() => rm(directory, { recursive: true, force: true }));
+	const store = new TranscriptionStore(directory, "Europe/Amsterdam");
+	await store.initialize();
+	for (const type of ["present", "joined", "left"]) await store.append({ ...record, type, text: undefined });
+	const message = { ...record, type: "message_posted", activityChannelId: "900", activityChannelName: "discussion\nspoof",
+		activityParentChannelId: "899", activityParentChannelName: "forum", messageId: "901", messageUrl: "https://discord.com/channels/123/900/901",
+		attachmentNames: ["file\nname.png"], text: "First line\nSecond line\u2028@everyone" };
+	await store.append(message);
+	const base = path.join(directory, "123/456/2026-10-01");
+	const records = (await readFile(`${base}.jsonl`, "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+	assert.equal(records[3].text, message.text);
+	assert.deepEqual(records[3].attachmentNames, message.attachmentNames);
+	assert.equal(records[3].activityChannelId, "900");
+	const lines = (await readFile(`${base}.txt`, "utf8")).trim().split("\n");
+	assert.equal(lines.length, 4);
+	assert.match(lines[0], /\[present\] Present in voice channel "General" \(456\)/);
+	assert.match(lines[1], /\[joined\] Joined voice channel "General" \(456\)/);
+	assert.match(lines[2], /\[left\] Left voice channel "General" \(456\)/);
+	assert.match(lines[3], /Someone \(789\): \[message_posted\] Posted in #forum \/ #discussion spoof \(900\)/);
+	assert.ok(lines[3].includes(message.messageUrl));
+	assert.match(lines[3], /Message: First line Second line @everyone \| Attachments: file name.png/);
+	assert.equal((await stat(`${base}.txt`)).mode & 0o777, 0o600);
 });
 
 test("continuous speech is bounded without losing frames, with silence and midnight boundaries", () => {

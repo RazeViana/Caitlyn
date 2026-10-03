@@ -1,6 +1,6 @@
 /**
  * @file transcriptionRuntime.test.js
- * @description Tests automatic voice selection, Discord username attribution, speaker lifecycle, durable pause and recovery using synthetic Discord.
+ * @description Tests voice selection, username-attributed participant activity, real join/leave events, durable pause and recovery using synthetic Discord.
  * @module transcriptionRuntime.test
  */
 
@@ -26,7 +26,14 @@ function fixture() {
 		guild.channels.cache.set(id, value);
 		return value;
 	};
-	const member = (id, username = "Speaker", bot = false) => ({ id, displayName: `Server nickname ${username}`, user: { bot, username, globalName: `Display name ${username}` } });
+	const member = (id, username = "Speaker", bot = false) => ({ id, displayName: `Server nickname ${username}`, user: { id, bot, username, globalName: `Display name ${username}` } });
+	const voiceState = (person, room, fields = {}) => ({ guild, id: person.id, member: person, channel: room ?? null, channelId: room?.id ?? null,
+		selfMute: false, selfDeaf: false, serverMute: false, serverDeaf: false, streaming: false, selfVideo: false, ...fields });
+	const post = (id, person, fields = {}) => {
+		const message = { id, author: person.user, guildId: guild.id, createdTimestamp: now, content: "A message", attachments: new Collection(), system: false, webhookId: null,
+			channel: { id: "900", name: "general", isThread: () => false }, inGuild() { return this.guildId !== null; }, ...fields };
+		return { ...message, channelId: message.channel.id, url: `https://discord.com/channels/${message.guildId}/${message.channel.id}/${message.id}` };
+	};
 	const first = channel("456");
 	const second = channel("457", 1);
 	first.members.set("111", member("111", "Alice"));
@@ -47,7 +54,7 @@ function fixture() {
 		log: { info: () => undefined, warn: () => undefined },
 	};
 	const runtime = new TranscriptionRuntime(client, config, dependencies);
-	return { runtime, records, captures, notices, first, second, client, guild, config, dependencies, channel, member, advance: (ms) => { now += ms; }, now: () => now };
+	return { runtime, records, captures, notices, first, second, client, guild, config, dependencies, channel, member, voiceState, post, advance: (ms) => { now += ms; }, now: () => now };
 }
 
 test("automatic recording sticks with a conversation, captures joiners separately and follows occupied channels", async (context) => {
@@ -77,6 +84,131 @@ test("automatic recording sticks with a conversation, captures joiners separatel
 	const usernames = { "111": "Alice", "222": "Bob", "333": "Carol" };
 	for (const entry of f.records.filter((record) => record.userId)) assert.equal(entry.speaker, usernames[entry.userId]);
 	assert.equal(f.client.listenerCount(Events.VoiceStateUpdate), 0);
+	assert.equal(f.client.listenerCount(Events.MessageCreate), 0);
+});
+
+test("voice arrivals and departures are captured even within one reconciliation tick, without inventing departures on pause", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	await f.runtime.start();
+	await setImmediate();
+	assert.deepEqual(f.records.filter((entry) => entry.type === "present").map((entry) => entry.userId), ["111"]);
+	assert.equal(f.records.filter((entry) => entry.type === "joined").length, 0);
+	const carol = f.member("333", "carol_account");
+	f.advance(10);
+	f.first.members.set(carol.id, carol);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.second), f.voiceState(carol, f.first));
+	const arrival = f.now();
+	assert.deepEqual(f.captures[0].ids, ["111", "333"]);
+	f.captures[0].packet(carol.id, Buffer.alloc(640, 3), f.now());
+	f.advance(10);
+	f.first.members.delete(carol.id);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.first), f.voiceState(carol, f.second));
+	const departure = f.now();
+	assert.deepEqual(f.captures[0].ids, ["111"]);
+	await f.runtime.pause();
+	await f.runtime.stop();
+	const joined = f.records.filter((entry) => entry.type === "joined");
+	const left = f.records.filter((entry) => entry.type === "left");
+	assert.deepEqual(joined.map((entry) => [entry.userId, entry.speaker, entry.at]), [["333", "carol_account", new Date(arrival).toISOString()]]);
+	assert.deepEqual(left.map((entry) => [entry.userId, entry.speaker, entry.at]), [["333", "carol_account", new Date(departure).toISOString()]]);
+	assert.match(joined[0].text, /Moved from.*457/);
+	assert.match(left[0].text, /Moved to.*457/);
+	assert.ok(f.records.some((entry) => entry.type === "transcript" && entry.userId === "333"));
+	assert.ok(f.records.some((entry) => entry.type === "session_stopped" && /administrator/.test(entry.text)));
+});
+
+test("the arrival that opens a recording keeps its event timestamp while existing occupants are snapshots", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	const alice = f.first.members.get("111");
+	f.first.members.clear();
+	f.second.members.clear();
+	await f.runtime.start();
+	f.advance(20);
+	const arrivedAt = f.now();
+	f.first.members.set(alice.id, alice);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(alice, null), f.voiceState(alice, f.first));
+	f.advance(100);
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.records.find((entry) => entry.type === "joined").at, new Date(arrivedAt).toISOString());
+	assert.equal(f.records.filter((entry) => entry.type === "present").length, 0);
+	f.captures[0].failure();
+	await f.runtime.reconcile();
+	f.advance(16_000);
+	await f.runtime.reconcile();
+	assert.equal(f.records.filter((entry) => entry.type === "joined").length, 1);
+	assert.equal(f.records.filter((entry) => entry.type === "left").length, 0);
+	assert.ok(f.records.some((entry) => entry.type === "present"));
+});
+
+test("participant posts keep message text and channel links locally and exclude outsiders, duplicate events and paused activity", async () => {
+	const f = fixture();
+	try {
+		await f.runtime.start();
+		await setImmediate();
+		const alice = f.first.members.get("111");
+		const bob = f.second.members.get("222");
+		const content = "Message text\nwith a second line and @everyone";
+		const message = f.post("901", alice, { content, attachments: new Collection([["a", { name: "photo.png" }]]) });
+		f.client.emit(Events.MessageCreate, message);
+		f.client.emit(Events.MessageCreate, message);
+		f.client.emit(Events.MessageCreate, f.post("902", bob));
+		f.client.emit(Events.MessageCreate, f.post("903", alice, { guildId: "other" }));
+		f.client.emit(Events.MessageCreate, f.post("904", alice, { guildId: null }));
+		f.client.emit(Events.MessageCreate, f.post("905", alice, { system: true }));
+		f.client.emit(Events.MessageCreate, f.post("906", alice, { webhookId: "999" }));
+		f.client.emit(Events.MessageCreate, f.post("907", f.member("111", "robot", true)));
+		f.client.emit(Events.MessageCreate, f.post("914", alice, { createdTimestamp: f.now() - 1 }));
+		f.advance(100);
+		const carol = f.member("333", "carol_account");
+		f.first.members.set(carol.id, carol);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+		f.client.emit(Events.MessageCreate, f.post("915", carol, { createdTimestamp: f.now() - 10 }));
+		const thread = f.post("908", alice, { channel: { id: "910", name: "discussion", isThread: () => true, parent: { id: "909", name: "forum" } } });
+		f.client.emit(Events.MessageCreate, thread);
+		f.first.members.delete(alice.id);
+		f.client.emit(Events.MessageCreate, f.post("911", alice));
+		f.first.members.set(alice.id, alice);
+		await f.runtime.pause();
+		f.client.emit(Events.MessageCreate, f.post("912", alice));
+		await f.runtime.stop();
+		f.client.emit(Events.MessageCreate, f.post("913", alice));
+		const posts = f.records.filter((entry) => entry.type === "message_posted");
+		assert.equal(posts.length, 2);
+		assert.deepEqual([posts[0].speaker, posts[0].userId, posts[0].channelId, posts[0].activityChannelId, posts[0].activityChannelName], ["Alice", "111", "456", "900", "general"]);
+		assert.equal(posts[0].text, content);
+		assert.equal(posts[0].at, new Date(message.createdTimestamp).toISOString());
+		assert.equal(posts[0].messageUrl, message.url);
+		assert.deepEqual(posts[0].attachmentNames, ["photo.png"]);
+		assert.deepEqual([posts[1].activityChannelId, posts[1].activityParentChannelId, posts[1].activityParentChannelName], ["910", "909", "forum"]);
+		assert.equal(f.records.filter((entry) => entry.type === "transcript").length, 0);
+		assert.equal(f.client.listenerCount(Events.MessageCreate), 0);
+	}
+	finally { await f.runtime.stop(); }
+});
+
+test("voice activity records mute, deafen, camera and screen changes for current participants only", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	await f.runtime.start();
+	const alice = f.first.members.get("111");
+	const before = f.voiceState(alice, f.first);
+	const after = f.voiceState(alice, f.first, { selfMute: true, selfDeaf: true, serverMute: true, serverDeaf: true, streaming: true, selfVideo: true });
+	f.client.emit(Events.VoiceStateUpdate, before, after);
+	f.client.emit(Events.VoiceStateUpdate, after, after);
+	f.client.emit(Events.VoiceStateUpdate, before, { ...after, guild: { id: "other" } });
+	const bob = f.second.members.get("222");
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(bob, f.second), f.voiceState(bob, f.second, { streaming: true }));
+	f.client.emit(Events.VoiceStateUpdate, after, before);
+	await f.runtime.pause();
+	f.client.emit(Events.VoiceStateUpdate, before, after);
+	const activity = f.records.filter((entry) => entry.type === "voice_activity");
+	assert.equal(activity.length, 2);
+	assert.equal(activity[0].speaker, "Alice");
+	assert.match(activity[0].text, /Microphone muted.*Audio deafened.*Server muted.*Server deafened.*Screen sharing started.*Camera turned on/);
+	assert.match(activity[1].text, /Microphone unmuted.*Audio undeafened.*Server unmuted.*Server undeafened.*Screen sharing stopped.*Camera turned off/);
 });
 
 test("pause persists across restarts, stops receiving immediately and resume explicitly enables automation", async () => {

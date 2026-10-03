@@ -1,6 +1,6 @@
 # Local voice transcription
 
-Caitlyn can automatically transcribe conversations in the configured server's ordinary voice channels. There is no participant opt-in step. The bot appears in the voice channel, posts a recording notice in its text chat, and saves speaker-labelled daily logs on Mainframe. It does not post transcripts to Discord or feed them into the existing AI chat/memory system. Text-channel archiving is not included in this feature.
+Caitlyn can automatically transcribe conversations in the configured server's ordinary voice channels. There is no participant opt-in step. The bot appears in the voice channel, posts a recording notice in its text chat, and saves speaker-labelled daily logs on Mainframe. These logs also include recorded participants' voice activity and messages posted in channels Caitlyn can see in the same server, including message text and links. They are not posted to Discord or fed into the existing AI chat/memory system.
 
 Each Discord user's audio stream is transcribed separately. New speaker labels use the account's Discord username (`user.username`) and stable Discord user ID, including when people talk over each other. Server nicknames and global display names are not used. This identifies the Discord account transmitting audio; it cannot distinguish multiple people sharing one microphone.
 
@@ -8,12 +8,22 @@ Each Discord user's audio stream is transcribed separately. New speaker labels u
 
 - `TRANSCRIPTION_CHANNEL_IDS=*` considers all ordinary voice channels in `GUILD_ID`. Stage channels and bots are excluded. A comma-separated channel allowlist is also supported.
 - Caitlyn records **one channel at a time**. It keeps the current conversation until that channel has no human members, then chooses another occupied channel by server channel order. Simultaneous conversations in other channels are not captured. Covering them requires additional bot identities/instances, each with separate tokens and transcript directories.
-- Already occupied channels are discovered at startup. New speakers get their own streams. Departing speakers' pending audio is flushed. Reconnection uses a 15-second backoff and writes a gap notice.
+- Already occupied channels are discovered at startup. Existing occupants receive `present` records. Actual joins and leaves receive timestamped `joined`/`left` records with usernames, user IDs and voice-channel names/IDs; channel moves include the other channel. Fast joins and leaves are handled directly from gateway events. If membership must be reconciled from the channel cache, departure records explain that the exact leave time is unavailable. New speakers get their own streams, and departing speakers' pending audio is flushed. Reconnection uses a 15-second backoff and writes a gap notice.
 - The bot requires View Channel, Connect and Send Messages in each candidate voice channel. GuildVoiceStates is already enabled in the bot. It joins muted but **not deafened**. Server-deafening the bot interrupts capture.
-- `/transcribe stop` immediately stops capture and saves a paused setting that survives restarts. Previously received audio may finish transcription. `/transcribe resume` clears that setting. `/transcribe start` prioritizes the administrator's current channel; stop an existing recording before selecting another one.
+- `/transcribe stop` stops capture and participant activity logging and saves a paused setting that survives restarts. Previously received audio may finish transcription. Stopping, pausing or reconnecting ends the recording session without falsely logging that everyone left the voice channel. `/transcribe resume` clears the paused setting. `/transcribe start` prioritizes the administrator's current channel; stop an existing recording before selecting another one.
 - All four command actions require Administrator permission. Commands are guild-only, and runtime access is restricted to the configured `GUILD_ID`. Commands never expose transcript content.
 
 Command replies are private Discord cards with separate recording state, speech-processing counters and daily-log information. Start, resume and stop show an action-specific title; the status distinguishes connecting, recording, waiting and paused. Failed/dropped counts cover the current bot process and reset when it restarts. Replies include the appropriate pause/resume command and explain that pauses persist across restarts.
+
+## Participant activity
+
+Activity belongs to the same daily voice-channel log as the conversation. It covers people currently in that recorded voice channel, while recording is enabled:
+
+- Message posts include the Discord username/user ID, creation timestamp, full original text, message ID/link, and the destination channel name/ID. Thread and forum messages include the parent channel when available. Attachment filenames are listed; attachment contents are not downloaded.
+- Mute/unmute, deafen/undeafen, server mute/deafen, camera on/off and screen-sharing changes are recorded as voice activity.
+- Messages from people outside the recorded channel, other servers, DMs, bots, webhooks and system messages are excluded. Delayed messages created before the recording session or the participant's arrival are excluded. Recently repeated message-create events are deduplicated within the session.
+
+This records new message posts; it does not backfill message history or track edits, deletions, reactions, typing or presence. Message text goes directly to the private local files, without speech-model or AI processing. Paused and stopped sessions accept no new activity. Existing Discord gateway intents cover this feature.
 
 ## Files and retention
 
@@ -25,7 +35,7 @@ Set `TRANSCRIPTION_DIRECTORY` to a writable persistent volume. Paths are:
 <directory>/<guild-id>/<voice-channel-id>/2026-10-01.txt
 ```
 
-JSONL is the authoritative append-only record, with UTC capture timestamps, channel and session identities, speaker usernames/IDs, transcript text, and session/join/leave/gap events. Older entries retain the labels captured before username attribution was deployed. Each completed append is flushed to disk. The text file is a readable view with the local time and UTC offset. Entries are appended as work completes; use the JSONL `at` timestamp when reconstructing chronological order across speakers and lifecycle events. Each chunk belongs to its capture date, even if inference finishes after midnight. The default daily boundary is `Europe/Amsterdam`, including daylight-saving changes.
+JSONL is the authoritative append-only record, with UTC capture timestamps, channel and session identities, speaker usernames/IDs, transcript text, and session/presence/join/leave/activity/gap events. `message_posted` records keep the voice channel as `channelId` and the post destination in `activityChannelId`/`activityChannelName`, with optional parent-channel details, `messageId`, `messageUrl`, `attachmentNames` and the original body in `text`. Older entries retain their originally captured labels and lifecycle semantics. Each completed append is flushed to disk. The text file is a readable view with the local time and UTC offset; message newlines and control characters become spaces so each event stays on one line, while JSONL retains the full original text. Entries are appended as work completes; use the JSONL `at` timestamp when reconstructing chronological order across speakers and lifecycle events. Each chunk belongs to its capture date, even if inference finishes after midnight. The default daily boundary is `Europe/Amsterdam`, including daylight-saving changes.
 
 New directories use mode `0700`; new files use `0600`. Provision the parent bind mount with the bot's container UID and private permissions. The code does not change permissions on an existing directory. Files remain until an operator removes them; there is no automatic retention deletion. Back up transcripts according to the desired retention policy. Do not place actual transcripts in the repository: `transcripts/` is excluded from Git and image build contexts.
 

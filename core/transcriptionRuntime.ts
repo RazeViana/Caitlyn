@@ -1,11 +1,11 @@
 /**
  * @file transcriptionRuntime.ts
- * @description Automatically follows occupied voice channels and saves daily conversations attributed to Discord usernames and user IDs.
+ * @description Follows occupied voice channels and saves username-attributed speech, voice events and participants' message activity in daily logs.
  * @module transcriptionRuntime
  */
 
 import { randomUUID } from "node:crypto";
-import { ChannelType, Events, PermissionFlagsBits, type Client, type VoiceChannel, type VoiceState } from "discord.js";
+import { ChannelType, Events, PermissionFlagsBits, type Client, type GuildMember, type Message, type VoiceChannel, type VoiceState } from "discord.js";
 import { SpeakerBuffer, localTranscriber } from "./transcriptionAudio.js";
 import { transcriptionSettings, type TranscriptionConfig } from "./transcriptionConfig.js";
 import { TranscriptionQueue } from "./transcriptionQueue.js";
@@ -17,8 +17,10 @@ interface Session {
 	id: string;
 	channel: VoiceChannel;
 	capture: VoiceCapture;
-	speakers: Map<string, { name: string; buffer: SpeakerBuffer }>;
+	speakers: Map<string, { name: string; joinedAt: number; buffer: SpeakerBuffer }>;
 	ready: boolean;
+	messageIds: Set<string>;
+	startedAt: number;
 }
 
 export interface TranscriptionDependencies {
@@ -38,6 +40,7 @@ export class TranscriptionRuntime {
 	private reconciling?: Promise<void>;
 	private retryAt = 0;
 	private preferred?: string;
+	private readonly pendingJoins = new Map<string, { channelId: string; at: number }>();
 	private readonly dependencies: TranscriptionDependencies;
 	private readonly queue: TranscriptionQueue;
 
@@ -59,9 +62,44 @@ export class TranscriptionRuntime {
 
 	private readonly voiceChanged = (before: VoiceState, after: VoiceState): void => {
 		if (after.guild.id !== this.config.guildId) return;
-		// Flush departing speakers immediately, before a queued channel reconciliation.
-		if (before.channelId !== after.channelId && this.session?.channel.id === before.channelId) {
-			this.session.speakers.get(after.id)?.buffer.flush();
+		const session = this.session;
+		const member = after.member ?? before.member;
+		if (!this.paused && !this.stopping && member && !member.user.bot) {
+			const at = this.dependencies.now();
+			if (before.channelId !== after.channelId) {
+				this.pendingJoins.delete(member.id);
+				if (!session && after.channel?.type === ChannelType.GuildVoice && this.allowed(after.channel)) {
+					this.pendingJoins.set(member.id, { channelId: after.channel.id, at });
+				}
+				if (session) {
+					if (before.channelId === session.channel.id) {
+						this.removeSpeaker(session, member.id, at, after.channel ? `Moved to "${after.channel.name}" (${after.channel.id}).` : undefined);
+					}
+					if (after.channelId === session.channel.id) {
+						this.addSpeaker(session, member, "joined", at, before.channel ? `Moved from "${before.channel.name}" (${before.channel.id}).` : undefined);
+					}
+					session.capture.sync([...session.speakers.keys()]);
+				}
+			}
+			else if (session && after.channelId === session.channel.id && session.speakers.has(member.id)) {
+				const changes: string[] = [];
+				const settings = [
+					["selfMute", "Microphone muted", "Microphone unmuted"],
+					["selfDeaf", "Audio deafened", "Audio undeafened"],
+					["serverMute", "Server muted", "Server unmuted"],
+					["serverDeaf", "Server deafened", "Server undeafened"],
+					["streaming", "Screen sharing started", "Screen sharing stopped"],
+					["selfVideo", "Camera turned on", "Camera turned off"],
+				] as const;
+				for (const [setting, enabled, disabled] of settings) {
+					if (typeof before[setting] === "boolean" && typeof after[setting] === "boolean" && before[setting] !== after[setting]) changes.push(after[setting] ? enabled : disabled);
+				}
+				if (changes.length) {
+					void this.queue.write(this.record(session, "voice_activity", {
+						at: new Date(at).toISOString(), userId: member.id, speaker: member.user.username, text: `${changes.join("; ")}.`,
+					}));
+				}
+			}
 		}
 		if (after.id === this.client.user?.id && this.session && (after.channelId !== this.session.channel.id || after.serverDeaf)) {
 			this.connectionFailed(this.session);
@@ -69,10 +107,31 @@ export class TranscriptionRuntime {
 		void this.reconcile().catch(() => this.dependencies.log.warn("Voice transcription channel update failed; will retry."));
 	};
 
+	private readonly messageCreated = (message: Message): void => {
+		const session = this.session;
+		const speaker = session?.speakers.get(message.author.id);
+		if (!session || this.paused || this.stopping || !this.queue.healthy || !message.inGuild()
+			|| message.guildId !== this.config.guildId || message.author.bot || message.webhookId || message.system
+			|| !speaker || !session.channel.members.has(message.author.id)
+			|| message.createdTimestamp < Math.max(session.startedAt, speaker.joinedAt)
+			|| session.messageIds.has(message.id)) return;
+		session.messageIds.add(message.id);
+		if (session.messageIds.size > 2048) session.messageIds.delete(session.messageIds.values().next().value!);
+		const parent = message.channel.isThread() ? message.channel.parent : null;
+		void this.queue.write(this.record(session, "message_posted", {
+			at: new Date(message.createdTimestamp).toISOString(), userId: message.author.id, speaker: message.author.username,
+			activityChannelId: message.channelId, activityChannelName: message.channel.name,
+			activityParentChannelId: parent?.id, activityParentChannelName: parent?.name,
+			messageId: message.id, messageUrl: message.url, text: message.content,
+			attachmentNames: [...message.attachments.values()].map((attachment) => attachment.name),
+		}));
+	};
+
 	async start(): Promise<void> {
 		await this.dependencies.store.initialize();
 		this.paused = await this.dependencies.store.paused();
 		this.client.on(Events.VoiceStateUpdate, this.voiceChanged);
+		this.client.on(Events.MessageCreate, this.messageCreated);
 		this.timer = setInterval(() => {
 			for (const speaker of this.session?.speakers.values() ?? []) speaker.buffer.idle(this.dependencies.now());
 			void this.reconcile().catch(() => this.dependencies.log.warn("Voice transcription reconciliation failed; will retry."));
@@ -89,25 +148,38 @@ export class TranscriptionRuntime {
 			channelId: session.channel.id, channelName: session.channel.name, sessionId: session.id, ...fields };
 	}
 
+	private addSpeaker(session: Session, member: GuildMember, type: "joined" | "present", at: number, reason?: string): void {
+		const existing = session.speakers.get(member.id);
+		if (existing) {
+			existing.name = member.user.username;
+			return;
+		}
+		const speaker = { name: member.user.username, joinedAt: at, buffer: new SpeakerBuffer(this.config.timezone, (chunk) => {
+			this.queue.push(chunk, this.record(session, "transcript", { at: new Date(chunk.at).toISOString(), end: new Date(chunk.end).toISOString(),
+				userId: member.id, speaker: speaker.name }));
+		}) };
+		session.speakers.set(member.id, speaker);
+		void this.queue.write(this.record(session, type, { at: new Date(at).toISOString(), userId: member.id, speaker: speaker.name, text: reason }));
+	}
+
+	private removeSpeaker(session: Session, userId: string, at: number, reason?: string): void {
+		const speaker = session.speakers.get(userId);
+		if (!speaker) return;
+		speaker.buffer.flush();
+		session.speakers.delete(userId);
+		void this.queue.write(this.record(session, "left", { at: new Date(at).toISOString(), userId, speaker: speaker.name, text: reason }));
+	}
+
 	private syncSpeakers(session: Session): void {
 		const members = this.humans(session.channel);
-		for (const [id, speaker] of session.speakers) {
-			if (members.some((member) => member.id === id)) continue;
-			speaker.buffer.flush();
-			session.speakers.delete(id);
-			void this.queue.write(this.record(session, "left", { userId: id, speaker: speaker.name }));
+		for (const id of session.speakers.keys()) {
+			if (!members.some((member) => member.id === id)) this.removeSpeaker(session, id, this.dependencies.now(), "Membership reconciled; the exact departure time is unavailable.");
 		}
 		for (const member of members) {
-			if (session.speakers.has(member.id)) {
-				session.speakers.get(member.id)!.name = member.user.username;
-				continue;
-			}
-			const speaker = { name: member.user.username, buffer: new SpeakerBuffer(this.config.timezone, (chunk) => {
-				this.queue.push(chunk, this.record(session, "transcript", { at: new Date(chunk.at).toISOString(), end: new Date(chunk.end).toISOString(),
-					userId: member.id, speaker: speaker.name }));
-			}) };
-			session.speakers.set(member.id, speaker);
-			void this.queue.write(this.record(session, "joined", { userId: member.id, speaker: speaker.name }));
+			const arrival = this.pendingJoins.get(member.id);
+			const joined = arrival?.channelId === session.channel.id;
+			this.addSpeaker(session, member, joined ? "joined" : "present", joined ? arrival.at : this.dependencies.now());
+			this.pendingJoins.delete(member.id);
 		}
 		session.capture.sync([...session.speakers.keys()]);
 	}
@@ -131,8 +203,8 @@ export class TranscriptionRuntime {
 			const guild = this.client.guilds.cache.get(this.config.guildId);
 			if (!guild || !this.client.isReady()) return;
 			if (this.session) {
+				this.syncSpeakers(this.session);
 				if (this.humans(this.session.channel).length) {
-					this.syncSpeakers(this.session);
 					return;
 				}
 				await this.closeSession("Voice channel is empty.");
@@ -150,16 +222,17 @@ export class TranscriptionRuntime {
 					const capture = this.dependencies.connect(channel, (userId, pcm, at) => {
 						if (session && this.session === session && !this.paused && !this.stopping) session.speakers.get(userId)?.buffer.push(pcm, at);
 					}, () => { if (session) this.connectionFailed(session); });
-					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false };
+					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, messageIds: new Set(), startedAt: this.dependencies.now() };
 					this.session = session;
 					// Install listeners before awaiting the voice handshake so the first speech is captured.
 					this.syncSpeakers(session);
+					this.pendingJoins.clear();
 					void capture.ready.then(async () => {
 						if (this.session !== session || this.stopping) return;
 						session!.ready = true;
 						await this.queue.write(this.record(session!, "session_started", { text: "Local voice transcription started. Raw audio is not saved." }));
 						if (this.session !== session || this.stopping || this.paused) return;
-						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Speaker-labelled daily logs are saved privately on Mainframe using a local speech model. Raw audio is not saved. An administrator can use `/transcribe stop` to stop recording.", allowedMentions: { parse: [] } });
+						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe include speech, voice activity, and participants' posts in channels Caitlyn can see, including message text and links. Discord usernames identify participants. Raw audio is not saved. An administrator can use `/transcribe stop` to stop recording and activity logging.", allowedMentions: { parse: [] } });
 					}).catch(() => { if (session) this.connectionFailed(session); });
 					break;
 				}
@@ -177,10 +250,7 @@ export class TranscriptionRuntime {
 		if (!session) return;
 		this.session = undefined;
 		session.capture.close();
-		for (const [userId, speaker] of session.speakers) {
-			speaker.buffer.flush();
-			await this.queue.write(this.record(session, "left", { userId, speaker: speaker.name, text: reason }));
-		}
+		for (const speaker of session.speakers.values()) speaker.buffer.flush();
 		await this.queue.write(this.record(session, "session_stopped", { text: reason }));
 	}
 
@@ -197,6 +267,7 @@ export class TranscriptionRuntime {
 			"**Daily logs**",
 			`Timezone: **${this.config.timezone}**`,
 			"Speech recognition runs locally. Logs stay private on **Mainframe**.",
+			"Includes voice joins/leaves, voice activity, and participants' message text and links.",
 			"",
 			this.paused
 				? "Use `/transcribe resume` to resume automatic recording, or `/transcribe start` to select your voice channel."
@@ -207,6 +278,7 @@ export class TranscriptionRuntime {
 	async pause(): Promise<void> {
 		await this.serialize(async () => {
 			this.paused = true;
+			this.pendingJoins.clear();
 			await this.closeSession("Stopped by an administrator.");
 			await this.dependencies.store.setPaused(true);
 		});
@@ -229,6 +301,7 @@ export class TranscriptionRuntime {
 		this.stopping = true;
 		if (this.timer) clearInterval(this.timer);
 		this.client.off(Events.VoiceStateUpdate, this.voiceChanged);
+		this.client.off(Events.MessageCreate, this.messageCreated);
 		await this.serialize(() => this.closeSession("Caitlyn is shutting down."));
 		await this.queue.stop();
 		await this.dependencies.store.drain();

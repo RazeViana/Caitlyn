@@ -1,6 +1,6 @@
 /**
  * @file transcriptionStore.ts
- * @description Appends durable daily transcript records and readable logs with private file permissions.
+ * @description Appends private daily speech and participant activity records, with readable channel and message context.
  * @module transcriptionStore
  */
 
@@ -8,7 +8,7 @@ import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface TranscriptRecord {
-	type: "session_started" | "session_stopped" | "joined" | "left" | "transcript" | "gap";
+	type: "session_started" | "session_stopped" | "present" | "joined" | "left" | "transcript" | "message_posted" | "voice_activity" | "gap";
 	at: string;
 	end?: string;
 	guildId: string;
@@ -18,6 +18,13 @@ export interface TranscriptRecord {
 	userId?: string;
 	speaker?: string;
 	text?: string;
+	activityChannelId?: string;
+	activityChannelName?: string;
+	activityParentChannelId?: string;
+	activityParentChannelName?: string;
+	messageId?: string;
+	messageUrl?: string;
+	attachmentNames?: string[];
 }
 
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -29,7 +36,22 @@ export function transcriptDay(at: string | number, timezone: string): string {
 	return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-function singleLine(value: string): string { return value.replace(/[\r\n\p{Cc}]/gu, " "); }
+function singleLine(value: string): string { return value.replace(/[\r\n\p{Cc}\p{Zl}\p{Zp}]/gu, " "); }
+
+function readableContent(record: TranscriptRecord): string {
+	if (record.type === "transcript") return record.text ?? "";
+	const voiceChannel = `"${record.channelName}" (${record.channelId})`;
+	if (record.type === "joined") return `[joined] Joined voice channel ${voiceChannel}. ${record.text ?? ""}`.trimEnd();
+	if (record.type === "left") return `[left] Left voice channel ${voiceChannel}. ${record.text ?? ""}`.trimEnd();
+	if (record.type === "present") return `[present] Present in voice channel ${voiceChannel}. ${record.text ?? ""}`.trimEnd();
+	if (record.type === "message_posted") {
+		const channel = record.activityParentChannelName
+			? `#${record.activityParentChannelName} / #${record.activityChannelName}` : `#${record.activityChannelName}`;
+		const attachments = record.attachmentNames?.length ? ` | Attachments: ${record.attachmentNames.join(", ")}` : "";
+		return `[message_posted] Posted in ${channel} (${record.activityChannelId}) | ${record.messageUrl} | Message: ${record.text ?? ""}${attachments}`;
+	}
+	return `[${record.type}] ${record.text ?? ""}`;
+}
 
 export class TranscriptionStore {
 	private tail: Promise<void> = Promise.resolve();
@@ -63,7 +85,7 @@ export class TranscriptionStore {
 			const base = join(directory, transcriptDay(record.at, this.timezone));
 			const timestamp = new Intl.DateTimeFormat("en-GB", { timeZone: this.timezone, hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "shortOffset", hour12: false }).format(new Date(record.at));
 			const who = record.userId ? `${singleLine(record.speaker ?? "Unknown")} (${record.userId})` : "Caitlyn";
-			const content = record.type === "transcript" ? record.text ?? "" : `[${record.type}] ${record.text ?? ""}`;
+			const content = readableContent(record);
 			// JSONL is authoritative. Text is a convenient append-only view; capture timestamps define ordering.
 			for (const [extension, data] of [["jsonl", `${JSON.stringify({ version: 1, timezone: this.timezone, ...record })}\n`], ["txt", `[${timestamp}] ${who}: ${singleLine(content)}\n`]]) {
 				const file = await open(`${base}.${extension}`, "a", 0o600);
