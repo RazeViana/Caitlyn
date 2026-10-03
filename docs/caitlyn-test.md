@@ -1,8 +1,8 @@
 # Mainframe transcription test instance
 
-Prepared on 2026-10-03 (Europe/Amsterdam) as the TrueNAS custom app `caitlyn-test`, using the published `2.2.0` revision `2b3e1b7fc1da043db629d6a905d625fa3546618f`. Production `caitlyn` remains online. The owner selected a separate Discord bot in the existing server, with application ID `728643744726908989`, verified to differ from production.
+Activated on 2026-10-03 at 21:53 CEST (Europe/Amsterdam) as the TrueNAS custom app `caitlyn-test`, using the published `2.2.0` revision `2b3e1b7fc1da043db629d6a905d625fa3546618f`. Production `caitlyn` remains online. The owner selected a separate Discord bot in the existing server, with application ID `728643744726908989`, verified to differ from production. Its server nickname is `caitlyn-test`; its existing global username, `SHUSH`, was preserved because that identity also belongs to other servers.
 
-Current checkpoint: the isolated database and GPU speech worker are healthy. The bot service is staged behind the `awaiting-discord-token` Compose profile until its separate token is saved and the server invitation is confirmed. No production token was copied into the test instance, no test bot has logged into Discord, and live voice reception still needs verification after activation.
+Current checkpoint: all three test services are running, the isolated database and GPU speech worker are healthy, and the bot has logged into Discord. Its separate token, required intents and server membership were verified before activation. The 15 guild commands include `/transcribe`; global and production commands were left unchanged. The bot joined an occupied voice channel, posted its recording notice and saved its first live, speaker-attributed speech transcript. A controlled two-speaker conversation is still needed to assess attribution and recognition quality.
 
 ## Layout and installed software
 
@@ -24,7 +24,9 @@ The [complete package inventory](caitlyn-test-installations.json) records every 
 
 The database and speech worker use the internal `ix-caitlyn-test_backend` network and publish no ports. Only the bot also joins the app's default network for Discord. All bind mounts are under the test directory; no production data mount is attached. Fresh migrations 001–016 initialized the empty test database. Social previews, AI replies and birthday reminders are disabled in this instance. Activity collected while testing goes only to its test database.
 
-## Finish Discord setup
+## Discord configuration and recreation
+
+These steps are complete for the running instance. Use them when recreating it or rotating its separate credentials.
 
 1. Enable Server Members Intent and Message Content Intent for the separate test application in the [Discord Developer Portal](https://discord.com/developers/applications).
 2. [Invite the test bot](https://discord.com/oauth2/authorize?client_id=728643744726908989&permissions=1051648&scope=bot%20applications.commands) to the existing server. Requested permissions are View Channels, Send Messages and Connect; administrators can restrict which voice channels it can view/connect to for a controlled test.
@@ -34,16 +36,22 @@ The database and speech worker use the internal `ix-caitlyn-test_backend` networ
    sudo -n python3 /mnt/Datashare/apps/caitlyn-test/set-discord-token.py
    ```
 
-   The hidden prompt accepts the new bot's token, verifies its application ID through Discord, and saves it atomically with private permissions. It refuses a token for another application and refuses HTTP redirects. Existing configuration is backed up privately first. `--token-file /path/to/private-file` is available when the token is already stored on Mainframe. Do not put a token in a command argument, this document, Git, or chat.
+   The hidden prompt accepts the test bot's token, verifies its application ID through Discord, and saves it atomically with private permissions. It refuses a token for another application and refuses HTTP redirects. Existing configuration is backed up privately first. `--token-file /path/to/private-file` is available when the token is already stored on Mainframe. Do not put a token in a command argument, this document, Git, or chat. After rotating credentials for an active instance, restart only the test app through TrueNAS so it loads the new value.
 
 4. Before activation, verify the new bot's identity, server membership and required intents; save its existing guild command definitions and register the 15 commands from the test image for this application only. Global and production command definitions must remain unchanged.
 5. Back up the saved test app configuration, then update only `caitlyn-test` through `app.update` with the prepared `compose.active.json`. This removes the staging profile. Wait for the TrueNAS job and bot startup to complete. Never edit the generated rendered Compose file.
+
+Activation job `226453` completed successfully. The previous TrueNAS app configuration, both prepared Compose configurations, deployment metadata, a consistent PostgreSQL custom-format dump and the production container baseline are saved privately under `/mnt/Datashare/apps/caitlyn-test/backups/activation-20261003T195227Z`. The original test guild command definitions and nickname are also backed up under `backups/`. Current operation and verification records are in `deployment.json` and `activation-verification.json` under the private deployment directory; they contain no token values.
 
 ## Checks and practical testing
 
 The database schema, isolated database connection and live GPU HTTP service passed a test using the compiled bot's actual transcription client. An 11-second public speech fixture returned the expected text in 3.837 seconds, with SHA-256 `e4e644650803b9dca2d1caaf17fbfa3b5cd835a792b8d53d888c6996f7eb1c5d`. The probe made no Discord connection and printed no transcript text. The token helper passed synthetic checks for application mismatch, private atomic writes, recoverable backups, no token output and redirect rejection.
 
-After activation, use a controlled voice conversation with two speakers and check `/transcribe status`, the recording notice, distinct speaker names/IDs and the daily text/JSONL files. Check join/leave, brief overlapping speech, `/transcribe stop` and `/transcribe resume`. English recognition stays local. As configured, automatic recording considers all ordinary voice channels in the existing server, one channel at a time; use `TRANSCRIPTION_CHANNEL_IDS` or Discord channel permissions to limit a test.
+The activation check confirmed Discord login, a connected and undeafened voice state, the recording notice, GPU health (`cuda` / `int8_float32`), writable transcript storage and private file permissions. Four participant join records, a session-start record and a live speech transcript were present at the initial check; conversation content was not printed. All test bind mounts are under the test directory, and no test service publishes a host port. The production bot, broker, FxEmbed and database retained their container IDs, images and start times through activation. Startup had no errors; warnings only described deliberately unconfigured optional features.
+
+The saved speech record has a nonempty speaker name, a user ID matching a joined participant and the correct Europe/Amsterdam daily filename. Both JSONL and readable text files exist with mode 0600. The final `npm run check` passed type checking, lint, build and 424 tests; the optional PostgreSQL integration suite was skipped. No test service restarted unexpectedly during activation verification.
+
+Use a controlled voice conversation with two speakers and check `/transcribe status`, the recording notice, distinct speaker names/IDs and the daily text/JSONL files. Check join/leave, brief overlapping speech, `/transcribe stop` and `/transcribe resume`. English recognition stays local. As configured, automatic recording considers all ordinary voice channels in the existing server, one channel at a time; use `TRANSCRIPTION_CHANNEL_IDS` or Discord channel permissions to limit a test.
 
 The test instance has a separate bot identity and persistent data, so production can stay online. A dedicated test server provides stronger isolation from normal server activity; [Discord recommends a server that is not actively used by others for development](https://docs.discord.com/developers/quick-start/getting-started#installing-your-app).
 
