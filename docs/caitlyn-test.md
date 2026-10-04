@@ -29,6 +29,8 @@ The test bot uses the existing private log channel `1545721255515267113` with IN
 
 Cron job **3**, description **Back up caitlyn-test transcripts and verify PostgreSQL restore**, runs daily. Its stored schedule is 04:15 in Mainframe's configured `America/Los_Angeles` timezone, currently **13:15 Europe/Amsterdam**; the offset differs during the countries' daylight-saving transition weeks. Each run creates a consistent database dump, private file/config copies, and a disposable restore verification, then updates the bot's backup status. Backups stay under the test deployment's `backups/` directory and currently have no automatic deletion. This provides local restore coverage, not protection against loss of the whole Datashare pool.
 
+The schedule was exercised through TrueNAS itself. An initial restore-startup failure exposed the difference between PostgreSQL's temporary Unix-socket bootstrap server and its final listener. The helper now waits for TCP readiness; consecutive scheduler jobs **227404** and **227411** completed successfully, and the bot reported recovery through its normal private logs. A regression test covers that bootstrap boundary. The helper's SHA-256 is recorded in the installation inventory. Its final change passed the normal 443-test offline gate (two PostgreSQL suites skipped; the bot release had already passed all 472 tests with PostgreSQL) and all four backup-specific Python checks.
+
 ## Discord configuration and recreation
 
 These steps are complete for the running instance. Use them when recreating it or rotating its separate credentials.

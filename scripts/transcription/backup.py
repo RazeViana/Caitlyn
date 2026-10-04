@@ -95,16 +95,18 @@ def restore_check(config, backup, image):
              "-e", "POSTGRES_HOST_AUTH_METHOD=trust", image], stdout=subprocess.DEVNULL)
         started = True
         for _ in range(60):
-            ready = subprocess.run(["docker", "exec", name, "pg_isready", "-U", "postgres"],
+            # The image briefly starts a Unix-socket-only bootstrap server. Wait
+            # for TCP so restore cannot race that temporary server's shutdown.
+            ready = subprocess.run(["docker", "exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if ready.returncode == 0:
                 break
             time.sleep(0.5)
         else:
             raise RuntimeError("Restore database did not become ready")
-        run(["docker", "exec", name, "createdb", "-U", "postgres", "verification"], stdout=subprocess.DEVNULL)
+        run(["docker", "exec", name, "createdb", "-h", "127.0.0.1", "-U", "postgres", "verification"], stdout=subprocess.DEVNULL)
         with (backup / "database.dump").open("rb") as data:
-            run(["docker", "exec", "-i", name, "pg_restore", "-U", "postgres", "-d", "verification",
+            run(["docker", "exec", "-i", name, "pg_restore", "-h", "127.0.0.1", "-U", "postgres", "-d", "verification",
                  "--no-owner", "--no-privileges", "--exit-on-error"], stdin=data, stdout=subprocess.DEVNULL)
         query = """SELECT json_build_object(
           'events', (SELECT count(*) FROM discord.transcript_events),
@@ -112,7 +114,7 @@ def restore_check(config, backup, image):
           'policy', (SELECT count(*) FROM pg_policies WHERE schemaname='discord' AND tablename='transcript_events'),
           'checkpoints', (SELECT coalesce(json_agg(json_build_object('source',source,'offset',byte_offset)), '[]')
                          FROM discord.transcript_import_offsets))"""
-        result = json.loads(run(["docker", "exec", name, "psql", "-U", "postgres", "-d", "verification", "-Atqc", query],
+        result = json.loads(run(["docker", "exec", name, "psql", "-h", "127.0.0.1", "-U", "postgres", "-d", "verification", "-Atqc", query],
                                 stdout=subprocess.PIPE, text=True).stdout)
         if result["row_security"] is not True or result["policy"] < 1:
             raise RuntimeError("Restored participant security is missing")

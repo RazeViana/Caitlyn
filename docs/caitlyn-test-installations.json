@@ -1415,6 +1415,7 @@
     "installed_path": "/root/.config/caitlyn-transcript-backup/backup.py",
     "runtime": "3.11.9",
     "extra_packages": [],
-    "schedule_id": 3
+    "schedule_id": 3,
+    "sha256": "398a00b335aa0c3789c4769a95f98352eea4291e9299dcbaa6bd63b4ebf53a8e"
   }
 }

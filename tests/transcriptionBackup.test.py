@@ -8,6 +8,9 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
+import subprocess
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location("backup", Path(__file__).parents[1] / "scripts/transcription/backup.py")
 backup = importlib.util.module_from_spec(spec)
@@ -52,6 +55,30 @@ class BackupTests(unittest.TestCase):
             backup.private_json(path / "status.json", {"complete": True})
             self.assertEqual(protected.read_text(), "unchanged")
             self.assertEqual((path / "status.json").stat().st_mode & 0o777, 0o600)
+
+    def test_restore_waits_past_the_temporary_unix_socket_startup_server(self):
+        polls = 0
+        initializing = True
+
+        def docker(arguments, **_kwargs):
+            nonlocal polls, initializing
+            if "pg_isready" in arguments:
+                if "-h" not in arguments:
+                    return SimpleNamespace(returncode=0)
+                polls += 1
+                initializing = polls < 3
+                return SimpleNamespace(returncode=2 if initializing else 0)
+            if "createdb" in arguments and initializing:
+                raise subprocess.CalledProcessError(1, arguments, stderr=b"temporary server stopped")
+            return SimpleNamespace(returncode=0, stdout='{"events":36,"row_security":true,"policy":1,"checkpoints":[]}')
+
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory)
+            (destination / "database.dump").write_bytes(b"fixture")
+            with mock.patch.object(backup.subprocess, "run", side_effect=docker), mock.patch.object(backup.time, "sleep"):
+                result = backup.restore_check({}, destination, "test-image")
+            self.assertEqual(polls, 3)
+            self.assertEqual(result["events"], 36)
 
 
 if __name__ == "__main__":
