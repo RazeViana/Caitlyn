@@ -9,6 +9,7 @@ ARG WHISPER_MODEL=base.en
 ARG WHISPER_MODEL_REVISION=3d3d5dee26484f91867d81cb899cfcf72b96be6c
 RUN python -c 'import os; from faster_whisper.utils import download_model; download_model(os.environ["WHISPER_MODEL"], revision=os.environ["WHISPER_MODEL_REVISION"], output_dir="/models/whisper")'
 COPY --chmod=644 server.py ./
+ENV TRANSCRIPTION_MODEL_ID=${WHISPER_MODEL}
 ENV HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 TRANSCRIPTION_CPU_THREADS=2
 USER 65534:65534
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8095/health", timeout=3)'

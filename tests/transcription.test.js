@@ -79,6 +79,23 @@ test("daily activity logs name voice and post channels while preserving full mes
 	assert.equal((await stat(`${base}.txt`)).mode & 0o777, 0o600);
 });
 
+test("unclean restart records an operator-only gap without inventing participant attendance", async (context) => {
+	const directory = await mkdtemp(path.join(os.tmpdir(), "caitlyn-restart-"));
+	context.after(() => rm(directory, { recursive: true, force: true }));
+	const store = new TranscriptionStore(directory, "Europe/Amsterdam");
+	await store.initialize();
+	await store.markSession({ ...record, audienceVersion: 1, audienceUserIds: ["789"] });
+	const restarted = new TranscriptionStore(directory, "Europe/Amsterdam");
+	assert.equal(await restarted.recoverSession("123"), true);
+	const file = path.join(directory, "123", "456", transcriptDay(Date.now(), "Europe/Amsterdam") + ".jsonl");
+	const gap = JSON.parse(await readFile(file, "utf8"));
+	assert.equal(gap.type, "gap");
+	assert.equal(gap.sessionId, "session");
+	assert.deepEqual(gap.audienceUserIds, []);
+	assert.equal(gap.userId, undefined);
+	assert.equal(await restarted.recoverSession("123"), false);
+});
+
 test("continuous speech is bounded without losing frames, with silence and midnight boundaries", () => {
 	const chunks = [];
 	const buffer = new SpeakerBuffer("Europe/Amsterdam", (chunk) => chunks.push(chunk));

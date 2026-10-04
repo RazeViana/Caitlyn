@@ -4,12 +4,13 @@
  * @module transcriptionAudio
  */
 
-import { transcriptDay } from "./transcriptionStore.js";
+import { transcriptDay, type RecognitionDetails } from "./transcriptionStore.js";
 import type { TranscriptionConfig } from "./transcriptionConfig.js";
 
 export const SAMPLE_RATE = 16000;
 export const MAX_AUDIO_BYTES = SAMPLE_RATE * 2 * 20;
 export interface AudioChunk { pcm: Buffer; at: number; end: number }
+export interface RecognitionResult { text: string; recognition: RecognitionDetails }
 
 export function waveAudio(pcm: Buffer): Buffer {
 	const header = Buffer.alloc(44);
@@ -53,7 +54,7 @@ export class SpeakerBuffer {
 }
 
 export function localTranscriber(config: TranscriptionConfig, fetcher: typeof fetch = fetch) {
-	return async (pcm: Buffer, signal: AbortSignal): Promise<string> => {
+	return async (pcm: Buffer, signal: AbortSignal): Promise<string | RecognitionResult> => {
 		const url = new URL(config.endpoint);
 		url.searchParams.set("language", config.language);
 		const response = await fetcher(url, {
@@ -80,6 +81,14 @@ export function localTranscriber(config: TranscriptionConfig, fetcher: typeof fe
 		finally { await reader.cancel(); }
 		const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
 		if (typeof result.text !== "string" || result.text.length > 16_000) throw new Error("Invalid transcription response");
-		return result.text.trim();
+		if (result.recognition === undefined) return result.text.trim();
+		const detail = result.recognition as RecognitionDetails;
+		const bounded = (value: unknown, min: number, max: number): boolean => typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+		if (!detail || typeof detail.model !== "string" || detail.model.length > 100 || !/^[a-z]{2,3}$/.test(detail.language)
+			|| !bounded(detail.durationSeconds, 0, 21) || !bounded(detail.processingSeconds, 0, 600)
+			|| !Array.isArray(detail.segments) || detail.segments.length > 128
+			|| detail.segments.some((s) => !s || !bounded(s.start, 0, 21) || !bounded(s.end, s.start, 21)
+				|| !bounded(s.averageLogProbability, -100, 0) || !bounded(s.noSpeechProbability, 0, 1))) throw new Error("Invalid recognition metadata");
+		return { text: result.text.trim(), recognition: detail };
 	};
 }

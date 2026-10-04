@@ -82,6 +82,25 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(json.load(response), {"ready": True})
         self.assertEqual(self.calls, [])
 
+    def test_scores_and_timing_are_retained_without_extra_text_in_metadata(self):
+        segment = SimpleNamespace(text="Test words", start=0.0, end=0.5, avg_logprob=-0.2, no_speech_prob=0.01)
+        model = SimpleNamespace(transcribe=lambda *_args, **_kwargs: (iter([segment]), SimpleNamespace(language="en", duration=1.0)))
+        server = ThreadingHTTPServer(("127.0.0.1", 0), worker.make_handler(model))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}/transcribe", audio(), {"Content-Type": "audio/wav"})
+            with urllib.request.urlopen(request, timeout=3) as response:
+                result = json.load(response)
+            self.assertEqual(result["text"], "Test words")
+            self.assertEqual(result["recognition"]["model"], "base.en")
+            self.assertEqual(result["recognition"]["segments"][0]["averageLogProbability"], -0.2)
+            self.assertNotIn("Test words", json.dumps(result["recognition"]))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
 
 class DeviceTests(unittest.TestCase):
     def test_cpu_default_and_pascal_compatible_gpu_preserve_offline_loading(self):

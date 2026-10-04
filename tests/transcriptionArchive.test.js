@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdtemp, readFile, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir, userInfo } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -35,8 +35,9 @@ test("archive validation never infers an audience from old membership logs or un
 	for (const change of [
 		{ audienceVersion: 1 }, { audienceVersion: 1, audienceUserIds: [null] },
 		{ guildId: "999" }, { channelId: "999" }, { end: "2026-10-03T19:00:00Z" },
-		{ at: "invalid" }, { text: "invalid\0text" }, { eventId: "../path" },
+		{ at: "invalid" }, { eventId: "../path" },
 	]) assert.throws(() => archivedEvent({ ...base, ...change }, "file", 0, "123", "456"));
+	assert.equal(archivedEvent({ ...base, text: "before\0after\ud800" }, "file", 0, "123", "456").content, "before\uFFFDafter\uFFFD");
 });
 
 test("PostgreSQL transcript archive enforces participation across queries, recovery and reader roles", {
@@ -66,6 +67,9 @@ test("PostgreSQL transcript archive enforces participation across queries, recov
 		const migration = await readFile(new URL("../migrations/017_transcript_archive.sql", import.meta.url), "utf8");
 		await writer.query(migration);
 		await writer.query(migration);
+		const operations = await readFile(new URL("../migrations/018_transcript_operations.sql", import.meta.url), "utf8");
+		await writer.query(operations);
+		await writer.query(operations);
 		await administrator.query("CREATE ROLE \"" + role + "\" LOGIN NOSUPERUSER NOBYPASSRLS");
 		roleCreated = true;
 		await writer.query("GRANT USAGE ON SCHEMA discord TO \"" + role + "\"");
@@ -160,6 +164,52 @@ test("PostgreSQL transcript archive enforces participation across queries, recov
 			await archive.sync();
 			assert.ok((await reader.events(carol)).events.some((row) => row.event_id === "offline"));
 			assert.match(archive.status(), /^synced/);
+		});
+
+		await context.test("crash tails, malformed audiences and oversized rows cannot swallow good records or stall other channels", async () => {
+			const file = join(directory, "123", "456", "2026-10-03.jsonl");
+			await appendFile(file, "{\"version\":1,\"unfinished\":");
+			await store.append(event("after-crash", 10, ["111"], { text: "Control\0character\ud800 preserved in original" }));
+			await appendFile(file, JSON.stringify({ ...base, audienceVersion: 1, audienceUserIds: [null] }) + "\n" + "X".repeat(300_000) + "\n");
+			await store.append(event("after-huge", 11, ["111"]));
+			await store.append(event("unaffected-room", 12, ["333"], { channelId: "458" }));
+			for (let pass = 0; pass < 4; pass++) await archive.sync();
+			assert.match(archive.status(), /^synced/);
+			assert.equal((await writer.query("SELECT content FROM discord.transcript_events WHERE event_id='after-crash'")).rows[0].content, "Control\uFFFDcharacter\uFFFD preserved in original");
+			assert.equal((await writer.query("SELECT count(*)::int AS n FROM discord.transcript_events WHERE event_id IN ('after-huge','unaffected-room')")).rows[0].n, 2);
+			const quarantined = await readdir(join(directory, "quarantine", "123", "456"));
+			assert.ok(quarantined.length >= 4);
+			const evidence = await Promise.all(quarantined.map(async (name) => JSON.parse(await readFile(join(directory, "quarantine", "123", "456", name), "utf8"))));
+			assert.ok(evidence.some((entry) => Buffer.from(entry.data, "base64").toString().includes("unfinished")));
+			assert.deepEqual((await reader.events(carol, { query: "Control" })).events, []);
+		});
+
+		await context.test("corrections preserve originals and deny even an administrator absent from the original audience", async () => {
+			await assert.rejects(archive.correction("before", "333", "carol", "Unauthorized correction"), /unavailable/);
+			const correction = await archive.correction("shared", "333", "carol_account", "Corrected pineapple");
+			await store.append({ ...correction, eventId: "correction-one" });
+			await archive.sync();
+			const visible = (await reader.events(carol, { type: "transcript_corrected" })).events;
+			assert.equal(visible[0].content, "Corrected pineapple");
+			assert.equal(visible[0].metadata.actorUsername, "carol_account");
+			assert.equal(visible[0].metadata.targetEventId, "shared");
+			assert.equal((await writer.query("SELECT content FROM discord.transcript_events WHERE event_id='shared'")).rows[0].content, "Shared pineapple conversation");
+			assert.deepEqual((await reader.events(outsider, { type: "transcript_corrected" })).events, []);
+		});
+
+		await context.test("retention removes daily files and rows and a restored old file cannot resurrect expired content", async () => {
+			const old = { ...event("expired", 0, ["111", "333"]), at: "2020-01-01T12:00:00Z", end: undefined };
+			await store.append(old);
+			await archive.sync();
+			const file = join(directory, "123", "456", "2020-01-01.jsonl");
+			const saved = await readFile(file);
+			await archive.expire(365, "Europe/Amsterdam");
+			await assert.rejects(readFile(file), { code: "ENOENT" });
+			assert.equal((await writer.query("SELECT count(*)::int AS n FROM discord.transcript_events WHERE event_id='expired'")).rows[0].n, 0);
+			await appendFile(file, saved);
+			await writer.query("DELETE FROM discord.transcript_import_offsets WHERE source = '123/456/2020-01-01.jsonl'");
+			await archive.sync();
+			assert.equal((await writer.query("SELECT count(*)::int AS n FROM discord.transcript_events WHERE event_id='expired'")).rows[0].n, 0);
 		});
 	}
 	finally {

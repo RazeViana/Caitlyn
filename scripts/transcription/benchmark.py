@@ -22,7 +22,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("audio", help="Local speech fixture, at most 20 seconds")
     parser.add_argument("--expected-word", help="Optional smoke-test word; transcript text is never printed")
+    parser.add_argument("--repeats", type=int, default=4, help="1–120 sequential requests for an accelerated load check")
     args = parser.parse_args()
+    if not 1 <= args.repeats <= 120:
+        raise ValueError("Repeats must be between 1 and 120")
     audio = decode_audio(args.audio, sampling_rate=16000)
     if not 0 < len(audio) <= 16000 * 20:
         raise ValueError("Provide a speech fixture between zero and 20 seconds")
@@ -40,7 +43,7 @@ def main():
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{server.server_port}/health", timeout=3) as response:
             health = json.load(response)
-        for _ in range(4):
+        for _ in range(args.repeats):
             start = time.monotonic()
             request = urllib.request.Request(f"http://127.0.0.1:{server.server_port}/transcribe?language=en",
                                              output.getvalue(), {"Content-Type": "audio/wav"})
@@ -50,7 +53,8 @@ def main():
             if not text or args.expected_word and args.expected_word.lower() not in text.lower():
                 raise RuntimeError("Speech smoke test failed")
         print(json.dumps({"health": health, "audio_seconds": len(audio) / 16000, "request_seconds": timings,
-                          "warm_median_seconds": statistics.median(timings[1:]),
+                          "warm_median_seconds": statistics.median(timings[1:] or timings),
+                          "processed_audio_seconds": args.repeats * len(audio) / 16000,
                           "transcript_sha256": hashlib.sha256(text.encode()).hexdigest()}), flush=True)
     finally:
         server.shutdown()

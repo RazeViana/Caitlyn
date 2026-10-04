@@ -12,12 +12,14 @@ import { ChannelType, Collection, Events, PermissionFlagsBits } from "discord.js
 import { TranscriptionRuntime, transcriptionRuntimes } from "../core/transcriptionRuntime.ts";
 import { execute } from "../commands/utility/transcribe.ts";
 import { startBot } from "../main.ts";
+import logger, { subscribeLogs } from "../core/logger.ts";
 
 function fixture() {
 	const records = [];
 	const captures = [];
 	const notices = [];
 	let paused = false;
+	let savedSettings = {};
 	let now = Date.parse("2026-10-01T12:00:00Z");
 	const guild = { id: "123", channels: { cache: new Collection() } };
 	const client = Object.assign(new EventEmitter(), { user: { id: "999" }, guilds: { cache: new Collection([[guild.id, guild]]) }, isReady: () => true });
@@ -40,7 +42,9 @@ function fixture() {
 	second.members.set("222", member("222", "Bob"));
 	const config = { guildId: guild.id, directory: "/unused", endpoint: "http://worker:8095/transcribe", channels: ["*"], timezone: "Europe/Amsterdam", language: "en" };
 	const dependencies = {
-		store: { initialize: async () => undefined, paused: async () => paused, setPaused: async (value) => { paused = value; }, append: async (entry) => { records.push(entry); }, drain: async () => undefined },
+		store: { initialize: async () => undefined, paused: async () => paused, settings: async () => savedSettings,
+			updateSettings: async (value) => { savedSettings = { ...savedSettings, ...value }; }, setPaused: async (value) => { paused = value; },
+			append: async (entry) => { records.push(entry); }, drain: async () => undefined },
 		connect: (room, packet, failure) => {
 			const capture = { room, packet, failure, ready: Promise.resolve(), ids: [], closed: false,
 				sync(ids) { this.ids = ids; },
@@ -383,6 +387,127 @@ test("transcription command checks administrator and guild access before mutatio
 	await execute(interaction);
 	assert.match(replies[2].embeds[0].data.description, /paused/);
 	assert.ok(!JSON.stringify(replies).includes("speech-"));
+});
+
+test("recorded message edits and bulk deletions preserve originals and exclude departed members from new text", async () => {
+	const f = fixture();
+	try {
+		await f.runtime.start();
+		await setImmediate();
+		const alice = f.first.members.get("111");
+		const carol = f.member("333", "carol_account");
+		f.first.members.set(carol.id, carol);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+		const original = f.post("801", alice, { content: "Original text" });
+		f.client.emit(Events.MessageCreate, original);
+		f.advance(100);
+		f.first.members.delete(carol.id);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.first), f.voiceState(carol, null));
+		const edited = { ...original, content: "Private edited text", editedTimestamp: f.now() };
+		f.client.emit(Events.MessageUpdate, original, edited);
+		f.client.emit(Events.MessageUpdate, original, edited);
+		f.client.emit(Events.MessageUpdate, edited, { ...edited, partial: true, content: "Do not fetch" });
+		f.client.emit(Events.MessageBulkDelete, new Collection([[edited.id, edited]]));
+		f.client.emit(Events.MessageDelete, edited);
+		await f.runtime.stop();
+		const records = f.records.filter((record) => record.messageId === "801");
+		assert.deepEqual(records.map((r) => [r.type, r.text, r.audienceUserIds]), [
+			["message_posted", "Original text", ["111", "333"]],
+			["message_edited", "Private edited text", ["111"]], ["message_deleted", undefined, ["111"]],
+		]);
+		assert.equal(records[1].targetEventId, records[0].eventId);
+		assert.equal(records[2].targetEventId, records[0].eventId);
+		assert.equal(f.client.listenerCount(Events.MessageUpdate), 0);
+	}
+	finally { await f.runtime.stop(); }
+});
+
+test("channel exclusions persist, stop the excluded recording and cannot expand the operator allowlist", async () => {
+	const f = fixture();
+	f.config.channels = ["456"];
+	try {
+		await f.runtime.start();
+		await f.runtime.exclude("456", true, "111");
+		assert.equal(f.captures[0].closed, true);
+		await assert.rejects(f.runtime.resume("456"), /excluded/);
+		await f.runtime.exclude("457", false, "111");
+		await assert.rejects(f.runtime.resume("457"), /not enabled/);
+		await f.runtime.stop();
+		const restarted = new TranscriptionRuntime(f.client, f.config, f.dependencies);
+		await restarted.start();
+		assert.match(restarted.status(), /Excluded channels:.*456/);
+		assert.equal(f.captures.length, 1);
+		await restarted.stop();
+	}
+	finally { await f.runtime.stop(); }
+});
+
+test("transcription uses the shared structured logger with guild context and no conversation text", async () => {
+	const f = fixture();
+	const logs = [];
+	const unsubscribe = subscribeLogs((record) => logs.push(record));
+	f.runtime = new TranscriptionRuntime(f.client, f.config, { ...f.dependencies, log: logger, transcribe: async () => "secret spoken content" });
+	try {
+		await f.runtime.start();
+		await setImmediate();
+		f.captures[0].packet("111", Buffer.alloc(640), f.now());
+		f.client.emit(Events.MessageCreate, f.post("801", f.first.members.get("111"), { content: "secret posted content" }));
+		await f.runtime.pause("111");
+		await f.runtime.stop();
+		assert.ok(logs.some((r) => r.level === "SUCCESS" && /recording started/.test(r.message)));
+		assert.ok(logs.some((r) => r.level === "DEBUG" && /Transcript event saved/.test(r.message) && /text length/.test(r.message)));
+		assert.ok(logs.some((r) => /requested by: "111"/.test(r.message)));
+		assert.ok(logs.every((r) => r.guildId === "123"));
+		assert.ok(!JSON.stringify(logs).includes("secret spoken content"));
+		assert.ok(!JSON.stringify(logs).includes("secret posted content"));
+	}
+	finally { unsubscribe(); await f.runtime.stop(); }
+});
+
+test("an unavailable database does not prevent Discord login and local recording startup", async () => {
+	const calls = [];
+	const client = { destroy: async () => { calls.push("destroy"); } };
+	const bot = await startBot({
+		validateEnvironment: () => undefined, createClient: () => client,
+		createTranscriptionRuntime: () => ({ start: async () => { calls.push("transcription"); }, stop: async () => undefined }),
+		createPGPool: async () => { throw new Error("private database password must never be logged"); }, closeDatabase: async () => undefined,
+		commandHandler: async () => undefined, eventHandler: async () => undefined, drainEvents: async () => undefined,
+		loginClient: async () => { calls.push("login"); }, startCronJobs: () => async () => undefined,
+		logger: { info: () => undefined, error: (message) => { assert.ok(!message.includes("password")); } },
+	});
+	await bot.stop();
+	assert.deepEqual(calls, ["login", "transcription", "destroy"]);
+});
+
+test("a simulated six-hour conversation preserves audiences through repeated membership changes and midnight", async () => {
+	const f = fixture();
+	const carol = f.member("333", "carol");
+	try {
+		f.advance(9 * 3_600_000);
+		await f.runtime.start();
+		await setImmediate();
+		for (let minute = 0; minute < 360; minute++) {
+			const capture = f.captures.at(-1);
+			capture.packet("111", Buffer.alloc(640, 1), f.now());
+			f.advance(100);
+			f.first.members.set(carol.id, carol);
+			f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+			capture.packet("111", Buffer.alloc(640, 2), f.now());
+			capture.packet("333", Buffer.alloc(640, 3), f.now());
+			f.advance(100);
+			f.first.members.delete(carol.id);
+			f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.first), f.voiceState(carol, null));
+			f.advance(59_800);
+			await setImmediate();
+		}
+		await f.runtime.stop();
+		const speech = f.records.filter((record) => record.type === "transcript");
+		assert.equal(speech.length, 1080);
+		assert.equal(f.records.filter((record) => record.type === "gap").length, 0);
+		assert.ok(speech.every((record) => JSON.stringify(record.audienceUserIds) === JSON.stringify(record.text === "speech-1" ? ["111"] : ["111", "333"])));
+		assert.ok(speech.some((record) => record.at.startsWith("2026-10-02")));
+	}
+	finally { await f.runtime.stop(); }
 });
 
 test("bot lifecycle starts transcription after login, drains it before Discord closes and isolates startup failure", async () => {

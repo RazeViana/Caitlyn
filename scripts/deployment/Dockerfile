@@ -25,8 +25,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY --from=build /app/dist ./dist
 COPY --chmod=644 scripts/deployment/checkRelease.mjs ./scripts/deployment/
+COPY --chmod=644 scripts/transcription/healthcheck.mjs ./scripts/transcription/
 RUN chmod 644 /app/package.json /app/package-lock.json \
-    && chmod 755 /app/scripts /app/scripts/deployment
+    && chmod 755 /app/scripts /app/scripts/deployment /app/scripts/transcription
 USER node
 RUN node --input-type=module -e "await import('./dist/core/environment.js')"
 CMD ["node", "dist/main.js"]

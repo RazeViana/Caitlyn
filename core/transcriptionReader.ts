@@ -21,7 +21,7 @@ export interface TranscriptFilters {
 }
 
 const idPattern = /^[1-9]\d{0,19}$/;
-const types = new Set(["session_started", "session_stopped", "present", "joined", "left", "transcript", "message_posted", "voice_activity", "gap"]);
+const types = new Set(["session_started", "session_stopped", "present", "joined", "left", "transcript", "message_posted", "message_edited", "message_deleted", "transcript_corrected", "voice_activity", "gap"]);
 const fields = "event_id, guild_id, channel_id, channel_name, session_id, event_type, occurred_at, ended_at, user_id, username, content, activity_channel_id, activity_channel_name, message_id, message_url, metadata";
 
 function id(value: string): string {

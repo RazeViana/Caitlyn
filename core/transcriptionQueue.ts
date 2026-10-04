@@ -4,7 +4,7 @@
  * @module transcriptionQueue
  */
 
-import type { AudioChunk } from "./transcriptionAudio.js";
+import type { AudioChunk, RecognitionResult } from "./transcriptionAudio.js";
 import type { TranscriptRecord } from "./transcriptionStore.js";
 
 interface Job { chunk: AudioChunk; record: TranscriptRecord }
@@ -18,7 +18,7 @@ export class TranscriptionQueue {
 	private dropped = new Map<string, TranscriptRecord>();
 	lost = 0;
 	constructor(
-		private readonly transcribe: (pcm: Buffer, signal: AbortSignal) => Promise<string>,
+		private readonly transcribe: (pcm: Buffer, signal: AbortSignal) => Promise<string | RecognitionResult>,
 		private readonly append: (record: TranscriptRecord) => Promise<void>,
 		private readonly storageFailure: () => void,
 		private readonly limit = 32,
@@ -74,8 +74,9 @@ export class TranscriptionQueue {
 				continue;
 			}
 			try {
-				const text = await this.transcribe(job.chunk.pcm, this.abort.signal);
-				if (text) await this.write({ ...job.record, text });
+				const result = await this.transcribe(job.chunk.pcm, this.abort.signal);
+				const text = typeof result === "string" ? result : result.text;
+				if (text) await this.write({ ...job.record, text, ...(typeof result === "string" ? {} : { recognition: result.recognition }) });
 			}
 			catch {
 				this.lost++;

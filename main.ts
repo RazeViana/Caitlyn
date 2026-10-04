@@ -74,8 +74,11 @@ export async function startBot(
 	let socialRuntime: SocialRuntime | undefined;
 	let transcriptionRuntime: TranscriptionRuntime | undefined;
 	let databaseEnabled = true;
+	let databaseRetry: NodeJS.Timeout | undefined;
+	let databaseProbe: Promise<void> | undefined;
 	const stop = (): Promise<void> => {
 		stopping ??= (async () => {
+			if (databaseRetry) clearInterval(databaseRetry);
 			if (!client) return;
 			const cleanup = async (label: string, action: () => Promise<unknown>): Promise<void> => {
 				try {
@@ -126,7 +129,20 @@ export async function startBot(
 		if (configuration?.transcription.enabled !== false) transcriptionRuntime = dependencies.createTranscriptionRuntime?.(client);
 
 		// Create a PostgreSQL connection pool
-		if (databaseEnabled) await dependencies.createPGPool();
+		if (databaseEnabled) {
+			try { await dependencies.createPGPool(); }
+			catch {
+				dependencies.logger.error("PostgreSQL is unavailable; Discord and local recording will start. Database features retry when the connection returns.");
+				databaseRetry = setInterval(() => {
+					if (databaseProbe || stopping) return;
+					databaseProbe = dependencies.createPGPool().then(() => {
+						if (databaseRetry) clearInterval(databaseRetry);
+						dependencies.logger.info("PostgreSQL connection restored; database features can resume.");
+					}).catch(() => undefined).finally(() => { databaseProbe = undefined; });
+				}, 30_000);
+				databaseRetry.unref();
+			}
+		}
 		await logForwarder?.start();
 
 		// Load the command & event handler

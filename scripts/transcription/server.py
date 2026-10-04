@@ -10,6 +10,7 @@ import json
 import os
 import re
 import threading
+import time
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
@@ -60,6 +61,7 @@ def validate_audio(audio):
 
 def make_handler(model, runtime=None):
     inference = threading.Lock()
+    active_since = None
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args):
@@ -77,11 +79,13 @@ def make_handler(model, runtime=None):
 
         def do_GET(self):
             if self.path == "/health":
-                self.respond(200, {"ready": True, **(runtime or {})})
+                ready = active_since is None or time.monotonic() - active_since < 75
+                self.respond(200 if ready else 503, {"ready": ready, **(runtime or {})})
             else:
                 self.respond(404, {"ready": False})
 
         def do_POST(self):
+            nonlocal active_since
             self.connection.settimeout(10)
             path = urlsplit(self.path)
             if path.path != "/transcribe":
@@ -104,16 +108,31 @@ def make_handler(model, runtime=None):
                 self.respond(503, {"error": "Worker is busy"})
                 return
             try:
+                active_since = time.monotonic()
                 audio = self.rfile.read(length)
                 if len(audio) != length:
                     raise ValueError("Incomplete audio")
                 validate_audio(audio)
-                segments, _info = model.transcribe(
+                started = time.monotonic()
+                segments, info = model.transcribe(
                     io.BytesIO(audio), language=None if language == "auto" else language,
                     vad_filter=True, beam_size=5, condition_on_previous_text=False,
                 )
+                segments = list(segments)
                 text = " ".join(segment.text.strip() for segment in segments).strip()
-                self.respond(200, {"text": text})
+                result = {"text": text}
+                if info is not None:
+                    result["recognition"] = {
+                        "model": os.environ.get("TRANSCRIPTION_MODEL_ID", "base.en"),
+                        "language": info.language,
+                        "durationSeconds": info.duration,
+                        "processingSeconds": round(time.monotonic() - started, 4),
+                        # These scores are diagnostic metrics, not calibrated accuracy percentages.
+                        "segments": [{"start": s.start, "end": s.end,
+                                      "averageLogProbability": s.avg_logprob,
+                                      "noSpeechProbability": s.no_speech_prob} for s in segments],
+                    }
+                self.respond(200, result)
             except (ValueError, wave.Error, EOFError):
                 self.respond(400, {"error": "Invalid audio"})
             except (BrokenPipeError, ConnectionResetError, TimeoutError):
@@ -121,6 +140,7 @@ def make_handler(model, runtime=None):
             except Exception:
                 self.respond(500, {"error": "Local inference failed"})
             finally:
+                active_since = None
                 inference.release()
 
     return Handler

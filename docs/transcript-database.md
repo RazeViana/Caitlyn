@@ -4,11 +4,13 @@ This is the bot-side handoff for a future website. It adds local PostgreSQL stor
 
 ## Capture and storage
 
-Apply migration `017_transcript_archive.sql`, then enable `TRANSCRIPTION_DATABASE_ENABLED=true` with the bot's existing PostgreSQL settings. The test instance uses its existing `caitlyn_test` database. Production and test databases remain separate.
+Apply migrations `017_transcript_archive.sql` and `018_transcript_operations.sql`, then enable `TRANSCRIPTION_DATABASE_ENABLED=true` with the bot's existing PostgreSQL settings. The test instance uses its existing `caitlyn_test` database. Production and test databases remain separate.
 
 Private daily JSONL files remain the durable capture log. The bot replays complete lines into `discord.transcript_events` every five seconds, including while recording is paused. Each event and its file checkpoint commit together. New events have stable UUIDs; legacy lines get deterministic IDs from their source path and byte offset. Replays use `ON CONFLICT DO NOTHING`, preserving both content and the original access list.
 
 Database downtime does not discard local recordings or pause ongoing capture. `/transcribe status` reports the archive state and import count; ingestion retries automatically. A full or unwritable local log volume still stops capture. Replay is bounded per pass and may take multiple passes for a backlog. Shutdown leaves any unfinished import in the local files for the next startup.
+
+Malformed complete entries are copied to private `quarantine/<guild>/<channel>/` files before their checkpoints advance. Oversized lines are quarantined in bounded fragments across persisted checkpoints. A corrupt source cannot block other channels. Unterminated short tails wait for completion; the writer inserts a newline before a later append. PostgreSQL-incompatible NUL and unpaired surrogates become replacement characters in the database copy while the JSONL original is preserved. Do not grant quarantine access to member readers.
 
 Do not truncate, replace or move active JSONL files. Truncation below a saved checkpoint stops that import. To reconstruct a restored database, stop the bot, preserve a database backup, reset the relevant operator-only checkpoints and restart; immutable event IDs prevent duplication. Never delete original logs as part of migration.
 
@@ -24,6 +26,8 @@ Each new record carries `audienceVersion: 1` and `audienceUserIds`, captured by 
 - Membership cache corrections with unknown timing, connection-loss buffers and coalesced overload intervals stay operator-only.
 - A Gateway disconnection closes voice capture; reconnection starts a new recording session.
 - There is no Discord administrator or server-owner override in the member reader.
+- `message_edited` and `message_deleted` are separate events with their own audiences, restricted to both the original audience and people present with source-channel access at the change. Do not apply an edit fetched with the bot's owner credentials to a member-visible original; read each revision under that member's row security.
+- `transcript_corrected` is an explicit annotation, never a replacement for the original. Its editor must have been an original participant, and its audience matches the original. Show it as a correction with its recorded editor and time.
 
 These boundaries use the bot's observed Discord events and received audio. They are not a reconstruction of word-level timing, network-delayed speech or proof someone listened through their speakers. Presence while muted or deafened still counts as channel participation.
 
@@ -46,7 +50,9 @@ Existing recordings lack verified audience metadata, including the early recordi
 | `audience_version`, `audience_user_ids` | Verified per-event member access |
 | `search_document` | Indexed English full-text search derived from content |
 
-`discord.transcript_import_offsets` is private ingestion state. Neither it nor the bot's other tables should be granted to the website.
+Revision metadata includes `targetEventId`, `actorId` and `actorUsername` where applicable. Speech `metadata.recognition` holds model/language, durations and per-segment probability metrics; these are not calibrated accuracy scores. Message edit/delete targets refer to the original recorded post event. Only observed current-session changes to the 2,048 tracked posts are covered; no history is fetched after downtime.
+
+`discord.transcript_import_offsets` is private ingestion state, including oversized-line recovery. `discord.transcript_retention` contains monotonic deletion fences that prevent an old file replay from restoring expired rows. Neither table should be granted to the website. Retention defaults off and must be explicitly configured through the bot; see [operations and backups](voice-transcription.md#operations-and-shared-logging).
 
 ## Website integration contract
 
@@ -83,4 +89,4 @@ Capture-time source-channel permission is stored in the audience. If the website
 
 The ordinary suite checks audience snapshots across join/leave/rejoin, delayed inference and message events, private text/thread permissions and unknown membership. The opt-in PostgreSQL suite uses a disposable database and real restricted reader role to verify migrations, replay, duplicate prevention, partial lines, downtime recovery, keyword/date filters, menus, pagination, direct SQL denial and pooled identity isolation.
 
-For a deployment rollback, disable database replay or restore the previous bot image and configuration. Leave both archive tables and original files intact; the migration is additive. Existing older bot versions ignore the new JSONL metadata. Preserve the pre-deployment database dump and configuration backup according to the server's backup policy.
+For a deployment rollback, disable database replay or restore the previous bot image and configuration. Leave all archive tables and original files intact. Older versions may not understand the new revision event types; disable replay in those versions. Preserve the pre-deployment database dump and configuration backup according to the server's backup policy.
