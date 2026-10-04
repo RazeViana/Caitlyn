@@ -3,6 +3,7 @@
  * @description Checks the recorder's private dependency heartbeat without contacting Discord or exposing transcript data.
  * @module transcriptionHealthcheck
  */
+import "../../dist/core/loadEnvironment.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 try {

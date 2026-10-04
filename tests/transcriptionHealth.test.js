@@ -8,6 +8,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
 import { TranscriptionHealth } from "../core/transcriptionHealth.ts";
 
 test("health checks alert once per condition, recover and persist aggregate loss without transcript content", async (context) => {
@@ -44,4 +45,20 @@ test("health checks alert once per condition, recover and persist aggregate loss
 	await restarted.check();
 	assert.match(restarted.summary, /backup/);
 	await restarted.stop();
+});
+
+test("container health reads mounted dotenv settings and rejects unhealthy or stale heartbeats", async (context) => {
+	const directory = await mkdtemp(join(tmpdir(), "caitlyn-container-health-"));
+	context.after(() => rm(directory, { force: true, recursive: true }));
+	const envFile = join(directory, "bot.env");
+	await writeFile(envFile, `TRANSCRIPTION_ENABLED=true\nTRANSCRIPTION_DIRECTORY=${directory}\n`);
+	for (const [health, expected] of [
+		[{ healthy: true, checkedAt: Date.now() }, 0], [{ healthy: false, checkedAt: Date.now() }, 1],
+		[{ healthy: true, checkedAt: Date.now() - 180_000 }, 1],
+	]) {
+		await writeFile(join(directory, "health.json"), JSON.stringify(health));
+		const result = spawnSync(process.execPath, ["scripts/transcription/healthcheck.mjs"], { env: { DOTENV_CONFIG_PATH: envFile }, encoding: "utf8" });
+		assert.equal(result.status, expected, result.stderr);
+		assert.equal(result.stdout, "");
+	}
 });
