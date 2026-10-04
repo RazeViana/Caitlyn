@@ -407,6 +407,14 @@ test("recorded message edits and bulk deletions preserve originals and exclude d
 		f.client.emit(Events.MessageUpdate, original, edited);
 		f.client.emit(Events.MessageUpdate, original, edited);
 		f.client.emit(Events.MessageUpdate, edited, { ...edited, partial: true, content: "Do not fetch" });
+		f.advance(50);
+		f.first.members.delete(alice.id);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(alice, f.first), f.voiceState(alice, null));
+		const absentAt = f.now();
+		f.advance(50);
+		f.first.members.set(alice.id, alice);
+		f.client.emit(Events.VoiceStateUpdate, f.voiceState(alice, null), f.voiceState(alice, f.first));
+		f.client.emit(Events.MessageUpdate, edited, { ...edited, content: "Edited while outside voice", editedTimestamp: absentAt });
 		f.client.emit(Events.MessageBulkDelete, new Collection([[edited.id, edited]]));
 		f.client.emit(Events.MessageDelete, edited);
 		await f.runtime.stop();

@@ -188,6 +188,7 @@ export class TranscriptionRuntime {
 		const original = tracked?.original;
 		if (!session || !original || this.paused || this.stopping || !this.queue.healthy || message.guildId !== this.config.guildId
 			|| !session.speakers.has(original.userId!) || !session.channel.members.has(original.userId!)) return;
+		if (at < session.speakers.get(original.userId!)!.joinedAt) return;
 		const attachments = type === "message_edited" ? [...message.attachments.values()].map((item) => item.name) : [];
 		if (type === "message_edited" && (at <= Date.parse(tracked!.latest.at) || message.content === tracked!.latest.text && JSON.stringify(attachments) === JSON.stringify(tracked!.latest.attachmentNames))) return;
 		const revision = this.record(session, type, {
