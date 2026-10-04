@@ -123,7 +123,7 @@ To roll back, restore the saved TrueNAS app configuration, environment and previ
 
 `npm run check` includes transcript/configuration/audio/queue/lifecycle/command tests and the local worker HTTP tests (Python 3 is needed for the latter). Tests use synthetic Discord clients and temporary directories, with no live token or production database. The Opus test exercises a real encoder/decoder. The worker can be tested with a public speech fixture in a disposable container using `--network none`, which verifies that inference works without external access.
 
-`scripts/transcription/benchmark.py` exercises the actual HTTP handler four times with a supplied local speech file (up to 20 seconds). It reports the first request, a median of the next three requests, and a transcript hash without printing conversation text. For a CUDA image and a fixture already placed in `/path/to/fixtures`:
+`scripts/transcription/benchmark.py` exercises the actual HTTP handler four times by default with a supplied local speech file (up to 20 seconds); `--repeats 120` runs an accelerated load check. It reports timings, the warm median, total processed audio duration and a transcript hash without printing conversation text. For a CUDA image and a fixture already placed in `/path/to/fixtures`:
 
 ```sh
 docker run --rm -i --network none --gpus device=0 --cpus 2 --memory 1g \
