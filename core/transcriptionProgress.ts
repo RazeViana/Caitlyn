@@ -8,6 +8,12 @@ import { join } from "node:path";
 import { privateJson } from "./transcriptionFiles.js";
 import type { PendingTranscription } from "./transcriptionQueue.js";
 
+export interface LiveVoicePresence {
+	channelId: string;
+	channelName: string;
+	members: { userId: string; displayName: string }[];
+}
+
 export class TranscriptionProgress {
 	private timer?: NodeJS.Timeout;
 	private running?: Promise<void>;
@@ -17,7 +23,7 @@ export class TranscriptionProgress {
 	private warnedAt = -Infinity;
 	private readonly directory: string;
 	constructor(directory: string, private guildId: string, private snapshot: () => PendingTranscription[],
-		private warn: () => void, private now = Date.now) {
+		private warn: () => void, private now = Date.now, private presence: () => LiveVoicePresence | null = () => null) {
 		this.directory = join(directory, "assets", guildId);
 	}
 
@@ -45,7 +51,7 @@ export class TranscriptionProgress {
 			const updatedAt = this.now();
 			const jobs = this.snapshot().filter((job) => job.guildId === this.guildId).slice(0, 33);
 			await privateJson(join(this.directory, "progress.json"), {
-				version: 1, guildId: this.guildId, updatedAt, expiresAt: updatedAt + 8000, jobs,
+				version: 1, guildId: this.guildId, updatedAt, expiresAt: updatedAt + 8000, jobs, presence: this.presence(),
 			});
 		})().catch(() => {
 			// Cosmetic telemetry must never interrupt capture or inference. A stale
@@ -71,7 +77,7 @@ export class TranscriptionProgress {
 		await this.running;
 		try {
 			await privateJson(join(this.directory, "progress.json"), {
-				version: 1, guildId: this.guildId, updatedAt: this.now(), expiresAt: this.now(), jobs: [],
+				version: 1, guildId: this.guildId, updatedAt: this.now(), expiresAt: this.now(), jobs: [], presence: null,
 			});
 		}
 		catch {
