@@ -58,7 +58,7 @@ test("database migrations bootstrap a fresh local database safely", {
 				"SELECT tablename FROM pg_tables WHERE schemaname = 'discord' ORDER BY tablename",
 			);
 			assert.deepEqual(rows.map((row) => row.tablename), [
-				"birthday_deliveries", "birthday_occurrences", "birthdays", "daily_activity", "guild_settings", "messages", "social_channels", "social_jobs", "transcript_events", "transcript_import_offsets", "transcript_retention", "user_activity", "voice_sessions",
+				"birthday_deliveries", "birthday_occurrences", "birthdays", "daily_activity", "guild_settings", "messages", "social_channels", "social_jobs", "transcript_channel_access", "transcript_events", "transcript_import_offsets", "transcript_retention", "user_activity", "voice_sessions",
 			]);
 		});
 

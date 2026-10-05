@@ -16,6 +16,8 @@ export interface RecordingHealth {
 	recording: boolean;
 	storageHealthy: boolean;
 	captureHealthy?: boolean;
+	messageAccessHealthy?: boolean;
+	chatPending?: number;
 	pending: number;
 	lost: number;
 	lastPacketAt: number;
@@ -94,6 +96,7 @@ export class TranscriptionHealth {
 		this.problem("discord", !state.discordReady, "Transcription is waiting for Discord to reconnect.");
 		this.problem("capture", state.captureHealthy === false, "An occupied channel is eligible for recording but audio capture is unavailable; check voice permissions and compatibility.");
 		this.problem("archive", state.archive?.stalled === true, "Transcript database import is stalled; local logs are preserved.");
+		this.problem("chat-access", state.messageAccessHealthy === false, "Chat channel permissions are unavailable; member access is denied until permissions refresh.");
 		this.problem("queue", state.pending >= 24, "Transcription is falling behind; the speech queue is nearly full.");
 		if (state.lost > this.previousLost) {
 			this.lifetimeLost += state.lost - this.previousLost;

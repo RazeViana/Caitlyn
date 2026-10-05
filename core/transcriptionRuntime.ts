@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { ChannelType, Events, PermissionFlagsBits, type Client, type ClientEvents, type GuildMember, type Message, type PartialMessage, type VoiceChannel, type VoiceState } from "discord.js";
+import { ChannelType, Events, PermissionFlagsBits, type Client, type GuildMember, type VoiceChannel, type VoiceState } from "discord.js";
 import { SpeakerBuffer, localTranscriber } from "./transcriptionAudio.js";
 import { transcriptionSettings, type TranscriptionConfig } from "./transcriptionConfig.js";
 import { TranscriptionQueue } from "./transcriptionQueue.js";
@@ -16,6 +16,8 @@ import { pool } from "./createPGPool.js";
 import { TranscriptionArchive } from "./transcriptionArchive.js";
 import { logData, type DataLogDetails } from "./dataLog.js";
 import { TranscriptionHealth } from "./transcriptionHealth.js";
+import { TranscriptionMessages } from "./transcriptionMessages.js";
+import { TranscriptionMessageAccess } from "./transcriptionMessageAccess.js";
 
 interface Session {
 	id: string;
@@ -24,13 +26,12 @@ interface Session {
 	speakers: Map<string, { name: string; joinedAt: number; buffer: SpeakerBuffer }>;
 	ready: boolean;
 	sharingSafe: boolean;
-	messageIds: Set<string>;
-	messages: Map<string, { original: TranscriptRecord; latest: TranscriptRecord }>;
 	startedAt: number;
 }
 
 export interface TranscriptionDependencies {
 	archive?: TranscriptionArchive;
+	messageAccess?: TranscriptionMessageAccess;
 	health?: TranscriptionHealth;
 	store: TranscriptionStore;
 	connect: typeof connectTranscriptionVoice;
@@ -57,6 +58,7 @@ export class TranscriptionRuntime {
 	private readonly pendingJoins = new Map<string, { channelId: string; at: number }>();
 	private readonly dependencies: TranscriptionDependencies;
 	private readonly queue: TranscriptionQueue;
+	private readonly messages?: TranscriptionMessages;
 
 	constructor(readonly client: Client, readonly config: TranscriptionConfig, dependencies: Partial<TranscriptionDependencies> = {}) {
 		this.dependencies = { store: new TranscriptionStore(config.directory, config.timezone), connect: connectTranscriptionVoice,
@@ -64,13 +66,21 @@ export class TranscriptionRuntime {
 		this.queue = new TranscriptionQueue(this.dependencies.transcribe, async (record) => {
 			await this.dependencies.store.append(record);
 			this.lastSavedAt = this.dependencies.now();
-			this.log("debug", "Transcript event saved.", { channel: record.channelId, user: record.userId, username: record.speaker,
-				record: record.eventId, action: record.type, characters: record.text?.length });
+			// Saving the bot's own log-channel message must not produce another forwarded log.
+			if (record.userId !== this.client.user?.id || !record.type.startsWith("message_")) {
+				this.log("debug", "Transcript event saved.", { channel: record.channelId, user: record.userId, username: record.speaker,
+					record: record.eventId, action: record.type, characters: record.text?.length });
+			}
 		}, () => {
 			this.paused = true;
 			this.log("warn", "Voice transcription paused: cannot save daily logs; no conversation content logged.");
 			void this.serialize(() => this.closeSession("Storage unavailable; recording stopped."));
 		});
+		if (config.captureMessages !== false) {
+			this.messages = new TranscriptionMessages(client, config.guildId,
+				(record) => this.queue.write(record), () => this.queue.healthy,
+				this.dependencies.archive ? (id) => this.dependencies.archive!.messageReference(id) : undefined, this.dependencies.now);
+		}
 	}
 
 	private log(level: "warn" | "info" | "debug" | "success", message: string, details: DataLogDetails = {}): void {
@@ -131,80 +141,6 @@ export class TranscriptionRuntime {
 		void this.reconcile().catch(() => this.log("warn", "Voice transcription channel update failed; will retry."));
 	};
 
-	private readonly messageCreated = (message: Message): void => {
-		const session = this.session;
-		const speaker = session?.speakers.get(message.author.id);
-		if (!session || this.paused || this.stopping || !this.queue.healthy || !message.inGuild()
-			|| message.guildId !== this.config.guildId || message.author.bot || message.webhookId || message.system
-			|| !speaker || !session.channel.members.has(message.author.id)
-			|| message.createdTimestamp < Math.max(session.startedAt, speaker.joinedAt)
-			|| session.messageIds.has(message.id)) return;
-		session.messageIds.add(message.id);
-		if (session.messageIds.size > 2048) session.messageIds.delete(session.messageIds.values().next().value!);
-		const parent = message.channel.isThread() ? message.channel.parent : null;
-		const record = this.record(session, "message_posted", {
-			at: new Date(message.createdTimestamp).toISOString(), userId: message.author.id, speaker: message.author.username,
-			activityChannelId: message.channelId, activityChannelName: message.channel.name,
-			activityParentChannelId: parent?.id, activityParentChannelName: parent?.name,
-			messageId: message.id, messageUrl: message.url, text: message.content,
-			attachmentNames: [...message.attachments.values()].map((attachment) => attachment.name),
-		});
-		record.audienceUserIds = this.messageAudience(message, record.audienceUserIds!);
-		session.messages.set(message.id, { original: record, latest: record });
-		if (session.messages.size > 2048) session.messages.delete(session.messages.keys().next().value!);
-		void this.queue.write(record);
-	};
-
-	private messageAudience(message: Message | PartialMessage, audience: string[]): string[] {
-		const session = this.session;
-		if (!session || !message.inGuild()) return [];
-		return audience.filter((id) => {
-			const member = session.channel.members.get(id);
-			if (!member) return false;
-			const permissions = message.channel.permissionsFor?.(member);
-			if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory])) return false;
-			return message.channel.type !== ChannelType.PrivateThread || message.channel.members.cache.has(id)
-				|| permissions.has(PermissionFlagsBits.ManageThreads);
-		});
-	}
-
-	private readonly messageUpdated = (_before: Message | PartialMessage, after: Message | PartialMessage): void => {
-		// Fetching an incomplete edit later cannot prove what was visible at the event boundary.
-		if (after.partial || !after.editedTimestamp) return;
-		this.messageRevision(after, "message_edited", after.editedTimestamp);
-	};
-
-	private readonly messageDeleted = (message: Message | PartialMessage): void => {
-		this.messageRevision(message, "message_deleted", this.dependencies.now());
-	};
-
-	private readonly messagesDeleted = (messages: ClientEvents[Events.MessageBulkDelete][0]): void => {
-		for (const message of messages.values()) this.messageDeleted(message);
-	};
-
-	private messageRevision(message: Message | PartialMessage, type: "message_edited" | "message_deleted", at: number): void {
-		const session = this.session;
-		const tracked = session?.messages.get(message.id);
-		const original = tracked?.original;
-		if (!session || !original || this.paused || this.stopping || !this.queue.healthy || message.guildId !== this.config.guildId
-			|| !session.speakers.has(original.userId!) || !session.channel.members.has(original.userId!)) return;
-		if (at < session.speakers.get(original.userId!)!.joinedAt) return;
-		const attachments = type === "message_edited" ? [...message.attachments.values()].map((item) => item.name) : [];
-		if (type === "message_edited" && (at <= Date.parse(tracked!.latest.at) || message.content === tracked!.latest.text && JSON.stringify(attachments) === JSON.stringify(tracked!.latest.attachmentNames))) return;
-		const revision = this.record(session, type, {
-			at: new Date(at).toISOString(), userId: original.userId, speaker: message.author?.username ?? original.speaker,
-			activityChannelId: original.activityChannelId, activityChannelName: original.activityChannelName,
-			activityParentChannelId: original.activityParentChannelId, activityParentChannelName: original.activityParentChannelName,
-			messageId: original.messageId, messageUrl: original.messageUrl, targetEventId: original.targetEventId ?? original.eventId,
-			text: type === "message_deleted" ? undefined : message.content ?? undefined, attachmentNames: attachments,
-		});
-		// Both the original conversation and this edit must have been visible to the viewer.
-		revision.audienceUserIds = this.messageAudience(message, revision.audienceUserIds!).filter((id) => original.audienceUserIds?.includes(id));
-		if (type === "message_deleted") session.messages.delete(message.id);
-		else tracked!.latest = revision;
-		void this.queue.write(revision);
-	}
-
 	private readonly gatewayLost = (): void => {
 		if (this.session) this.connectionFailed(this.session);
 	};
@@ -218,10 +154,8 @@ export class TranscriptionRuntime {
 		this.excludedChannels = new Set(settings?.excludedChannelIds ?? []);
 		this.retentionDays = settings?.retentionDays ?? 0;
 		this.client.on(Events.VoiceStateUpdate, this.voiceChanged);
-		this.client.on(Events.MessageCreate, this.messageCreated);
-		this.client.on(Events.MessageUpdate, this.messageUpdated);
-		this.client.on(Events.MessageDelete, this.messageDeleted);
-		this.client.on(Events.MessageBulkDelete, this.messagesDeleted);
+		this.messages?.start();
+		await this.dependencies.messageAccess?.start();
 		this.client.on(Events.ShardDisconnect, this.gatewayLost);
 		this.timer = setInterval(() => {
 			for (const speaker of this.session?.speakers.values() ?? []) speaker.buffer.idle(this.dependencies.now());
@@ -232,6 +166,7 @@ export class TranscriptionRuntime {
 		await this.reconcile();
 		await this.dependencies.health?.start();
 		this.log("info", "Voice transcription service started.", { status: this.paused ? "paused" : "automatic", days: this.retentionDays });
+		if (this.messages) this.log("info", "Chat message archive started for readable channels, independently of voice recording.");
 	}
 
 	private humans(channel: VoiceChannel) { return [...channel.members.values()].filter((member) => !member.user.bot); }
@@ -350,7 +285,7 @@ export class TranscriptionRuntime {
 					}, () => { if (session) this.connectionFailed(session); });
 					// Attach a rejection handler before filesystem work can delay the handshake handler.
 					void capture.ready.catch(() => undefined);
-					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, sharingSafe: true, messageIds: new Set(), messages: new Map(), startedAt: this.dependencies.now() };
+					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, sharingSafe: true, startedAt: this.dependencies.now() };
 					this.session = session;
 					await this.dependencies.store.markSession?.(this.record(session, "session_started"));
 					// Install listeners before awaiting the voice handshake so the first speech is captured.
@@ -361,7 +296,9 @@ export class TranscriptionRuntime {
 						session!.ready = true;
 						await this.queue.write(this.record(session!, "session_started", { text: "Local voice transcription started. Raw audio is not saved." }));
 						if (this.session !== session || this.stopping || this.paused) return;
-						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe include speech, voice activity, and participants' posts in channels Caitlyn can see, including message text and links. Discord usernames identify participants. Raw audio is not saved. An administrator can use `/transcribe stop` to stop recording and activity logging.", allowedMentions: { parse: [] } });
+						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe identify speakers by Discord username. Raw audio is not saved. "
+							+ (this.messages ? "Chat messages are archived separately according to their text channel's permissions, even when nobody is in voice. " : "")
+							+ "An administrator can use `/transcribe stop` to pause voice recording.", allowedMentions: { parse: [] } });
 						this.log("success", "Voice transcription recording started.", { channel: channel.id, count: session!.speakers.size });
 					}).catch(() => { if (session) this.connectionFailed(session); });
 					break;
@@ -392,6 +329,7 @@ export class TranscriptionRuntime {
 		return { discordReady: this.client.isReady(), paused: this.paused, recording: this.session?.ready === true,
 			captureHealthy: !expected || Boolean(this.session && (this.session.ready || this.dependencies.now() - this.session.startedAt < 30_000)),
 			storageHealthy: this.queue.healthy, pending: this.queue.pending, lost: this.queue.lost,
+			chatPending: this.messages?.queued ?? 0, messageAccessHealthy: this.dependencies.messageAccess?.healthy,
 			lastPacketAt: this.lastPacketAt, lastSavedAt: this.lastSavedAt, archive: this.dependencies.archive?.health() };
 	}
 
@@ -412,7 +350,8 @@ export class TranscriptionRuntime {
 			`Timezone: **${this.config.timezone}**`,
 			this.dependencies.archive ? `**Database archive:** ${this.dependencies.archive.status()}` : "**Database archive:** disabled",
 			"Speech recognition runs locally. Logs stay private on **Mainframe**.",
-			"Includes voice joins/leaves, voice activity, and participants' message text and links.",
+			"Includes voice joins/leaves and voice activity.",
+			this.messages ? "**Chat archive:** all readable channels, including while voice recording is paused." : "**Chat archive:** disabled",
 			"",
 			this.paused
 				? "Use `/transcribe resume` to resume automatic recording, or `/transcribe start` to select your voice channel."
@@ -493,16 +432,16 @@ export class TranscriptionRuntime {
 		this.stopping = true;
 		if (this.timer) clearInterval(this.timer);
 		this.client.off(Events.VoiceStateUpdate, this.voiceChanged);
-		this.client.off(Events.MessageCreate, this.messageCreated);
-		this.client.off(Events.MessageUpdate, this.messageUpdated);
-		this.client.off(Events.MessageDelete, this.messageDeleted);
-		this.client.off(Events.MessageBulkDelete, this.messagesDeleted);
+		const messagesStopped = this.messages?.stop();
+		const accessStopped = this.dependencies.messageAccess?.stop();
 		this.client.off(Events.ShardDisconnect, this.gatewayLost);
 		await this.serialize(() => this.closeSession("Caitlyn is shutting down."));
+		await messagesStopped;
 		await this.queue.stop();
 		await this.dependencies.store.drain();
 		await this.retaining;
 		await this.dependencies.archive?.stop();
+		await accessStopped;
 		await this.dependencies.health?.stop();
 	}
 }
@@ -515,6 +454,7 @@ export function configuredTranscriptionRuntime(client: Client): TranscriptionRun
 	const archive = settings.config.databaseEnabled
 		? new TranscriptionArchive(pool, settings.config.directory, settings.config.guildId, logger) : undefined;
 	const health = new TranscriptionHealth(settings.config.directory, settings.config.guildId, settings.config.endpoint, () => runtime.healthSnapshot(), settings.config.backupMonitor);
-	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health });
+	const messageAccess = archive ? new TranscriptionMessageAccess(client, pool, settings.config.guildId, logger) : undefined;
+	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess });
 	return runtime;
 }
