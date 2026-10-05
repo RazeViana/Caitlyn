@@ -306,9 +306,11 @@ class Operations:
                 require(not state.get("OOMKilled") and details.get("RestartCount") == 0, "new_service_restarted")
                 require(details.get("Image") == compose["services"][name]["image"], "running_image_mismatch")
                 ready = ready and state.get("Running")
-                if name != "caitlyn":
+                # Transcription adds a bot dependency healthcheck. A successful
+                # Discord login alone must not release an unhealthy recorder.
+                if name != "caitlyn" or "healthcheck" in compose["services"][name] or "Health" in state:
                     ready = ready and state.get("Health", {}).get("Status") == "healthy"
-                else:
+                if name == "caitlyn":
                     logs = self.command(["docker", "logs", "--since", state["StartedAt"], "--tail=200", container])
                     ready = ready and "Bot started successfully" in logs
             if ready:

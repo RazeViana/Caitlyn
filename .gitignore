@@ -11,6 +11,7 @@ npm-debug.log*
 
 # Logs
 logs/
+transcripts/
 *.log
 npm-debug.log*
 

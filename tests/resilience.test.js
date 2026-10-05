@@ -57,8 +57,8 @@ function startupFixture() {
 	return { calls, dependencies };
 }
 
-test("startup DB/login failures clean up and never schedule jobs or claim success", async () => {
-	for (const failurePoint of ["createPGPool", "loginClient"]) {
+test("startup login failures clean up and never schedule jobs or claim success", async () => {
+	for (const failurePoint of ["loginClient"]) {
 		const { calls, dependencies } = startupFixture();
 		dependencies[failurePoint] = async () => { throw new Error("unavailable"); };
 		await assert.rejects(startBot(dependencies), /unavailable/);

@@ -11,7 +11,7 @@ Pushing to `main` releases the bot and all three media images together. Feature 
 5. A TrueNAS cron task checks every five minutes. It accepts only a complete release for the current `main` commit, with the approved database migration fingerprint.
 6. It downloads all four images and checks their revision labels and architecture. A temporary bot-image check imports the full bot entry point, then verifies database access and required tables without starting the bot, logging into Discord or writing data. This check has a 90-second limit and runs while the existing bot is still online.
 7. If the app is still running with the same configuration and the worker is idle, it saves the previous app configuration, stops the app, applies all image IDs, and starts the app again.
-8. It waits for healthy media services and the bot's completed Discord startup, then registers commands in the configured guild. Ordinary restarts do not register commands again. Global commands are not changed by this updater.
+8. It waits for healthy media services and the bot's completed Discord startup, then registers commands in the configured guild. When the bot has a healthcheck, that must also be healthy: Discord login alone cannot hide a failed recorder dependency. Rollback to an older bot without a healthcheck still uses its startup check. Ordinary restarts do not register commands again. Global commands are not changed by this updater.
 
 There is a brief outage while the app restarts. This is not a rolling deployment: running two copies with the same Discord token can process events twice. The database app is not stopped or replaced.
 

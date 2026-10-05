@@ -26,6 +26,7 @@ const expectedCommands = [
 	"social",
 	"streaks",
 	"toggleai",
+	"transcribe",
 	"user",
 ];
 const expectedEvents = ["guildCreate", "interactionCreate", "messageCreate", "messageDelete", "messageDeleteBulk", "messageUpdate", "ready", "voiceStateUpdate"];

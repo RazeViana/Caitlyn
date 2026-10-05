@@ -26,10 +26,11 @@ In the **existing private logging channel**, `/logs levels types:all` includes D
 | AI | Whether processing/memory is enabled, service request/reply counts and lengths, selected memory counts, saved message IDs/roles/field names, search-vector length and confirmed reply completion |
 | Social previews | Saved request identity, server/channel/sender, task and post IDs, platform, caption length, image/video/file counts, downloaded bytes and quote presence; existing send/compression/original-cleanup results |
 | Message edits/deletions | Message identity and preview-check request; saved cancellation counts only when existing preview records were affected |
+| Local transcription | Session starts/stops, administrator actions, channel exclusions, retention results, safe archive/quarantine/recovery counts and dependency/backup alerts; DEBUG event IDs, usernames and content lengths only |
 | Settings and commands | Command name/requester without option values; confirmed birthday, social, AI and private-log setting changes; a handler finishing is not labelled as a successful feature operation |
 | User/server/GIF lookups | Which Discord profile/server fields were shown without a new database write; server member count and whether a birthday GIF was returned |
 
-“Received” means Discord sent the event. “Collected” means data was obtained for processing, not necessarily saved. “Saved” is logged only after the relevant database operation finishes; transactional activity logs wait until commit. Failed commits do not produce successful-save lines. This is not a claim that every incoming message is stored: normal activity tracking counts messages, while full conversation storage still requires the existing enabled AI-memory path.
+“Received” means Discord sent the event. “Collected” means data was obtained for processing, not necessarily saved. “Saved” is logged only after the relevant database operation finishes; transactional activity logs wait until commit. Failed commits do not produce successful-save lines. Normal activity tracking counts messages. The separately enabled voice-transcript feature stores recorded participants' posts under its own attendance rules; see [voice transcription](voice-transcription.md).
 
 ## Privacy and limits
 
@@ -38,6 +39,6 @@ In the **existing private logging channel**, `/logs levels types:all` includes D
 - User IDs, usernames, channel IDs/names, server IDs and timestamps are still personal/activity information. Keep the existing main-server logging channel private. No logs are forwarded to other servers. Logs of unrelated legacy errors are not a guaranteed content scrubber.
 - Bot message-create events are ignored, and known bot message deletions do not produce an activity log. Social cancellations with no affected records remain quiet. Normal log delivery never logs its own successful sends back into the stream.
 - DEBUG can be busy: a single message may have separate receipt, activity-save and AI-skip lines. The existing bounded Discord queue, level filters and exact loss notices remain in place; this is not a complete or durable audit archive. No new log file or retention policy is created.
-- No new member-join surveillance, voice recording, attachment download or history backfill was added. Existing data collection and feature opt-ins are unchanged; Reddit remains parked.
+- Operational logging does not enable the separate voice-recording feature, download attachments or backfill history. Feature controls remain independent; Reddit remains parked.
 
 See [private logging setup and delivery behavior](discord-logging.md). New wording and activity logs need a bot restart to become active. No command definition changed, so command registration is not required.

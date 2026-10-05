@@ -24,7 +24,7 @@ const archive = execFileSync("git", ["archive", revision], { cwd: repository, ma
 execFileSync("tar", ["-xf", "-", "-C", source], { input: archive });
 const overlays = overlaysRequested ? ["scripts/fxEmbed/bootstrap.mjs", "scripts/fxEmbed/healthcheck.mjs",
 	"scripts/deployment/Dockerfile", "scripts/deployment/Dockerfile.fxembed", "scripts/deployment/Dockerfile.media",
-	"scripts/deployment/tsconfig.json", "scripts/deployment/startBroker.mjs", "scripts/deployment/brokerHealth.mjs", "scripts/deployment/compose.mjs",
+	"scripts/deployment/tsconfig.json", "scripts/deployment/startBroker.mjs", "scripts/deployment/brokerHealth.mjs", "scripts/deployment/fxConnectionWatchdog.mjs", "scripts/deployment/compose.mjs",
 	"scripts/deployment/prepareBundle.mjs", "scripts/deployment/checkRelease.mjs", "tests/deployment.test.js"] : [];
 for (const path of overlays) {
 	await mkdir(join(source, path, ".."), { recursive: true });

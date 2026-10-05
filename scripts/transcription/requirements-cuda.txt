@@ -1,0 +1,3 @@
+# CUDA 12 and cuDNN 9.10 retain GTX 1070 / Pascal support. Newer cuDNN drops it.
+nvidia-cublas-cu12==12.8.4.1
+nvidia-cudnn-cu12==9.10.2.21

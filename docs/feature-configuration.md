@@ -5,6 +5,7 @@ Only a nonempty `TOKEN` is required to start the bot. Without it, startup logs a
 | Feature | Required settings/dependencies | When unavailable |
 | --- | --- | --- |
 | Database, activity, birthday storage | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` | No startup connection, message/voice tracking or persistence commands; affected commands return a disabled explanation |
+| Local voice transcription | `TRANSCRIPTION_ENABLED=true`, `GUILD_ID`, `TRANSCRIPTION_ENDPOINT`, `TRANSCRIPTION_DIRECTORY`, `TRANSCRIPTION_CHANNEL_IDS` | No voice capture or transcript writes; `/transcribe` reports disabled. Independent of PostgreSQL and AI chat settings. See [setup and limitations](voice-transcription.md). |
 | AI chat | `OLLAMA_MODEL`, `WEBUI_API_KEY`, `WEBUI_CHAT_ENDPOINT` | AI stays off and `/toggleai` refuses activation |
 | AI memory | Database plus `EMBEDDING_MODEL`, `EMBEDDING_ENDPOINT`; valid optional context counts | Chat can still reply, without context queries, embeddings or storage |
 | Birthday reminders | Database plus `GUILD_ID`, `GENERAL_CHAT_ID`; valid optional timezone | No birthday scheduler; configured database birthday commands remain available |

@@ -9,6 +9,7 @@
 import "../../dist/core/loadEnvironment.js";
 import { pool } from "../../dist/core/createPGPool.js";
 import { getFeatureConfiguration, validateEnvironment } from "../../dist/core/environment.js";
+import { transcriptionSettings } from "../../dist/core/transcriptionConfig.js";
 
 try {
 	// Import the complete entry point before stopping the working bot. Its entry
@@ -25,6 +26,12 @@ try {
 	}
 	await pool.query("SELECT needs_reconciliation FROM discord.voice_sessions LIMIT 0");
 	await pool.query("SELECT source_cleanup, replacement_ready FROM discord.social_jobs LIMIT 0");
+	const transcription = transcriptionSettings();
+	if (transcription.enabled && transcription.config.databaseEnabled) {
+		await pool.query("SELECT event_id, audience_version, audience_user_ids FROM discord.transcript_events LIMIT 0");
+		await pool.query("SELECT byte_offset, discarding_line FROM discord.transcript_import_offsets LIMIT 0");
+		await pool.query("SELECT deleted_before FROM discord.transcript_retention LIMIT 0");
+	}
 	await pool.query("COMMIT");
 	console.log("Release database check passed; AI is off; no Discord login or data changes");
 }

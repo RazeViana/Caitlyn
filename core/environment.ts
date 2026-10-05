@@ -8,6 +8,7 @@
 
 import "./loadEnvironment.js";
 import { birthdayTimezone } from "./birthdayClock.js";
+import { transcriptionSettings } from "./transcriptionConfig.js";
 
 export type Environment = Record<string, string | undefined>;
 export interface FeatureConfiguration {
@@ -63,6 +64,7 @@ export function getFeatureConfiguration(environment: Environment = process.env) 
 		giphy: feature(required("GIPHY_API_KEY")),
 		socialMedia: feature(social, "SOCIAL_MEDIA_ENABLED"),
 		discordLogging: feature([...databaseDependency]),
+		transcription: feature(transcriptionSettings(environment).problems, "TRANSCRIPTION_ENABLED"),
 	};
 }
 

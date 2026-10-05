@@ -1,0 +1,1424 @@
+{
+  "bot": {
+    "architecture": "x64",
+    "node": "v24.21.0",
+    "nodePath": "/usr/local/bin/node",
+    "npmVersion": "11.19.0",
+    "yarnVersion": "1.22.22",
+    "dockerCli": null,
+    "python": null,
+    "ffmpeg": null,
+    "pip": null,
+    "osFamily": "Alpine",
+    "osPackages": [
+      "alpine-baselayout-3.7.2-r1",
+      "alpine-baselayout-data-3.7.2-r1",
+      "alpine-keys-2.6-r0",
+      "alpine-release-3.24.2-r0",
+      "apk-tools-3.0.8-r0",
+      "busybox-1.37.0-r31",
+      "busybox-binsh-1.37.0-r31",
+      "ca-certificates-bundle-20260909-r0",
+      "libapk-3.0.8-r0",
+      "libcrypto3-3.5.8-r0",
+      "libgcc-15.2.0-r5",
+      "libssl3-3.5.8-r0",
+      "libstdc++-15.2.0-r5",
+      "musl-1.2.6-r2",
+      "musl-utils-1.2.6-r2",
+      "scanelf-1.3.9-r1",
+      "ssl_client-1.37.0-r31",
+      "zlib-1.3.2-r0"
+    ],
+    "npmPackages": [
+      {
+        "name": "@discordjs/builders",
+        "version": "1.14.1",
+        "path": "/app/node_modules/@discordjs/builders"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "1.5.3",
+        "path": "/app/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@discordjs/formatters",
+        "version": "0.6.2",
+        "path": "/app/node_modules/@discordjs/formatters"
+      },
+      {
+        "name": "@discordjs/rest",
+        "version": "2.6.3",
+        "path": "/app/node_modules/@discordjs/rest"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "2.1.1",
+        "path": "/app/node_modules/@discordjs/rest/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@discordjs/util",
+        "version": "1.2.0",
+        "path": "/app/node_modules/@discordjs/util"
+      },
+      {
+        "name": "@discordjs/voice",
+        "version": "0.19.2",
+        "path": "/app/node_modules/@discordjs/voice"
+      },
+      {
+        "name": "prism-media",
+        "version": "1.3.5",
+        "path": "/app/node_modules/@discordjs/voice/node_modules/prism-media"
+      },
+      {
+        "name": "@discordjs/ws",
+        "version": "1.2.3",
+        "path": "/app/node_modules/@discordjs/ws"
+      },
+      {
+        "name": "@discordjs/collection",
+        "version": "2.1.1",
+        "path": "/app/node_modules/@discordjs/ws/node_modules/@discordjs/collection"
+      },
+      {
+        "name": "@sapphire/async-queue",
+        "version": "1.5.5",
+        "path": "/app/node_modules/@sapphire/async-queue"
+      },
+      {
+        "name": "@sapphire/shapeshift",
+        "version": "4.0.0",
+        "path": "/app/node_modules/@sapphire/shapeshift"
+      },
+      {
+        "name": "@sapphire/snowflake",
+        "version": "3.5.5",
+        "path": "/app/node_modules/@sapphire/snowflake"
+      },
+      {
+        "name": "@snazzah/davey",
+        "version": "0.1.12",
+        "path": "/app/node_modules/@snazzah/davey"
+      },
+      {
+        "name": "@snazzah/davey-linux-x64-musl",
+        "version": "0.1.12",
+        "path": "/app/node_modules/@snazzah/davey-linux-x64-musl"
+      },
+      {
+        "name": "@types/node",
+        "version": "24.13.3",
+        "path": "/app/node_modules/@types/node"
+      },
+      {
+        "name": "@types/ws",
+        "version": "8.18.1",
+        "path": "/app/node_modules/@types/ws"
+      },
+      {
+        "name": "@vladfrangu/async_event_emitter",
+        "version": "2.4.7",
+        "path": "/app/node_modules/@vladfrangu/async_event_emitter"
+      },
+      {
+        "name": "date-fns",
+        "version": "4.4.0",
+        "path": "/app/node_modules/date-fns"
+      },
+      {
+        "name": "discord-api-types",
+        "version": "0.38.55",
+        "path": "/app/node_modules/discord-api-types"
+      },
+      {
+        "name": "discord.js",
+        "version": "14.27.0",
+        "path": "/app/node_modules/discord.js"
+      },
+      {
+        "name": "dotenv",
+        "version": "16.6.1",
+        "path": "/app/node_modules/dotenv"
+      },
+      {
+        "name": "fast-deep-equal",
+        "version": "3.1.3",
+        "path": "/app/node_modules/fast-deep-equal"
+      },
+      {
+        "name": "lodash",
+        "version": "4.18.1",
+        "path": "/app/node_modules/lodash"
+      },
+      {
+        "name": "lodash.snakecase",
+        "version": "4.1.1",
+        "path": "/app/node_modules/lodash.snakecase"
+      },
+      {
+        "name": "magic-bytes.js",
+        "version": "1.13.1",
+        "path": "/app/node_modules/magic-bytes.js"
+      },
+      {
+        "name": "node-cron",
+        "version": "4.6.0",
+        "path": "/app/node_modules/node-cron"
+      },
+      {
+        "name": "opusscript",
+        "version": "0.1.1",
+        "path": "/app/node_modules/opusscript"
+      },
+      {
+        "name": "pg",
+        "version": "8.23.0",
+        "path": "/app/node_modules/pg"
+      },
+      {
+        "name": "pg-cloudflare",
+        "version": "1.4.0",
+        "path": "/app/node_modules/pg-cloudflare"
+      },
+      {
+        "name": "pg-connection-string",
+        "version": "2.14.0",
+        "path": "/app/node_modules/pg-connection-string"
+      },
+      {
+        "name": "pg-int8",
+        "version": "1.0.1",
+        "path": "/app/node_modules/pg-int8"
+      },
+      {
+        "name": "pg-pool",
+        "version": "3.14.0",
+        "path": "/app/node_modules/pg-pool"
+      },
+      {
+        "name": "pg-protocol",
+        "version": "1.16.0",
+        "path": "/app/node_modules/pg-protocol"
+      },
+      {
+        "name": "pg-types",
+        "version": "2.2.0",
+        "path": "/app/node_modules/pg-types"
+      },
+      {
+        "name": "pgpass",
+        "version": "1.0.5",
+        "path": "/app/node_modules/pgpass"
+      },
+      {
+        "name": "postgres-array",
+        "version": "2.0.0",
+        "path": "/app/node_modules/postgres-array"
+      },
+      {
+        "name": "postgres-bytea",
+        "version": "1.0.0",
+        "path": "/app/node_modules/postgres-bytea"
+      },
+      {
+        "name": "postgres-date",
+        "version": "1.0.7",
+        "path": "/app/node_modules/postgres-date"
+      },
+      {
+        "name": "postgres-interval",
+        "version": "1.2.0",
+        "path": "/app/node_modules/postgres-interval"
+      },
+      {
+        "name": "split2",
+        "version": "4.2.0",
+        "path": "/app/node_modules/split2"
+      },
+      {
+        "name": "ts-mixer",
+        "version": "6.0.4",
+        "path": "/app/node_modules/ts-mixer"
+      },
+      {
+        "name": "tslib",
+        "version": "2.8.1",
+        "path": "/app/node_modules/tslib"
+      },
+      {
+        "name": "undici",
+        "version": "6.28.1",
+        "path": "/app/node_modules/undici"
+      },
+      {
+        "name": "undici-types",
+        "version": "7.18.2",
+        "path": "/app/node_modules/undici-types"
+      },
+      {
+        "name": "ws",
+        "version": "8.21.3",
+        "path": "/app/node_modules/ws"
+      },
+      {
+        "name": "xtend",
+        "version": "4.0.2",
+        "path": "/app/node_modules/xtend"
+      },
+      {
+        "name": "corepack",
+        "version": "0.36.0",
+        "path": "/usr/local/lib/node_modules/corepack"
+      },
+      {
+        "name": "npm",
+        "version": "11.19.0",
+        "path": "/usr/local/lib/node_modules/npm"
+      },
+      {
+        "name": "@gar/promise-retry",
+        "version": "1.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@gar/promise-retry"
+      },
+      {
+        "name": "@isaacs/fs-minipass",
+        "version": "4.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@isaacs/fs-minipass"
+      },
+      {
+        "name": "@isaacs/string-locale-compare",
+        "version": "1.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@isaacs/string-locale-compare"
+      },
+      {
+        "name": "@npmcli/agent",
+        "version": "4.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/agent"
+      },
+      {
+        "name": "@npmcli/arborist",
+        "version": "9.9.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist"
+      },
+      {
+        "name": "@npmcli/config",
+        "version": "10.12.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/config"
+      },
+      {
+        "name": "@npmcli/fs",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/fs"
+      },
+      {
+        "name": "@npmcli/git",
+        "version": "7.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/git"
+      },
+      {
+        "name": "@npmcli/installed-package-contents",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/installed-package-contents"
+      },
+      {
+        "name": "@npmcli/map-workspaces",
+        "version": "5.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/map-workspaces"
+      },
+      {
+        "name": "@npmcli/metavuln-calculator",
+        "version": "9.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/metavuln-calculator"
+      },
+      {
+        "name": "@npmcli/name-from-folder",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/name-from-folder"
+      },
+      {
+        "name": "@npmcli/node-gyp",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/node-gyp"
+      },
+      {
+        "name": "@npmcli/package-json",
+        "version": "7.0.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/package-json"
+      },
+      {
+        "name": "@npmcli/promise-spawn",
+        "version": "9.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/promise-spawn"
+      },
+      {
+        "name": "@npmcli/query",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/query"
+      },
+      {
+        "name": "@npmcli/redact",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/redact"
+      },
+      {
+        "name": "@npmcli/run-script",
+        "version": "10.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@npmcli/run-script"
+      },
+      {
+        "name": "@sigstore/bundle",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/bundle"
+      },
+      {
+        "name": "@sigstore/core",
+        "version": "3.2.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/core"
+      },
+      {
+        "name": "@sigstore/protobuf-specs",
+        "version": "0.5.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/protobuf-specs"
+      },
+      {
+        "name": "@sigstore/sign",
+        "version": "4.1.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/sign"
+      },
+      {
+        "name": "@sigstore/tuf",
+        "version": "4.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/tuf"
+      },
+      {
+        "name": "@sigstore/verify",
+        "version": "3.1.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@sigstore/verify"
+      },
+      {
+        "name": "@tufjs/canonical-json",
+        "version": "2.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@tufjs/canonical-json"
+      },
+      {
+        "name": "@tufjs/models",
+        "version": "4.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/@tufjs/models"
+      },
+      {
+        "name": "abbrev",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/abbrev"
+      },
+      {
+        "name": "agent-base",
+        "version": "7.1.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/agent-base"
+      },
+      {
+        "name": "aproba",
+        "version": "2.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/aproba"
+      },
+      {
+        "name": "archy",
+        "version": "1.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/archy"
+      },
+      {
+        "name": "balanced-match",
+        "version": "4.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/balanced-match"
+      },
+      {
+        "name": "bin-links",
+        "version": "6.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/bin-links"
+      },
+      {
+        "name": "binary-extensions",
+        "version": "3.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/binary-extensions"
+      },
+      {
+        "name": "brace-expansion",
+        "version": "5.0.7",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/brace-expansion"
+      },
+      {
+        "name": "cacache",
+        "version": "20.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/cacache"
+      },
+      {
+        "name": "chalk",
+        "version": "5.6.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/chalk"
+      },
+      {
+        "name": "chownr",
+        "version": "3.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/chownr"
+      },
+      {
+        "name": "ci-info",
+        "version": "4.4.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ci-info"
+      },
+      {
+        "name": "cidr-regex",
+        "version": "5.0.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/cidr-regex"
+      },
+      {
+        "name": "cmd-shim",
+        "version": "8.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/cmd-shim"
+      },
+      {
+        "name": "common-ancestor-path",
+        "version": "2.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/common-ancestor-path"
+      },
+      {
+        "name": "cssesc",
+        "version": "3.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/cssesc"
+      },
+      {
+        "name": "debug",
+        "version": "4.4.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/debug"
+      },
+      {
+        "name": "diff",
+        "version": "8.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/diff"
+      },
+      {
+        "name": "env-paths",
+        "version": "2.2.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/env-paths"
+      },
+      {
+        "name": "exponential-backoff",
+        "version": "3.1.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/exponential-backoff"
+      },
+      {
+        "name": "fastest-levenshtein",
+        "version": "1.0.16",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/fastest-levenshtein"
+      },
+      {
+        "name": "fs-minipass",
+        "version": "3.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/fs-minipass"
+      },
+      {
+        "name": "glob",
+        "version": "13.0.6",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/glob"
+      },
+      {
+        "name": "graceful-fs",
+        "version": "4.2.11",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/graceful-fs"
+      },
+      {
+        "name": "hosted-git-info",
+        "version": "9.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/hosted-git-info"
+      },
+      {
+        "name": "http-cache-semantics",
+        "version": "4.2.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/http-cache-semantics"
+      },
+      {
+        "name": "http-proxy-agent",
+        "version": "7.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/http-proxy-agent"
+      },
+      {
+        "name": "https-proxy-agent",
+        "version": "7.0.6",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/https-proxy-agent"
+      },
+      {
+        "name": "iconv-lite",
+        "version": "0.7.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/iconv-lite"
+      },
+      {
+        "name": "ignore-walk",
+        "version": "8.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ignore-walk"
+      },
+      {
+        "name": "ini",
+        "version": "6.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ini"
+      },
+      {
+        "name": "init-package-json",
+        "version": "8.2.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/init-package-json"
+      },
+      {
+        "name": "ip-address",
+        "version": "10.2.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ip-address"
+      },
+      {
+        "name": "is-cidr",
+        "version": "6.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/is-cidr"
+      },
+      {
+        "name": "isexe",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/isexe"
+      },
+      {
+        "name": "json-parse-even-better-errors",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/json-parse-even-better-errors"
+      },
+      {
+        "name": "json-stringify-nice",
+        "version": "1.1.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/json-stringify-nice"
+      },
+      {
+        "name": "jsonparse",
+        "version": "1.3.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/jsonparse"
+      },
+      {
+        "name": "just-diff",
+        "version": "6.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/just-diff"
+      },
+      {
+        "name": "just-diff-apply",
+        "version": "5.5.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/just-diff-apply"
+      },
+      {
+        "name": "libnpmaccess",
+        "version": "10.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmaccess"
+      },
+      {
+        "name": "libnpmdiff",
+        "version": "8.1.12",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmdiff"
+      },
+      {
+        "name": "libnpmexec",
+        "version": "10.3.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmexec"
+      },
+      {
+        "name": "libnpmfund",
+        "version": "7.0.26",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmfund"
+      },
+      {
+        "name": "libnpmorg",
+        "version": "8.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmorg"
+      },
+      {
+        "name": "libnpmpack",
+        "version": "9.1.12",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmpack"
+      },
+      {
+        "name": "libnpmpublish",
+        "version": "11.2.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmpublish"
+      },
+      {
+        "name": "libnpmsearch",
+        "version": "9.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmsearch"
+      },
+      {
+        "name": "libnpmteam",
+        "version": "8.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmteam"
+      },
+      {
+        "name": "libnpmversion",
+        "version": "8.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/libnpmversion"
+      },
+      {
+        "name": "lru-cache",
+        "version": "11.5.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/lru-cache"
+      },
+      {
+        "name": "make-fetch-happen",
+        "version": "15.0.6",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/make-fetch-happen"
+      },
+      {
+        "name": "minimatch",
+        "version": "10.2.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minimatch"
+      },
+      {
+        "name": "minipass",
+        "version": "7.1.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass"
+      },
+      {
+        "name": "minipass-collect",
+        "version": "2.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-collect"
+      },
+      {
+        "name": "minipass-fetch",
+        "version": "5.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-fetch"
+      },
+      {
+        "name": "minipass-flush",
+        "version": "1.0.6",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-flush"
+      },
+      {
+        "name": "minipass-pipeline",
+        "version": "1.2.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline"
+      },
+      {
+        "name": "minipass",
+        "version": "3.3.6",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline/node_modules/minipass"
+      },
+      {
+        "name": "yallist",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-pipeline/node_modules/yallist"
+      },
+      {
+        "name": "minipass-sized",
+        "version": "2.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minipass-sized"
+      },
+      {
+        "name": "minizlib",
+        "version": "3.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/minizlib"
+      },
+      {
+        "name": "ms",
+        "version": "2.1.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ms"
+      },
+      {
+        "name": "mute-stream",
+        "version": "3.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/mute-stream"
+      },
+      {
+        "name": "negotiator",
+        "version": "1.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/negotiator"
+      },
+      {
+        "name": "node-gyp",
+        "version": "12.4.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/node-gyp"
+      },
+      {
+        "name": "nopt",
+        "version": "9.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/nopt"
+      },
+      {
+        "name": "npm-audit-report",
+        "version": "7.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-audit-report"
+      },
+      {
+        "name": "npm-bundled",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-bundled"
+      },
+      {
+        "name": "npm-install-checks",
+        "version": "8.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-install-checks"
+      },
+      {
+        "name": "npm-normalize-package-bin",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-normalize-package-bin"
+      },
+      {
+        "name": "npm-package-arg",
+        "version": "13.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-package-arg"
+      },
+      {
+        "name": "npm-packlist",
+        "version": "10.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-packlist"
+      },
+      {
+        "name": "npm-pick-manifest",
+        "version": "11.0.3",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-pick-manifest"
+      },
+      {
+        "name": "npm-profile",
+        "version": "12.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-profile"
+      },
+      {
+        "name": "npm-registry-fetch",
+        "version": "19.1.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-registry-fetch"
+      },
+      {
+        "name": "npm-user-validate",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/npm-user-validate"
+      },
+      {
+        "name": "p-map",
+        "version": "7.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/p-map"
+      },
+      {
+        "name": "pacote",
+        "version": "21.5.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/pacote"
+      },
+      {
+        "name": "parse-conflict-json",
+        "version": "5.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/parse-conflict-json"
+      },
+      {
+        "name": "path-scurry",
+        "version": "2.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/path-scurry"
+      },
+      {
+        "name": "postcss-selector-parser",
+        "version": "7.1.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/postcss-selector-parser"
+      },
+      {
+        "name": "proc-log",
+        "version": "6.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/proc-log"
+      },
+      {
+        "name": "proggy",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/proggy"
+      },
+      {
+        "name": "promise-all-reject-late",
+        "version": "1.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/promise-all-reject-late"
+      },
+      {
+        "name": "promise-call-limit",
+        "version": "3.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/promise-call-limit"
+      },
+      {
+        "name": "promzard",
+        "version": "3.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/promzard"
+      },
+      {
+        "name": "qrcode-terminal",
+        "version": "0.12.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/qrcode-terminal"
+      },
+      {
+        "name": "read",
+        "version": "5.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/read"
+      },
+      {
+        "name": "read-cmd-shim",
+        "version": "6.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/read-cmd-shim"
+      },
+      {
+        "name": "safer-buffer",
+        "version": "2.1.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/safer-buffer"
+      },
+      {
+        "name": "semver",
+        "version": "7.8.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/semver"
+      },
+      {
+        "name": "signal-exit",
+        "version": "4.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/signal-exit"
+      },
+      {
+        "name": "sigstore",
+        "version": "4.1.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/sigstore"
+      },
+      {
+        "name": "smart-buffer",
+        "version": "4.2.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/smart-buffer"
+      },
+      {
+        "name": "socks",
+        "version": "2.8.9",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/socks"
+      },
+      {
+        "name": "socks-proxy-agent",
+        "version": "8.0.5",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/socks-proxy-agent"
+      },
+      {
+        "name": "spdx-exceptions",
+        "version": "2.5.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-exceptions"
+      },
+      {
+        "name": "spdx-expression-parse",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-expression-parse"
+      },
+      {
+        "name": "spdx-license-ids",
+        "version": "3.0.23",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/spdx-license-ids"
+      },
+      {
+        "name": "ssri",
+        "version": "13.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/ssri"
+      },
+      {
+        "name": "supports-color",
+        "version": "10.2.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/supports-color"
+      },
+      {
+        "name": "tar",
+        "version": "7.5.19",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tar"
+      },
+      {
+        "name": "text-table",
+        "version": "0.2.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/text-table"
+      },
+      {
+        "name": "tiny-relative-date",
+        "version": "2.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tiny-relative-date"
+      },
+      {
+        "name": "tinyglobby",
+        "version": "0.2.17",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby"
+      },
+      {
+        "name": "fdir",
+        "version": "6.5.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/fdir"
+      },
+      {
+        "name": "picomatch",
+        "version": "4.0.4",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tinyglobby/node_modules/picomatch"
+      },
+      {
+        "name": "treeverse",
+        "version": "3.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/treeverse"
+      },
+      {
+        "name": "tuf-js",
+        "version": "4.1.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/tuf-js"
+      },
+      {
+        "name": "undici",
+        "version": "6.27.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/undici"
+      },
+      {
+        "name": "util-deprecate",
+        "version": "1.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/util-deprecate"
+      },
+      {
+        "name": "validate-npm-package-name",
+        "version": "7.0.2",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/validate-npm-package-name"
+      },
+      {
+        "name": "walk-up-path",
+        "version": "4.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/walk-up-path"
+      },
+      {
+        "name": "which",
+        "version": "6.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/which"
+      },
+      {
+        "name": "write-file-atomic",
+        "version": "7.0.1",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/write-file-atomic"
+      },
+      {
+        "name": "yallist",
+        "version": "5.0.0",
+        "path": "/usr/local/lib/node_modules/npm/node_modules/yallist"
+      }
+    ],
+    "image": "sha256:4f5c1d70cb542004557b9c163f25f771779ef53dcd8bb56e9fc6da4dc111c944"
+  },
+  "database": {
+    "image": "sha256:5090c7fd921d75d8984233faaf8fb0d8ad18ddc38f912fd1261f9999b5d214a7",
+    "postgres_version": "17.8",
+    "pgvector_version": "0.8.1",
+    "os_packages": [
+      "adduser\t3.134",
+      "apt\t2.6.1",
+      "base-files\t12.4+deb12u13",
+      "base-passwd\t3.6.1",
+      "bash\t5.2.15-2+b10",
+      "binutils-common:amd64\t2.40-2",
+      "bsdutils\t1:2.38.1-5+deb12u3",
+      "coreutils\t9.1-1",
+      "dash\t0.5.12-2",
+      "debconf\t1.5.82",
+      "debian-archive-keyring\t2023.3+deb12u2",
+      "debianutils\t5.7-0.5~deb12u1",
+      "diffutils\t1:3.8-4",
+      "dirmngr\t2.2.40-1.1+deb12u2",
+      "dpkg\t1.21.22",
+      "dpkg-dev\t1.21.22",
+      "e2fsprogs\t1.47.0-2+b2",
+      "findutils\t4.9.0-4",
+      "gcc-12-base:amd64\t12.2.0-14+deb12u1",
+      "gnupg\t2.2.40-1.1+deb12u2",
+      "gnupg-l10n\t2.2.40-1.1+deb12u2",
+      "gnupg-utils\t2.2.40-1.1+deb12u2",
+      "gpg\t2.2.40-1.1+deb12u2",
+      "gpg-agent\t2.2.40-1.1+deb12u2",
+      "gpg-wks-client\t2.2.40-1.1+deb12u2",
+      "gpg-wks-server\t2.2.40-1.1+deb12u2",
+      "gpgconf\t2.2.40-1.1+deb12u2",
+      "gpgsm\t2.2.40-1.1+deb12u2",
+      "gpgv\t2.2.40-1.1+deb12u2",
+      "grep\t3.8-5",
+      "gzip\t1.12-1",
+      "hostname\t3.23+nmu1",
+      "init-system-helpers\t1.65.2+deb12u1",
+      "less\t590-2.1~deb12u2",
+      "libacl1:amd64\t2.3.1-3",
+      "libapt-pkg6.0:amd64\t2.6.1",
+      "libassuan0:amd64\t2.5.5-5",
+      "libattr1:amd64\t1:2.5.1-4",
+      "libaudit-common\t1:3.0.9-1",
+      "libaudit1:amd64\t1:3.0.9-1",
+      "libblkid1:amd64\t2.38.1-5+deb12u3",
+      "libbsd0:amd64\t0.11.7-2",
+      "libbz2-1.0:amd64\t1.0.8-5+b1",
+      "libc-bin\t2.36-9+deb12u13",
+      "libc-l10n\t2.36-9+deb12u13",
+      "libc6:amd64\t2.36-9+deb12u13",
+      "libcap-ng0:amd64\t0.8.3-1+b3",
+      "libcap2:amd64\t1:2.66-4+deb12u2+b2",
+      "libcom-err2:amd64\t1.47.0-2+b2",
+      "libcrypt-dev:amd64\t1:4.4.33-2",
+      "libcrypt1:amd64\t1:4.4.33-2",
+      "libdb5.3:amd64\t5.3.28+dfsg2-1",
+      "libdebconfclient0:amd64\t0.270",
+      "libedit2:amd64\t3.1-20221030-2",
+      "libext2fs2:amd64\t1.47.0-2+b2",
+      "libffi8:amd64\t3.4.4-1",
+      "libgcc-s1:amd64\t12.2.0-14+deb12u1",
+      "libgcrypt20:amd64\t1.10.1-3",
+      "libgdbm-compat4:amd64\t1.23-3",
+      "libgdbm6:amd64\t1.23-3",
+      "libgmp10:amd64\t2:6.2.1+dfsg1-1.1",
+      "libgnutls30:amd64\t3.7.9-2+deb12u5",
+      "libgpg-error0:amd64\t1.46-1",
+      "libgssapi-krb5-2:amd64\t1.20.1-2+deb12u4",
+      "libhogweed6:amd64\t3.8.1-2",
+      "libicu72:amd64\t72.1-3+deb12u1",
+      "libidn2-0:amd64\t2.3.3-1+b1",
+      "libjson-perl\t4.10000-1",
+      "libk5crypto3:amd64\t1.20.1-2+deb12u4",
+      "libkeyutils1:amd64\t1.6.3-2",
+      "libkrb5-3:amd64\t1.20.1-2+deb12u4",
+      "libkrb5support0:amd64\t1.20.1-2+deb12u4",
+      "libksba8:amd64\t1.6.3-2",
+      "libldap-2.5-0:amd64\t2.5.13+dfsg-5",
+      "libllvm19:amd64\t1:19.1.7-3~deb12u1",
+      "liblz4-1:amd64\t1.9.4-1",
+      "liblzma5:amd64\t5.4.1-1",
+      "libmd0:amd64\t1.0.4-2",
+      "libmount1:amd64\t2.38.1-5+deb12u3",
+      "libncursesw6:amd64\t6.4-4",
+      "libnettle8:amd64\t3.8.1-2",
+      "libnpth0:amd64\t1.6-3",
+      "libnss-wrapper:amd64\t1.1.12-1",
+      "libp11-kit0:amd64\t0.24.1-2",
+      "libpam-modules:amd64\t1.5.2-6+deb12u2",
+      "libpam-modules-bin\t1.5.2-6+deb12u2",
+      "libpam-runtime\t1.5.2-6+deb12u2",
+      "libpam0g:amd64\t1.5.2-6+deb12u2",
+      "libpcre2-8-0:amd64\t10.42-1",
+      "libperl5.36:amd64\t5.36.0-7+deb12u3",
+      "libpq5:amd64\t18.2-1.pgdg12+1",
+      "libpython3.11-minimal:amd64\t3.11.2-6+deb12u6",
+      "libreadline8:amd64\t8.2-1.3",
+      "libsasl2-2:amd64\t2.1.28+dfsg-10",
+      "libsasl2-modules-db:amd64\t2.1.28+dfsg-10",
+      "libseccomp2:amd64\t2.5.4-1+deb12u1",
+      "libselinux1:amd64\t3.4-1+b6",
+      "libsemanage-common\t3.4-1",
+      "libsemanage2:amd64\t3.4-1+b5",
+      "libsepol2:amd64\t3.4-2.1",
+      "libsmartcols1:amd64\t2.38.1-5+deb12u3",
+      "libsqlite3-0:amd64\t3.40.1-2+deb12u2",
+      "libss2:amd64\t1.47.0-2+b2",
+      "libssl3:amd64\t3.0.18-1~deb12u2",
+      "libstdc++6:amd64\t12.2.0-14+deb12u1",
+      "libsystemd0:amd64\t252.39-1~deb12u1",
+      "libtasn1-6:amd64\t4.19.0-2+deb12u1",
+      "libtinfo6:amd64\t6.4-4",
+      "libtirpc-common\t1.3.3+ds-1",
+      "libudev1:amd64\t252.39-1~deb12u1",
+      "libunistring2:amd64\t1.0-2",
+      "libuuid1:amd64\t2.38.1-5+deb12u3",
+      "libxml2:amd64\t2.9.14+dfsg-1.3~deb12u5",
+      "libxslt1.1:amd64\t1.1.35-1+deb12u3",
+      "libxxhash0:amd64\t0.8.1-1",
+      "libz3-4:amd64\t4.8.12-3.1",
+      "libzstd1:amd64\t1.5.4+dfsg2-5",
+      "locales\t2.36-9+deb12u13",
+      "login\t1:4.13+dfsg1-1+deb12u2",
+      "logsave\t1.47.0-2+b2",
+      "mawk\t1.3.4.20200120-3.1",
+      "media-types\t10.0.0",
+      "mount\t2.38.1-5+deb12u3",
+      "ncurses-base\t6.4-4",
+      "ncurses-bin\t6.4-4",
+      "netbase\t6.4",
+      "openssl\t3.0.18-1~deb12u2",
+      "passwd\t1:4.13+dfsg1-1+deb12u2",
+      "perl\t5.36.0-7+deb12u3",
+      "perl-base\t5.36.0-7+deb12u3",
+      "perl-modules-5.36\t5.36.0-7+deb12u3",
+      "pinentry-curses\t1.2.1-1",
+      "postgresql-17\t17.8-1.pgdg12+1",
+      "postgresql-client-17\t17.8-1.pgdg12+1",
+      "postgresql-client-common\t289.pgdg12+1",
+      "postgresql-common\t289.pgdg12+1",
+      "python3\t3.11.2-1+b1",
+      "python3.11-minimal\t3.11.2-6+deb12u6",
+      "readline-common\t8.2-1.3",
+      "sed\t4.9-1",
+      "sensible-utils\t0.0.17+nmu1",
+      "ssl-cert\t1.1.2",
+      "sysvinit-utils\t3.06-4",
+      "tar\t1.34+dfsg-1.2+deb12u1",
+      "tzdata\t2025b-0+deb12u2",
+      "ucf\t3.0043+nmu1+deb12u1",
+      "usr-is-merged\t37~deb12u1",
+      "util-linux\t2.38.1-5+deb12u3",
+      "util-linux-extra\t2.38.1-5+deb12u3",
+      "xz-utils\t5.4.1-1",
+      "zlib1g:amd64\t1:1.2.13.dfsg-1",
+      "zstd\t1.5.4+dfsg2-5"
+    ],
+    "postgres_binary": "/usr/lib/postgresql/17/bin/postgres",
+    "pgvector_library": "/usr/lib/postgresql/17/lib/vector.so",
+    "package_manifest": "/var/lib/dpkg/status"
+  },
+  "source_revision": "911f3bcc358f1e867e3a15ccf405755b89be31f1",
+  "speech_worker": {
+    "tag": "caitlyn-transcription:2.2.0-365118e",
+    "id": "sha256:d084ad44d35059e52ae0d9ad2de28a2db9dba242c277ebd6976c2aefc59f58ec",
+    "model": {
+      "name": "Systran/faster-whisper-base.en",
+      "revision": "3d3d5dee26484f91867d81cb899cfcf72b96be6c",
+      "path": "/models/whisper"
+    },
+    "python": "3.11.16",
+    "pythonPath": "/usr/local/bin/python",
+    "packages": [
+      {
+        "name": "anyio",
+        "version": "4.15.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "av",
+        "version": "18.1.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.7.22",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "click",
+        "version": "8.5.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "ctranslate2",
+        "version": "4.8.2",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "faster-whisper",
+        "version": "1.2.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "filelock",
+        "version": "4.0.8",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "flatbuffers",
+        "version": "25.12.19",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "fsspec",
+        "version": "2026.9.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "h11",
+        "version": "0.16.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "hf-xet",
+        "version": "1.6.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "httpcore",
+        "version": "1.0.9",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "httpx",
+        "version": "0.28.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "huggingface_hub",
+        "version": "1.33.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "idna",
+        "version": "3.20",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "numpy",
+        "version": "2.4.6",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "nvidia-cublas-cu12",
+        "version": "12.8.4.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "nvidia-cudnn-cu12",
+        "version": "9.10.2.21",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "onnxruntime",
+        "version": "1.30.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "packaging",
+        "version": "26.3",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "pip",
+        "version": "24.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "protobuf",
+        "version": "7.36.2",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "PyYAML",
+        "version": "6.0.3",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "setuptools",
+        "version": "79.0.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "tokenizers",
+        "version": "0.23.2",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "tqdm",
+        "version": "4.70.1",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "typing_extensions",
+        "version": "4.16.0",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      },
+      {
+        "name": "wheel",
+        "version": "0.46.3",
+        "path": "/usr/local/lib/python3.11/site-packages"
+      }
+    ],
+    "osPackages": [
+      "adduser\t3.152",
+      "apt\t3.0.3",
+      "base-files\t13.8+deb13u7",
+      "base-passwd\t3.6.7",
+      "bash\t5.2.37-2+b10",
+      "bsdutils\t1:2.41.5-0+deb13u1",
+      "ca-certificates\t20250419",
+      "coreutils\t9.7-3",
+      "dash\t0.5.12-12",
+      "debconf\t1.5.91",
+      "debian-archive-keyring\t2025.1",
+      "debianutils\t5.23.2",
+      "diffutils\t1:3.10-4",
+      "dpkg\t1.22.22",
+      "findutils\t4.10.0-3",
+      "gcc-14-base:amd64\t14.2.0-19",
+      "grep\t3.11-4",
+      "gzip\t1.13-1+deb13u1",
+      "hostname\t3.25",
+      "init-system-helpers\t1.69~deb13u1",
+      "libacl1:amd64\t2.3.2-2+b1",
+      "libapt-pkg7.0:amd64\t3.0.3",
+      "libattr1:amd64\t1:2.5.2-3",
+      "libaudit-common\t1:4.0.2-2+deb13u1",
+      "libaudit1:amd64\t1:4.0.2-2+deb13u1",
+      "libblkid1:amd64\t2.41.5-0+deb13u1",
+      "libbsd0:amd64\t0.12.2-2",
+      "libbz2-1.0:amd64\t1.0.8-6",
+      "libc-bin\t2.41-12+deb13u4",
+      "libc6:amd64\t2.41-12+deb13u4",
+      "libcap-ng0:amd64\t0.8.5-4+b1",
+      "libcap2:amd64\t1:2.75-10+deb13u1+b3",
+      "libcrypt1:amd64\t1:4.4.38-1",
+      "libdb5.3t64:amd64\t5.3.28+dfsg2-9",
+      "libdebconfclient0:amd64\t0.280",
+      "libffi8:amd64\t3.4.8-2",
+      "libgcc-s1:amd64\t14.2.0-19",
+      "libgdbm6t64:amd64\t1.24-2",
+      "libgmp10:amd64\t2:6.3.0+dfsg-3",
+      "libhogweed6t64:amd64\t3.10.1-1",
+      "liblastlog2-2:amd64\t2.41.5-0+deb13u1",
+      "liblz4-1:amd64\t1.10.0-4",
+      "liblzma5:amd64\t5.8.1-1+deb13u1",
+      "libmd0:amd64\t1.1.0-2+b1",
+      "libmount1:amd64\t2.41.5-0+deb13u1",
+      "libncursesw6:amd64\t6.5+20250216-2",
+      "libnettle8t64:amd64\t3.10.1-1",
+      "libpam-modules:amd64\t1.7.0-5",
+      "libpam-modules-bin\t1.7.0-5",
+      "libpam-runtime\t1.7.0-5",
+      "libpam0g:amd64\t1.7.0-5",
+      "libpcre2-8-0:amd64\t10.46-1~deb13u2",
+      "libreadline8t64:amd64\t8.2-6",
+      "libseccomp2:amd64\t2.6.0-2",
+      "libselinux1:amd64\t3.8.1-1",
+      "libsemanage-common\t3.8.1-1",
+      "libsemanage2:amd64\t3.8.1-1",
+      "libsepol2:amd64\t3.8.1-1",
+      "libsmartcols1:amd64\t2.41.5-0+deb13u1",
+      "libsqlite3-0:amd64\t3.46.1-7+deb13u2",
+      "libssl3t64:amd64\t3.5.7-1~deb13u2",
+      "libstdc++6:amd64\t14.2.0-19",
+      "libsystemd0:amd64\t257.13-1~deb13u1",
+      "libtinfo6:amd64\t6.5+20250216-2",
+      "libudev1:amd64\t257.13-1~deb13u1",
+      "libuuid1:amd64\t2.41.5-0+deb13u1",
+      "libxxhash0:amd64\t0.8.3-2",
+      "libzstd1:amd64\t1.5.7+dfsg-1",
+      "login\t1:4.16.0-2+really2.41.5-0+deb13u1",
+      "login.defs\t1:4.17.4-2",
+      "mawk\t1.3.4.20250131-1",
+      "mount\t2.41.5-0+deb13u1",
+      "ncurses-base\t6.5+20250216-2",
+      "ncurses-bin\t6.5+20250216-2",
+      "netbase\t6.5",
+      "openssl\t3.5.7-1~deb13u2",
+      "openssl-provider-legacy\t3.5.7-1~deb13u2",
+      "passwd\t1:4.17.4-2",
+      "perl-base\t5.40.1-6+deb13u1",
+      "readline-common\t8.2-6",
+      "sed\t4.9-2+deb13u1",
+      "sqv\t1.3.0-3+b2",
+      "sysvinit-utils\t3.14-4",
+      "tar\t1.35+dfsg-3.1",
+      "tzdata\t2026c-0+deb13u1",
+      "util-linux\t2.41.5-0+deb13u1",
+      "zlib1g:amd64\t1:1.3.dfsg+really1.3.1-1+b1"
+    ],
+    "source_revision": "365118e7c9aca5aaa184ba4359eca95d9b5a6864",
+    "init": true,
+    "pids_limit": 64,
+    "healthcheck_form": "CMD"
+  },
+  "verified_date": "2026-10-05",
+  "timezone": "Europe/Amsterdam",
+  "host_packages_installed": [],
+  "helper": {
+    "source": "scripts/transcription/configureTestBot.py",
+    "installed_path": "/mnt/Datashare/apps/caitlyn-test/set-discord-token.py",
+    "runtime": "Python 3.11.9",
+    "extra_packages": [],
+    "python_path": "/bin/python3"
+  },
+  "backup_helper": {
+    "source": "scripts/transcription/backup.py",
+    "installed_path": "/root/.config/caitlyn-transcript-backup/backup.py",
+    "runtime": "3.11.9",
+    "extra_packages": [],
+    "schedule_id": 3,
+    "sha256": "398a00b335aa0c3789c4769a95f98352eea4291e9299dcbaa6bd63b4ebf53a8e"
+  }
+}

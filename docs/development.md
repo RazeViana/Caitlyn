@@ -116,11 +116,15 @@ Apply `016` before starting the social runtime from this checkout. Existing jobs
 
 Keep database dumps and private environment snapshots under `backups/`. Both Git and Docker build contexts exclude that directory; never remove these exclusions when sharing or building the project.
 
+Migration `017` adds the transcript event archive, private import checkpoints, indexed text search and participant row security. Enable replay only after applying it. The transcript PostgreSQL test uses its own disposable database and restricted role; the ordinary suite remains offline. See the [website integration contract](transcript-database.md) before adding any viewer, export or API.
+
+Migration `018` expands transcript event types for edits/deletions/corrections, adds bounded oversized-line recovery and private retention replay fences. Apply it before this recorder version. Fault tests cover crash tails, quarantine, invalid Unicode, unaffected channels, corrections and retention using the disposable PostgreSQL instance. Runtime diagnostics use the shared `logger`/`logData`; never include transcript bodies or raw database/provider errors. Backup verification restores only into a separately created network-isolated container. Production deployment still requires the complete release, separately reviewed migrations and a real multi-participant recording check.
+
 ## Branch base
 
-Create future feature branches from `caitlyn-3.0`. The integration branch was renamed from `caitlyn-2.0` locally and on GitHub on 2026-09-06; historical integration plans retain the former name.
+Create future feature branches from `2.2.0`, the current development branch for Caitlyn 2.2.0, local GPU voice transcription and FxEmbed connection recovery. It replaces `feat/voice-transcription-daily-logs`. The recovery commit `ec56850` from `fix/fxembed-network-recovery` is merged into `2.2.0`; remove that old branch after publishing the merge. The older `caitlyn-3.0` and `codex/social-media-replacement` branches are fully merged into `main` at `8608331` and can also be removed. The owner explicitly approved deleting `caitlyn-memory` at `ef4a50b` without merging its two old commits. Publish `2.2.0` before deleting old remote branches, and preserve `main`. Historical integration plans retain the names used at the time.
 Do not target or update `main` without an explicit release decision because pushes to `main` deploy to the homeserver.
 
-Keep new commits on `caitlyn-3.0` local unless a separate instruction explicitly authorizes publishing them. Renaming the GitHub branch did not push the local feature commits. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. This branch rename does not change package versions or deployment targets.
+The owner authorized publishing `2.2.0` with package version `2.2.0`. Keep subsequent work local unless publishing is authorized for that task. Replacing remote `main`, including a force-push, is a release action and is not part of normal feature development. Pushing `2.2.0` does not deploy the bot.
 
 The current [release workflow](automatic-deployment.md) checks the source, builds all four images and publishes a complete release before the mainframe updater acts. Never build releases with the local `--working-overlays` option or accidentally stage parked feature files. Keep database migrations under separate review; a changed migration fingerprint pauses automatic server updates.

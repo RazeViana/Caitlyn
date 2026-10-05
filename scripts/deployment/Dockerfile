@@ -25,8 +25,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY --from=build /app/dist ./dist
 COPY --chmod=644 scripts/deployment/checkRelease.mjs ./scripts/deployment/
+COPY --chmod=644 scripts/transcription/healthcheck.mjs ./scripts/transcription/
 RUN chmod 644 /app/package.json /app/package-lock.json \
-    && chmod 755 /app/scripts /app/scripts/deployment
+    && chmod 755 /app/scripts /app/scripts/deployment /app/scripts/transcription
 USER node
 RUN node --input-type=module -e "await import('./dist/core/environment.js')"
 CMD ["node", "dist/main.js"]
@@ -34,7 +35,7 @@ CMD ["node", "dist/main.js"]
 FROM bot AS broker
 USER root
 RUN apk add --no-cache docker-cli
-COPY --chmod=644 scripts/deployment/startBroker.mjs scripts/deployment/brokerHealth.mjs ./scripts/deployment/
+COPY --chmod=644 scripts/deployment/startBroker.mjs scripts/deployment/brokerHealth.mjs scripts/deployment/fxConnectionWatchdog.mjs ./scripts/deployment/
 RUN chmod 755 /app/scripts /app/scripts/deployment
 ENV HOME=/tmp
 USER node
