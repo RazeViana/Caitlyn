@@ -992,7 +992,7 @@
         "path": "/usr/local/lib/node_modules/npm/node_modules/yallist"
       }
     ],
-    "image": "sha256:4f5c1d70cb542004557b9c163f25f771779ef53dcd8bb56e9fc6da4dc111c944"
+    "image": "sha256:bea456eca74b9daa7046c549d5c82bb2c28b61958021a02b5421cb0deeae8c5c"
   },
   "database": {
     "image": "sha256:5090c7fd921d75d8984233faaf8fb0d8ad18ddc38f912fd1261f9999b5d214a7",
@@ -1156,7 +1156,7 @@
     "pgvector_library": "/usr/lib/postgresql/17/lib/vector.so",
     "package_manifest": "/var/lib/dpkg/status"
   },
-  "source_revision": "911f3bcc358f1e867e3a15ccf405755b89be31f1",
+  "source_revision": "b93fdffe339045d732c4d5bca375323195860c5d",
   "speech_worker": {
     "tag": "caitlyn-transcription:2.2.0-365118e",
     "id": "sha256:d084ad44d35059e52ae0d9ad2de28a2db9dba242c277ebd6976c2aefc59f58ec",
