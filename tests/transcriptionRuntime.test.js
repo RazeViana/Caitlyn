@@ -61,6 +61,42 @@ function fixture() {
 	return { runtime, records, captures, notices, first, second, client, guild, config, dependencies, channel, member, voiceState, post, advance: (ms) => { now += ms; }, now: () => now };
 }
 
+test("live presence follows current human membership and disappears when capture is not trustworthy", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	assert.equal(f.runtime.voicePresence(), null);
+	await f.runtime.start();
+	await setImmediate();
+	assert.deepEqual(f.runtime.voicePresence(), { channelId: "456", channelName: "Room 456", members: [{ userId: "111", displayName: "Server nickname Alice" }] });
+	const carol = f.member("333", "Carol");
+	f.first.members.set(carol.id, carol);
+	f.first.members.set("444", f.member("444", "Robot", true));
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111", "333"]);
+	f.first.members.delete(carol.id);
+	// Presence must not wait for reconciliation or infer attendance from buffered speech.
+	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111"]);
+	f.first.members.get("111").displayName = "New nickname";
+	assert.equal(f.runtime.voicePresence().members[0].displayName, "New nickname");
+	f.client.isReady = () => false;
+	assert.equal(f.runtime.voicePresence(), null);
+	f.client.isReady = () => true;
+	f.guild.available = false;
+	assert.equal(f.runtime.voicePresence(), null);
+	f.guild.available = true;
+	f.captures[0].failure();
+	assert.equal(f.runtime.voicePresence(), null);
+	await setImmediate();
+	f.advance(16_000);
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.runtime.voicePresence().members.length, 1);
+	await f.runtime.pause();
+	assert.equal(f.runtime.voicePresence(), null);
+	await f.runtime.stop();
+	assert.equal(f.runtime.voicePresence(), null);
+});
+
 test("automatic recording sticks with a conversation, captures joiners separately and follows occupied channels", async (context) => {
 	const f = fixture();
 	context.after(() => f.runtime.stop());

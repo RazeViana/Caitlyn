@@ -45,7 +45,8 @@ test("progress heartbeat is private, bounded, short-lived and cleared on stop", 
 	const directory = await mkdtemp(join(tmpdir(), "caitlyn-progress-"));
 	let now = 1_000_000;
 	const item = { ...record, phase: "transcribing" };
-	const worker = new TranscriptionProgress(directory, "123", () => [item, { ...item, guildId: "999" }], () => assert.fail("Unexpected failure"), () => now);
+	let presence = { channelId: "456", channelName: "Lounge", members: [{ userId: "111", displayName: "Alex" }] };
+	const worker = new TranscriptionProgress(directory, "123", () => [item, { ...item, guildId: "999" }], () => assert.fail("Unexpected failure"), () => now, () => presence);
 	const path = join(directory, "assets", "123", "progress.json");
 	const read = async () => JSON.parse(await readFile(path, "utf8"));
 	try {
@@ -54,11 +55,15 @@ test("progress heartbeat is private, bounded, short-lived and cleared on stop", 
 		const first = await read();
 		assert.equal(first.jobs.length, 1);
 		assert.equal(first.expiresAt - first.updatedAt, 8000);
+		assert.deepEqual(first.presence, presence);
+		presence = null;
 		now += 2000;
 		await worker.refresh();
 		assert.equal((await read()).updatedAt, now);
+		assert.equal((await read()).presence, null);
 		await worker.stop();
 		assert.deepEqual((await read()).jobs, []);
+		assert.equal((await read()).presence, null);
 		assert.equal((await read()).expiresAt, now);
 		now += 2000;
 		await worker.refresh();

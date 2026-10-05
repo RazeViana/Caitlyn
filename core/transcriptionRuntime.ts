@@ -19,7 +19,7 @@ import { TranscriptionHealth } from "./transcriptionHealth.js";
 import { TranscriptionMessages } from "./transcriptionMessages.js";
 import { TranscriptionMessageAccess } from "./transcriptionMessageAccess.js";
 import { TranscriptionAssets } from "./transcriptionAssets.js";
-import { TranscriptionProgress } from "./transcriptionProgress.js";
+import { TranscriptionProgress, type LiveVoicePresence } from "./transcriptionProgress.js";
 
 interface Session {
 	id: string;
@@ -205,6 +205,7 @@ export class TranscriptionRuntime {
 				userId: member.id, speaker: speaker.name }));
 		}) };
 		session.speakers.set(member.id, speaker);
+		this.dependencies.progress?.changed();
 		void this.queue.write(this.record(session, type, { at: new Date(at).toISOString(), userId: member.id, speaker: speaker.name, text: reason }));
 	}
 
@@ -216,6 +217,7 @@ export class TranscriptionRuntime {
 			...(verified ? {} : { audienceUserIds: [] }),
 		}));
 		session.speakers.delete(userId);
+		this.dependencies.progress?.changed();
 	}
 
 	private syncSpeakers(session: Session): void {
@@ -244,6 +246,7 @@ export class TranscriptionRuntime {
 		if (this.session !== session) return;
 		if (!session.sharingSafe) return;
 		session.sharingSafe = false;
+		this.dependencies.progress?.changed();
 		this.log("warn", "Voice transcription connection lost; recording will reconnect.", { channel: session.channel.id });
 		this.retryAt = this.dependencies.now() + 15_000;
 		// Stop packet receipt now; the serialized cleanup also writes the failure interval.
@@ -301,6 +304,7 @@ export class TranscriptionRuntime {
 					void capture.ready.then(async () => {
 						if (this.session !== session || this.stopping) return;
 						session!.ready = true;
+						this.dependencies.progress?.changed();
 						await this.queue.write(this.record(session!, "session_started", { text: "Local voice transcription started. Raw audio is not saved." }));
 						if (this.session !== session || this.stopping || this.paused) return;
 						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe identify speakers by Discord username. Raw audio is not saved. "
@@ -323,6 +327,7 @@ export class TranscriptionRuntime {
 		const session = this.session;
 		if (!session) return;
 		this.session = undefined;
+		this.dependencies.progress?.changed();
 		session.capture.close();
 		for (const speaker of session.speakers.values()) speaker.buffer.flush();
 		await this.queue.write(this.record(session, "session_stopped", { text: reason }));
@@ -331,6 +336,16 @@ export class TranscriptionRuntime {
 	}
 
 	pendingTranscriptions() { return this.queue.activity(); }
+
+	voicePresence(): LiveVoicePresence | null {
+		const session = this.session;
+		if (!session?.ready || !session.sharingSafe || this.paused || this.stopping || !this.client.isReady()
+			|| session.channel.guild.available === false) return null;
+		// Read current gateway membership, never the audience of an older audio chunk.
+		const members = this.humans(session.channel).filter((member) => session.speakers.has(member.id))
+			.map((member) => ({ userId: member.id, displayName: member.displayName }));
+		return members.length ? { channelId: session.channel.id, channelName: session.channel.name, members } : null;
+	}
 
 	healthSnapshot() {
 		const channels = this.client.guilds.cache.get(this.config.guildId)?.channels.cache.values() ?? [];
@@ -468,7 +483,8 @@ export function configuredTranscriptionRuntime(client: Client): TranscriptionRun
 	const messageAccess = archive ? new TranscriptionMessageAccess(client, pool, settings.config.guildId, logger) : undefined;
 	const assets = archive ? new TranscriptionAssets(client, pool, settings.config.directory, settings.config.guildId, logger) : undefined;
 	const progress = archive ? new TranscriptionProgress(settings.config.directory, settings.config.guildId,
-		() => runtime.pendingTranscriptions(), () => logger.warn("Website transcription progress could not be refreshed.")) : undefined;
+		() => runtime.pendingTranscriptions(), () => logger.warn("Website transcription progress could not be refreshed."),
+		Date.now, () => runtime.voicePresence()) : undefined;
 	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess, assets, progress });
 	return runtime;
 }
