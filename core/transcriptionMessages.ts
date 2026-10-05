@@ -7,6 +7,16 @@
 import { Events, type Client, type ClientEvents, type Message, type PartialMessage } from "discord.js";
 import type { TranscriptRecord } from "./transcriptionStore.js";
 import { captureAttachments } from "./transcriptionAssets.js";
+import { logForwarders } from "./discordLogForwarder.js";
+
+/** Use the same live destination as the logger, including setup changes and database refreshes. */
+export function shouldArchiveMessageChannel(client: Client, guildId: string, channelId: string, threadParentId?: string | null): boolean {
+	const forwarder = logForwarders.get(client);
+	if (!forwarder) return true;
+	const logChannelId = forwarder.logChannelId(guildId);
+	// Until log settings load, do not risk copying operational logs into conversations.
+	return logChannelId !== undefined && (logChannelId === null || channelId !== logChannelId && threadParentId !== logChannelId);
+}
 
 interface TrackedMessage { original?: TranscriptRecord; latest: TranscriptRecord }
 type MessageEvent = "message_posted" | "message_edited" | "message_deleted";
@@ -41,6 +51,8 @@ export class TranscriptionMessages {
 	private capture(message: Message | PartialMessage, type: MessageEvent, at: number): void {
 		if (this.stopped || !this.healthy() || !message.inGuild() || message.guildId !== this.guildId
 			|| message.system || !Number.isFinite(at)) return;
+		const threadParentId = message.channel.isThread() ? message.channel.parentId ?? message.channel.parent?.id : undefined;
+		if (!shouldArchiveMessageChannel(this.client, this.guildId, message.channelId, threadParentId)) return;
 		// Snapshot immediately: discord.js may mutate the cached message before an
 		// asynchronous original-message lookup or file write has finished.
 		const parent = message.channel.isThread() ? message.channel.parent : null;
@@ -53,7 +65,7 @@ export class TranscriptionMessages {
 			userId: message.author?.id, speaker: message.author?.username,
 			avatarHash: message.author?.avatar,
 			activityChannelId: message.channelId, activityChannelName: message.channel.name,
-			activityParentChannelId: parent?.id, activityParentChannelName: parent?.name,
+			activityParentChannelId: threadParentId ?? undefined, activityParentChannelName: parent?.name,
 			messageId: message.id, messageUrl: message.url,
 			text: type === "message_deleted" ? undefined : message.content ?? undefined,
 			attachmentNames: type === "message_deleted" ? [] : [...message.attachments.values()].map((item) => item.name),
@@ -64,7 +76,7 @@ export class TranscriptionMessages {
 	}
 
 	private async save(record: TranscriptRecord): Promise<void> {
-		if (!this.healthy()) return;
+		if (!this.healthy() || !shouldArchiveMessageChannel(this.client, this.guildId, record.channelId, record.activityParentChannelId)) return;
 		const tracked = this.messages.get(record.messageId!);
 		if (tracked && (record.type === "message_posted" || tracked.latest.type === "message_deleted"
 			|| Date.parse(record.at) <= Date.parse(tracked.latest.at) && record.type === "message_edited")) return;
@@ -78,6 +90,8 @@ export class TranscriptionMessages {
 			record.userId ??= original?.userId;
 			record.speaker ??= original?.speaker;
 		}
+		// A setup change can happen while the original-message lookup is pending.
+		if (!shouldArchiveMessageChannel(this.client, this.guildId, record.channelId, record.activityParentChannelId)) return;
 		await this.write(record);
 		this.messages.set(record.messageId!, { original, latest: record });
 		if (this.messages.size > 2048) this.messages.delete(this.messages.keys().next().value!);

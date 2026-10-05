@@ -1,0 +1,600 @@
+{
+  "verified_date": "2026-10-05",
+  "timezone": "Europe/Amsterdam",
+  "host_packages_installed": [],
+  "image": "sha256:eb5c5e85cbe50963a38bc9fed6051000699f82b88989a73c4b88345331771faf",
+  "tag": "caitlyn-transcription:2.2.0-large-v3-bf215c6",
+  "source_revision": "bf215c61fc52a55d201f50f7a781018669cb9783",
+  "model": {
+    "repository": "Systran/faster-whisper-large-v3",
+    "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+    "path": "/models/whisper"
+  },
+  "runtime": {
+    "device": "cuda",
+    "compute_type": "float32",
+    "cpu_limit": 2,
+    "memory_limit": "8g",
+    "memory_swap_limit": "8g",
+    "pids_limit": 64,
+    "init": true
+  },
+  "python": "3.11.16",
+  "pythonPath": "/usr/local/bin/python",
+  "packages": [
+    {
+      "name": "anyio",
+      "version": "4.15.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "av",
+      "version": "18.1.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.7.22",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "ctranslate2",
+      "version": "4.8.2",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "faster-whisper",
+      "version": "1.2.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "filelock",
+      "version": "4.0.8",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "flatbuffers",
+      "version": "25.12.19",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "fsspec",
+      "version": "2026.9.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "h11",
+      "version": "0.16.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "hf-xet",
+      "version": "1.6.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "httpcore",
+      "version": "1.0.9",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "httpx",
+      "version": "0.28.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "huggingface_hub",
+      "version": "1.33.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "numpy",
+      "version": "2.4.6",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "nvidia-cublas-cu12",
+      "version": "12.8.4.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "nvidia-cudnn-cu12",
+      "version": "9.10.2.21",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "onnxruntime",
+      "version": "1.30.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "pip",
+      "version": "24.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "protobuf",
+      "version": "7.36.2",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.3",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "setuptools",
+      "version": "79.0.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "tokenizers",
+      "version": "0.23.2",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "tqdm",
+      "version": "4.70.1",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    },
+    {
+      "name": "wheel",
+      "version": "0.46.3",
+      "path": "/usr/local/lib/python3.11/site-packages"
+    }
+  ],
+  "osPackages": [
+    "adduser\t3.152",
+    "apt\t3.0.3",
+    "base-files\t13.8+deb13u7",
+    "base-passwd\t3.6.7",
+    "bash\t5.2.37-2+b10",
+    "bsdutils\t1:2.41.5-0+deb13u1",
+    "ca-certificates\t20250419",
+    "coreutils\t9.7-3",
+    "dash\t0.5.12-12",
+    "debconf\t1.5.91",
+    "debian-archive-keyring\t2025.1",
+    "debianutils\t5.23.2",
+    "diffutils\t1:3.10-4",
+    "dpkg\t1.22.22",
+    "findutils\t4.10.0-3",
+    "gcc-14-base\t14.2.0-19",
+    "grep\t3.11-4",
+    "gzip\t1.13-1+deb13u1",
+    "hostname\t3.25",
+    "init-system-helpers\t1.69~deb13u1",
+    "libacl1\t2.3.2-2+b1",
+    "libapt-pkg7.0\t3.0.3",
+    "libattr1\t1:2.5.2-3",
+    "libaudit-common\t1:4.0.2-2+deb13u1",
+    "libaudit1\t1:4.0.2-2+deb13u1",
+    "libblkid1\t2.41.5-0+deb13u1",
+    "libbsd0\t0.12.2-2",
+    "libbz2-1.0\t1.0.8-6",
+    "libc-bin\t2.41-12+deb13u4",
+    "libc6\t2.41-12+deb13u4",
+    "libcap-ng0\t0.8.5-4+b1",
+    "libcap2\t1:2.75-10+deb13u1+b3",
+    "libcrypt1\t1:4.4.38-1",
+    "libdb5.3t64\t5.3.28+dfsg2-9",
+    "libdebconfclient0\t0.280",
+    "libffi8\t3.4.8-2",
+    "libgcc-s1\t14.2.0-19",
+    "libgdbm6t64\t1.24-2",
+    "libgmp10\t2:6.3.0+dfsg-3",
+    "libhogweed6t64\t3.10.1-1",
+    "liblastlog2-2\t2.41.5-0+deb13u1",
+    "liblz4-1\t1.10.0-4",
+    "liblzma5\t5.8.1-1+deb13u1",
+    "libmd0\t1.1.0-2+b1",
+    "libmount1\t2.41.5-0+deb13u1",
+    "libncursesw6\t6.5+20250216-2",
+    "libnettle8t64\t3.10.1-1",
+    "libpam-modules\t1.7.0-5",
+    "libpam-modules-bin\t1.7.0-5",
+    "libpam-runtime\t1.7.0-5",
+    "libpam0g\t1.7.0-5",
+    "libpcre2-8-0\t10.46-1~deb13u2",
+    "libreadline8t64\t8.2-6",
+    "libseccomp2\t2.6.0-2",
+    "libselinux1\t3.8.1-1",
+    "libsemanage-common\t3.8.1-1",
+    "libsemanage2\t3.8.1-1",
+    "libsepol2\t3.8.1-1",
+    "libsmartcols1\t2.41.5-0+deb13u1",
+    "libsqlite3-0\t3.46.1-7+deb13u2",
+    "libssl3t64\t3.5.7-1~deb13u2",
+    "libstdc++6\t14.2.0-19",
+    "libsystemd0\t257.13-1~deb13u1",
+    "libtinfo6\t6.5+20250216-2",
+    "libudev1\t257.13-1~deb13u1",
+    "libuuid1\t2.41.5-0+deb13u1",
+    "libxxhash0\t0.8.3-2",
+    "libzstd1\t1.5.7+dfsg-1",
+    "login\t1:4.16.0-2+really2.41.5-0+deb13u1",
+    "login.defs\t1:4.17.4-2",
+    "mawk\t1.3.4.20250131-1",
+    "mount\t2.41.5-0+deb13u1",
+    "ncurses-base\t6.5+20250216-2",
+    "ncurses-bin\t6.5+20250216-2",
+    "netbase\t6.5",
+    "openssl\t3.5.7-1~deb13u2",
+    "openssl-provider-legacy\t3.5.7-1~deb13u2",
+    "passwd\t1:4.17.4-2",
+    "perl-base\t5.40.1-6+deb13u1",
+    "readline-common\t8.2-6",
+    "sed\t4.9-2+deb13u1",
+    "sqv\t1.3.0-3+b2",
+    "sysvinit-utils\t3.14-4",
+    "tar\t1.35+dfsg-3.1",
+    "tzdata\t2026c-0+deb13u1",
+    "util-linux\t2.41.5-0+deb13u1",
+    "zlib1g\t1:1.3.dfsg+really1.3.1-1+b1"
+  ],
+  "modelConfig": {
+    "alignment_heads": [
+      [
+        7,
+        0
+      ],
+      [
+        10,
+        17
+      ],
+      [
+        12,
+        18
+      ],
+      [
+        13,
+        12
+      ],
+      [
+        16,
+        1
+      ],
+      [
+        17,
+        14
+      ],
+      [
+        19,
+        11
+      ],
+      [
+        21,
+        4
+      ],
+      [
+        24,
+        1
+      ],
+      [
+        25,
+        6
+      ]
+    ],
+    "lang_ids": [
+      50259,
+      50260,
+      50261,
+      50262,
+      50263,
+      50264,
+      50265,
+      50266,
+      50267,
+      50268,
+      50269,
+      50270,
+      50271,
+      50272,
+      50273,
+      50274,
+      50275,
+      50276,
+      50277,
+      50278,
+      50279,
+      50280,
+      50281,
+      50282,
+      50283,
+      50284,
+      50285,
+      50286,
+      50287,
+      50288,
+      50289,
+      50290,
+      50291,
+      50292,
+      50293,
+      50294,
+      50295,
+      50296,
+      50297,
+      50298,
+      50299,
+      50300,
+      50301,
+      50302,
+      50303,
+      50304,
+      50305,
+      50306,
+      50307,
+      50308,
+      50309,
+      50310,
+      50311,
+      50312,
+      50313,
+      50314,
+      50315,
+      50316,
+      50317,
+      50318,
+      50319,
+      50320,
+      50321,
+      50322,
+      50323,
+      50324,
+      50325,
+      50326,
+      50327,
+      50328,
+      50329,
+      50330,
+      50331,
+      50332,
+      50333,
+      50334,
+      50335,
+      50336,
+      50337,
+      50338,
+      50339,
+      50340,
+      50341,
+      50342,
+      50343,
+      50344,
+      50345,
+      50346,
+      50347,
+      50348,
+      50349,
+      50350,
+      50351,
+      50352,
+      50353,
+      50354,
+      50355,
+      50356,
+      50357,
+      50358
+    ],
+    "suppress_ids": [
+      1,
+      2,
+      7,
+      8,
+      9,
+      10,
+      14,
+      25,
+      26,
+      27,
+      28,
+      29,
+      31,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      90,
+      91,
+      92,
+      93,
+      359,
+      503,
+      522,
+      542,
+      873,
+      893,
+      902,
+      918,
+      922,
+      931,
+      1350,
+      1853,
+      1982,
+      2460,
+      2627,
+      3246,
+      3253,
+      3268,
+      3536,
+      3846,
+      3961,
+      4183,
+      4667,
+      6585,
+      6647,
+      7273,
+      9061,
+      9383,
+      10428,
+      10929,
+      11938,
+      12033,
+      12331,
+      12562,
+      13793,
+      14157,
+      14635,
+      15265,
+      15618,
+      16553,
+      16604,
+      18362,
+      18956,
+      20075,
+      21675,
+      22520,
+      26130,
+      26161,
+      26435,
+      28279,
+      29464,
+      31650,
+      32302,
+      32470,
+      36865,
+      42863,
+      47425,
+      49870,
+      50254,
+      50258,
+      50359,
+      50360,
+      50361,
+      50362,
+      50363
+    ],
+    "suppress_ids_begin": [
+      220,
+      50257
+    ]
+  },
+  "modelId": "large-v3",
+  "computeType": "float32",
+  "benchmark": {
+    "model": "large-v3",
+    "runtime": {
+      "device": "cuda",
+      "compute_type": "float32"
+    },
+    "load_seconds": 78.904,
+    "memory_peak_bytes": 6250614784,
+    "memory_current_bytes": 1626619904,
+    "results": [
+      {
+        "case": "public_speech",
+        "audio_seconds": 11.0,
+        "seconds": 12.985,
+        "real_time_factor": 1.18,
+        "characters": 108,
+        "sha256": "37d003a932256f11d07e00d0c1478443140ea5e87d817b0f8bc577c1d2aa2e1b",
+        "reference_words": 22,
+        "word_errors": 0,
+        "word_error_rate": 0.0
+      },
+      {
+        "case": "public_speech",
+        "audio_seconds": 11.0,
+        "seconds": 1.742,
+        "real_time_factor": 0.158,
+        "characters": 108,
+        "sha256": "37d003a932256f11d07e00d0c1478443140ea5e87d817b0f8bc577c1d2aa2e1b",
+        "reference_words": 22,
+        "word_errors": 0,
+        "word_error_rate": 0.0
+      },
+      {
+        "case": "public_speech",
+        "audio_seconds": 11.0,
+        "seconds": 1.799,
+        "real_time_factor": 0.164,
+        "characters": 108,
+        "sha256": "37d003a932256f11d07e00d0c1478443140ea5e87d817b0f8bc577c1d2aa2e1b",
+        "reference_words": 22,
+        "word_errors": 0,
+        "word_error_rate": 0.0
+      },
+      {
+        "case": "short_speech",
+        "audio_seconds": 3.0,
+        "seconds": 1.208,
+        "real_time_factor": 0.403,
+        "characters": 28,
+        "sha256": "62f8d95c5d736b5eb52d9467c4f669625a3b5c39ccca91c5767171725f7e0688"
+      },
+      {
+        "case": "short_speech",
+        "audio_seconds": 3.0,
+        "seconds": 1.182,
+        "real_time_factor": 0.394,
+        "characters": 28,
+        "sha256": "62f8d95c5d736b5eb52d9467c4f669625a3b5c39ccca91c5767171725f7e0688"
+      },
+      {
+        "case": "short_speech",
+        "audio_seconds": 3.0,
+        "seconds": 1.096,
+        "real_time_factor": 0.365,
+        "characters": 28,
+        "sha256": "62f8d95c5d736b5eb52d9467c4f669625a3b5c39ccca91c5767171725f7e0688"
+      },
+      {
+        "case": "twenty_second_chunk",
+        "audio_seconds": 20.0,
+        "seconds": 2.449,
+        "real_time_factor": 0.122,
+        "characters": 186,
+        "sha256": "eb89a80902d166d84fa0a0fcccd8d4d1f80342036b715de6d603ca331cab591f"
+      },
+      {
+        "case": "twenty_second_chunk",
+        "audio_seconds": 20.0,
+        "seconds": 2.551,
+        "real_time_factor": 0.128,
+        "characters": 186,
+        "sha256": "eb89a80902d166d84fa0a0fcccd8d4d1f80342036b715de6d603ca331cab591f"
+      },
+      {
+        "case": "silence",
+        "audio_seconds": 3.0,
+        "seconds": 0.03,
+        "real_time_factor": 0.01,
+        "characters": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "gpu_total_peak_mib": 7244,
+  "production_warmup": {
+    "ready": true,
+    "model": "large-v3",
+    "compute_type": "float32",
+    "audio_seconds": 11.0,
+    "seconds": 2.399,
+    "reference_words_matched": true,
+    "sha256": "37d003a932256f11d07e00d0c1478443140ea5e87d817b0f8bc577c1d2aa2e1b"
+  }
+}

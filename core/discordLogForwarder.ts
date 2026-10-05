@@ -123,6 +123,7 @@ export function createDiscordLogForwarder(client: Client, overrides: Partial<For
 	const destinations = new Map<string, Destination>();
 	const startup: LogRecord[] = [];
 	let initialized = false;
+	let settingsAvailable = false;
 	let stopped = false;
 	let revision = 0;
 	let refreshing = false;
@@ -134,6 +135,7 @@ export function createDiscordLogForwarder(client: Client, overrides: Partial<For
 	function update(settings: GuildLogSettings): void {
 		revision++;
 		if (settings.log_scope !== "console") return;
+		settingsAvailable = true;
 		const existing = destinations.get(settings.guild_id);
 		if (existing?.settings.log_channel_id === settings.log_channel_id
 			&& JSON.stringify(existing.settings.log_levels) === JSON.stringify(settings.log_levels)) return;
@@ -185,6 +187,7 @@ export function createDiscordLogForwarder(client: Client, overrides: Partial<For
 			const settings = (await dependencies.settings.list()).filter((row) => row.log_scope === "console");
 			if (stopped || before !== revision) return;
 			if (settings.length > 1) {
+				settingsAvailable = false;
 				destinations.clear();
 				dependencies.diagnostic("More than one server is set up for private logs; sending logs to Discord is paused. Check database setup step 012.");
 				return;
@@ -193,6 +196,7 @@ export function createDiscordLogForwarder(client: Client, overrides: Partial<For
 				if (!settings.some((row) => row.guild_id === id)) destinations.delete(id);
 			}
 			for (const row of settings) update(row);
+			settingsAvailable = true;
 			if (!initialized) {
 				initialized = true;
 				for (const record of startup.splice(0)) enqueue(record);
@@ -297,6 +301,10 @@ export function createDiscordLogForwarder(client: Client, overrides: Partial<For
 	}
 
 	return {
+		/** Undefined means settings are not known; null means this guild has no log destination. */
+		logChannelId(guildId: string): string | null | undefined {
+			return settingsAvailable ? destinations.get(guildId)?.settings.log_channel_id ?? null : undefined;
+		},
 		update(settings: GuildLogSettings): void {
 			if (stopped) return;
 			update(settings);

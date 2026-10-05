@@ -19,7 +19,9 @@ Command replies are private Discord cards with separate recording state, speech-
 
 Voice joins/leaves, mute/deafen changes, camera changes and screen-sharing activity belong to the recorded voice channel's daily log and retain voice-attendance restrictions.
 
-Chat capture runs independently for new messages Discord delivers in the configured server's readable channels. It includes members outside voice, ordinary bot/webhook posts, full text, account usernames/IDs, message IDs/links, source-channel metadata, thread/forum parents and attachment filenames. DMs, other servers and system events are excluded. Attachment contents and historical Discord messages are not downloaded. `TRANSCRIPTION_MESSAGES_ENABLED=false` disables new chat capture without changing voice recording or access to already stored messages.
+Chat capture runs independently for new messages Discord delivers in the configured server's readable channels. It includes members outside voice, ordinary bot/webhook posts, full text, account usernames/IDs, message IDs/links, source-channel metadata, thread/forum parents and attachment filenames. DMs, other servers and system events are excluded. Supported uploads are cached locally as described in the [database and asset contract](transcript-database.md); historical Discord messages are not backfilled. `TRANSCRIPTION_MESSAGES_ENABLED=false` disables new chat capture without changing voice recording or access to already stored messages.
+
+Caitlyn's configured Discord log channel and its child threads are excluded from conversation capture, including edits, individual deletions and bulk deletions. The filter reads the live destination used by the log forwarder, so `/setup logs` changes take effect immediately for incoming or queued events. Chat events received before an enabled forwarder has loaded its settings are skipped to avoid archiving an unknown log destination. Permission snapshots also omit the log channel and its threads, hiding previously archived log entries from restricted readers after the next refresh (normally within 30 seconds). Existing operator files and backups are retained.
 
 Posts, complete observed edits and deletions are separate append-only events. Current source-channel View Channel and Read Message History control visibility for all three; private threads also require thread membership or Manage Threads. Voice joins/leaves do not restrict text history. The bot refreshes these permissions in PostgreSQL, and unavailable or expired permission information denies text access. See the [database access contract](transcript-database.md).
 
@@ -61,7 +63,7 @@ Schedule this script once daily using supported TrueNAS cron middleware, with st
 
 ## Local speech worker
 
-The worker under `scripts/transcription/` uses faster-whisper 1.2.1 with the English `base.en` model. The default image and Compose configuration use Mainframe's NVIDIA GPU with `int8_float32` inference. An explicit CPU configuration is also available. Model weights are downloaded **while building the image**. The image pins the model revision and Python package versions. Runtime loads only local model files, enables offline mode, and needs no API key or paid service. The supplied Compose network is internal and publishes no host port; requests and audio remain on Mainframe.
+The worker under `scripts/transcription/` uses faster-whisper 1.2.1 with the full `large-v3` model, pinned to `Systran/faster-whisper-large-v3` revision `edaa852ec7e145841d8ffdb056a99866b5f0a478`. The default image and GPU Compose configuration use Mainframe's GTX 1070 with `float32` inference. The container allows 8 GiB of system RAM to cover model loading; this is separate from GPU memory. The explicit CPU configuration retains pinned English `base.en` and its 1 GiB RAM limit. Model weights are downloaded **while building the image**. The image pins the model revision and Python package versions. Runtime loads only local model files, enables offline mode, and needs no API key or paid service. The supplied Compose network is internal and publishes no host port; requests and audio remain on Mainframe.
 
 Build and start this worker as its own stack during activation:
 
@@ -74,11 +76,11 @@ This creates the internal Docker network `caitlyn-transcription`. Attach **only 
 
 ### NVIDIA GPU configuration
 
-Mainframe's GTX 1070 has 8 GiB of VRAM and supports `int8_float32` inference. The default Compose file exposes one selected GPU to the speech worker only. It keeps the same English model, memory-only audio handling, private network and daily log behavior. No extra GPU override file is needed.
+Mainframe's GTX 1070 has 8 GiB of VRAM and runs this model with `float32` inference. The default Compose file exposes one selected GPU to the speech worker only. Audio handling stays in memory, requests stay on the private network, and the bot writes daily logs. No extra GPU override file is needed.
 
 Use the GPU option for Mainframe: the same 11-second test clip took a median **0.284 seconds on GPU versus 1.909 seconds on CPU** after initialization, about 6.7 times faster, with identical transcript hashes. The first GPU request took 16.942 seconds to initialize libraries. This measures one clean speech sample, not conversation accuracy or total concurrent-speaker capacity. The CPU option remains available for rollback and machines without NVIDIA GPUs.
 
-`TRANSCRIPTION_GPU_ID` selects the Docker-visible GPU (default `0`; a GPU UUID can also be used). It is a Compose environment variable, not a setting in the bot's `.env`. The worker uses `TRANSCRIPTION_DEVICE=cuda` and `TRANSCRIPTION_COMPUTE_TYPE=int8_float32`. CPU threads are independently configurable through `TRANSCRIPTION_CPU_THREADS` (1–32; default 2). Invalid or unsupported device/precision settings fail startup; the worker does not silently switch devices.
+`TRANSCRIPTION_GPU_ID` selects the Docker-visible GPU (default `0`; a GPU UUID can also be used). It is a Compose environment variable, not a setting in the bot's `.env`. The GPU worker uses `TRANSCRIPTION_DEVICE=cuda` and `TRANSCRIPTION_COMPUTE_TYPE=float32`. CPU threads are independently configurable through `TRANSCRIPTION_CPU_THREADS` (1–32; default 2). Invalid or unsupported device/precision settings fail startup; the worker does not silently switch devices.
 
 For an explicit CPU deployment, use the standalone CPU file **instead of** the GPU file:
 
@@ -106,7 +108,7 @@ TRANSCRIPTION_TIMEZONE=Europe/Amsterdam
 
 `GUILD_ID` selects the server. The endpoint accepts local HTTP addresses or Docker service names and refuses credentials, public hostnames and redirects. POST PCM16 mono 16 kHz WAV to `/transcribe?language=en` to receive text and `recognition` metadata: model, language, audio/processing duration, segment offsets, average log probability and no-speech probability. These scores are diagnostic signals, not accuracy percentages. Segment offsets refer to the submitted PCM; they do not reconstruct wall-clock silence. Older text-only worker responses remain supported. Public Discord voice traffic still uses the bot's normal Discord connection.
 
-Changing language to `auto`/`nl` also requires rebuilding with an appropriate **multilingual** model and its matching `WHISPER_MODEL_REVISION`; `base.en` is English-only. Do not expect changing the language variable alone to change the image's model.
+Production remains configured for English (`en`). The full `large-v3` model supports other languages, including `auto`/`nl`; the CPU alternative's `base.en` model is English-only and requires a different model/revision before using those language settings. Changing a language setting does not change the model packaged in an existing image.
 
 ## Mainframe activation and rollback
 
@@ -124,14 +126,16 @@ To roll back, restore the saved TrueNAS app configuration, environment and previ
 
 ## Verification
 
+The full `large-v3` production image was checked on Mainframe's GTX 1070 with 8 GiB of GPU memory. Full-precision requests used at most 7,244 MiB total GPU memory with the existing bots also loaded; warm 20-second clips took 2.45–2.55 seconds. The public reference passage matched and silence produced no text. See [deployment evidence and the owner-requested archive reset](mainframe-installations.md#full-speech-model-and-archive-reset-october-5). These checks do not establish accuracy for members' microphones.
+
 `npm run check` includes transcript/configuration/audio/queue/lifecycle/command tests and the local worker HTTP tests (Python 3 is needed for the latter). Tests use synthetic Discord clients and temporary directories, with no live token or production database. The Opus test exercises a real encoder/decoder. The worker can be tested with a public speech fixture in a disposable container using `--network none`, which verifies that inference works without external access.
 
 `scripts/transcription/benchmark.py` exercises the actual HTTP handler four times by default with a supplied local speech file (up to 20 seconds); `--repeats 120` runs an accelerated load check. It reports timings, the warm median, total processed audio duration and a transcript hash without printing conversation text. For a CUDA image and a fixture already placed in `/path/to/fixtures`:
 
 ```sh
-docker run --rm -i --network none --gpus device=0 --cpus 2 --memory 1g \
+docker run --rm -i --network none --gpus device=0 --cpus 2 --memory 8g \
   --read-only --tmpfs /tmp:size=16m -v /path/to/fixtures:/fixtures:ro \
-  --entrypoint python caitlyn-transcription:base-en-cuda \
+  --entrypoint python caitlyn-transcription:large-v3-cuda \
   - /fixtures/sample.wav < scripts/transcription/benchmark.py
 ```
 

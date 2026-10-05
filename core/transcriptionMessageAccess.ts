@@ -7,6 +7,7 @@
 import { ChannelType, Events, PermissionFlagsBits, type Client, type GuildBasedChannel, type GuildMember } from "discord.js";
 import type { Pool } from "pg";
 import { logData } from "./dataLog.js";
+import { shouldArchiveMessageChannel } from "./transcriptionMessages.js";
 
 export function canReadMessageChannel(channel: GuildBasedChannel, member: GuildMember): boolean {
 	const permissions = channel.permissionsFor(member);
@@ -147,6 +148,7 @@ export class TranscriptionMessageAccess {
 		const snapshots: { channel_id: string; user_ids: string[] }[] = [];
 		for (const channel of guild.channels.cache.values()) {
 			if (!channel.isTextBased() || this.deletedChannels.has(channel.id)
+				|| !shouldArchiveMessageChannel(this.client, this.guildId, channel.id, channel.isThread() ? channel.parentId : undefined)
 				|| !channel.permissionsFor(me)?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory])) continue;
 			if (channel.type === ChannelType.PrivateThread) {
 				// Replace stale cache entries as well as adding missing memberships.
@@ -165,9 +167,13 @@ export class TranscriptionMessageAccess {
 			try {
 				await connection.query("BEGIN");
 				await connection.query("DELETE FROM discord.transcript_channel_access WHERE guild_id=$1", [this.guildId]);
+				const currentSnapshots = snapshots.filter((snapshot) => {
+					const channel = guild.channels.cache.get(snapshot.channel_id);
+					return channel && shouldArchiveMessageChannel(this.client, this.guildId, channel.id, channel.isThread() ? channel.parentId : undefined);
+				});
 				await connection.query(`INSERT INTO discord.transcript_channel_access(guild_id,channel_id,user_ids,valid_until)
 					SELECT $1, channel_id, user_ids, statement_timestamp()+interval '90 seconds'
-					FROM jsonb_to_recordset($2::jsonb) AS records(channel_id text,user_ids text[])`, [this.guildId, JSON.stringify(snapshots)]);
+					FROM jsonb_to_recordset($2::jsonb) AS records(channel_id text,user_ids text[])`, [this.guildId, JSON.stringify(currentSnapshots)]);
 				await connection.query("COMMIT");
 			}
 			catch (error) {

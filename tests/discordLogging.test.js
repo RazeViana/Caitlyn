@@ -90,6 +90,28 @@ test("only the main server receives logs and legacy destinations in other server
 	await forwarding.stop();
 });
 
+test("the archive can read the current log destination without exposing log content", async () => {
+	const fixture = forwarderFixture([settings("111", "112")]);
+	const forwarding = createDiscordLogForwarder(fixture.client, fixture.dependencies);
+	try {
+		assert.equal(forwarding.logChannelId("111"), undefined);
+		await forwarding.refresh();
+		assert.equal(forwarding.logChannelId("111"), "112");
+		assert.equal(forwarding.logChannelId("222"), null);
+		forwarding.update(settings("111", "113", "console", []));
+		assert.equal(forwarding.logChannelId("111"), "113");
+		fixture.dependencies.settings.list = async () => { throw new Error("offline"); };
+		await forwarding.refresh();
+		assert.equal(forwarding.logChannelId("111"), "113");
+		forwarding.update(settings("111", null));
+		assert.equal(forwarding.logChannelId("111"), null);
+		fixture.dependencies.settings.list = async () => [settings("111", "112"), settings("222", "223")];
+		await forwarding.refresh();
+		assert.equal(forwarding.logChannelId("111"), undefined);
+	}
+	finally { await forwarding.stop(); }
+});
+
 test("redaction removes configured and URL-encoded credentials, bearer headers, URLs, and ANSI codes", () => {
 	const text = "\u001b[31msecret+value secret%2Bvalue Bearer abc.def postgresql://user:pass@localhost/db https://user:pass@service.invalid/api\u001b[0m";
 	const redacted = redactLog(text, { TOKEN: "secret+value" });
