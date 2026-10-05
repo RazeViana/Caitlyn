@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 import { attachmentUrl, captureAttachments, downloadAttachment, sameMessageRevision, assetEventKey, assetFileKey, TranscriptionAssets } from "../core/transcriptionAssets.ts";
 
 const upload = { id: "789", name: "clip.mp4", size: 6, contentType: "video/mp4", url: "https://cdn.discordapp.com/attachments/456/789/clip.mp4?ex=123&hm=private" };
@@ -48,8 +49,8 @@ test("streamed files are atomic, private, checked for truncation and bounded by 
 
 test("ready files survive worker replay; profile export includes server and global avatars", async () => {
 	const directory = await mkdtemp(join(tmpdir(), "caitlyn-assets-"));
-	const member = { id: "111", user: { avatar: "a".repeat(32) }, avatar: "b".repeat(32) };
-	const client = { guilds: { cache: new Map([["123", { members: { cache: new Map([["111", member]]) } }]]) } };
+	const member = { id: "111", displayName: "Member", user: { avatar: "a".repeat(32) }, avatar: "b".repeat(32) };
+	const client = Object.assign(new EventEmitter(), { guilds: { cache: new Map([["123", { members: { cache: new Map([["111", member]]), fetch: async () => new Map([["111", member]]) } }]]) } });
 	const db = { query: async () => ({ rows: [] }) };
 	const warnings = [];
 	const worker = new TranscriptionAssets(client, db, directory, "123", { warn: (value) => warnings.push(value) });
