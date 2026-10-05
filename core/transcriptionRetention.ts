@@ -9,6 +9,7 @@ import { join } from "node:path";
 import type { Pool } from "pg";
 import { transcriptDay } from "./transcriptionStore.js";
 import { syncDirectory } from "./transcriptionFiles.js";
+import { assetFileKey } from "./transcriptionAssets.js";
 
 export async function expireTranscripts(database: Pool, directory: string, guildId: string, timezone: string, days: number, now = Date.now()): Promise<number> {
 	if (!Number.isInteger(days) || days < 0 || days > 36500) throw new Error("Invalid retention period");
@@ -56,6 +57,25 @@ export async function expireTranscripts(database: Pool, directory: string, guild
 			}
 			await syncDirectory(path);
 		}
+	}
+	// Media files belong to individual immutable events. Only remove them after
+	// their event is gone and below the committed retention fence.
+	const assetRoot = join(directory, "assets", guildId);
+	for (const file of await entries(join(assetRoot, "events"))) {
+		if (!file.isFile() || !/^[a-f0-9]{64}\.json$/.test(file.name)) continue;
+		const path = join(assetRoot, "events", file.name);
+		const saved = JSON.parse(await readFile(path, "utf8"));
+		if (saved.guildId !== guildId || !Number.isFinite(Date.parse(saved.at)) || transcriptDay(saved.at, timezone) >= cutoffDay) continue;
+		const existing = await database.query("SELECT 1 FROM discord.transcript_events WHERE event_id=$1", [saved.eventId]);
+		if (existing.rows.length) continue;
+		for (const item of saved.attachments ?? []) {
+			if (/^[1-9]\d{0,19}$/.test(item.id) && item.key === assetFileKey(guildId, saved.eventId, item.id)) {
+				await unlink(join(assetRoot, "files", item.key + ".bin")).catch((error: NodeJS.ErrnoException) => { if (error.code !== "ENOENT") throw error; });
+			}
+		}
+		await unlink(path);
+		await syncDirectory(join(assetRoot, "events"));
+		await syncDirectory(join(assetRoot, "files"));
 	}
 	return count;
 }

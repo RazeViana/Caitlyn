@@ -9,6 +9,7 @@ import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { privateJson, syncDirectory } from "./transcriptionFiles.js";
+import type { CapturedAttachment } from "./transcriptionAssets.js";
 
 export interface TranscriptSettings { paused: boolean; excludedChannelIds?: string[]; retentionDays?: number }
 
@@ -41,6 +42,8 @@ export interface TranscriptRecord {
 	messageId?: string;
 	messageUrl?: string;
 	attachmentNames?: string[];
+	attachments?: CapturedAttachment[];
+	avatarHash?: string | null;
 	targetEventId?: string;
 	actorId?: string;
 	actorUsername?: string;

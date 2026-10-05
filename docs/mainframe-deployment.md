@@ -1,6 +1,6 @@
 # Mainframe deployment
 
-For ongoing main-branch updates, use [automatic deployment](automatic-deployment.md). The image IDs and checks below record the initial manual rollout, not the latest registry release.
+For the current 2.2.0 voice and independent chat release, see the [verified production installation](mainframe-installations.md). For ongoing main-branch updates, use [automatic deployment](automatic-deployment.md). The image IDs and checks below record earlier manual rollouts.
 
 ## FxEmbed recovery verification (2026-10-03)
 
