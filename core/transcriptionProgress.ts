@@ -36,7 +36,10 @@ export class TranscriptionProgress {
 
 	refresh(): Promise<void> {
 		if (this.stopped) return Promise.resolve();
-		if (this.running) { this.again = true; return this.running; }
+		if (this.running) {
+			this.again = true;
+			return this.running;
+		}
 		this.running ??= (async () => {
 			await mkdir(this.directory, { recursive: true, mode: 0o700 });
 			const updatedAt = this.now();
@@ -53,7 +56,10 @@ export class TranscriptionProgress {
 			}
 		}).finally(() => {
 			this.running = undefined;
-			if (this.again && !this.stopped) { this.again = false; void this.refresh(); }
+			if (this.again && !this.stopped) {
+				this.again = false;
+				void this.refresh();
+			}
 		});
 		return this.running;
 	}
