@@ -1,5 +1,5 @@
 # @file deploymentUpdater_test.py
-# @description Tests release selection, private files, stopped-app protection and rollback using fake operations.
+# @description Tests release selection, runtime health, private files, stopped-app protection and rollback using fake operations.
 # @module deploymentUpdater_test
 
 import copy
@@ -78,6 +78,44 @@ class FakeOperations:
         self.events.append("commands")
         if self.fail == "commands" and "rollback" not in self.events:
             raise updater.UpdateError("commands_failed")
+
+
+class ReadinessTests(unittest.TestCase):
+    def verify(self, statuses, configured=True):
+        operations = updater.Operations(CONFIG, Path('/unused'))
+        compose = copy.deepcopy(COMPOSE)
+        if configured:
+            compose['services']['caitlyn']['healthcheck'] = {'test': ['CMD', 'node', 'healthcheck.mjs']}
+        inspections = iter(statuses)
+
+        def command(arguments, **_kwargs):
+            if arguments[1] == 'logs':
+                return 'Bot started successfully'
+            status = next(inspections) if arguments[-1].endswith('-caitlyn-1') else 'healthy'
+            state = {'Running': True, 'OOMKilled': False, 'StartedAt': '2026-10-05T00:00:00Z'}
+            if status is not None:
+                state['Health'] = {'Status': status}
+            return json.dumps([{'State': state, 'RestartCount': 0, 'Image': 'sha256:' + 'f' * 64}])
+
+        operations.command = command
+        with patch.object(updater.time, 'monotonic', side_effect=[0, *range(len(statuses)), 121]), \
+                patch.object(updater.time, 'sleep'):
+            operations.verify(compose)
+
+    def test_startup_waits_for_recorder_health_to_recover(self):
+        self.verify(['starting', 'unhealthy', 'healthy'])
+
+    def test_successful_login_does_not_hide_failed_or_missing_recorder_health(self):
+        for status in ['starting', 'unhealthy', None]:
+            with self.subTest(status=status), self.assertRaisesRegex(updater.UpdateError, 'new_services_not_ready'):
+                self.verify([status])
+
+    def test_image_health_is_checked_even_without_compose_override(self):
+        with self.assertRaisesRegex(updater.UpdateError, 'new_services_not_ready'):
+            self.verify(['unhealthy'], configured=False)
+
+    def test_legacy_bot_without_healthcheck_still_supports_rollback(self):
+        self.verify([None], configured=False)
 
 
 class UpdaterTests(unittest.TestCase):
