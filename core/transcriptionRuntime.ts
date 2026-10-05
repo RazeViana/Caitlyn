@@ -19,6 +19,7 @@ import { TranscriptionHealth } from "./transcriptionHealth.js";
 import { TranscriptionMessages } from "./transcriptionMessages.js";
 import { TranscriptionMessageAccess } from "./transcriptionMessageAccess.js";
 import { TranscriptionAssets } from "./transcriptionAssets.js";
+import { TranscriptionProgress } from "./transcriptionProgress.js";
 
 interface Session {
 	id: string;
@@ -34,6 +35,7 @@ export interface TranscriptionDependencies {
 	archive?: TranscriptionArchive;
 	messageAccess?: TranscriptionMessageAccess;
 	assets?: TranscriptionAssets;
+	progress?: TranscriptionProgress;
 	health?: TranscriptionHealth;
 	store: TranscriptionStore;
 	connect: typeof connectTranscriptionVoice;
@@ -78,7 +80,7 @@ export class TranscriptionRuntime {
 			this.paused = true;
 			this.log("warn", "Voice transcription paused: cannot save daily logs; no conversation content logged.");
 			void this.serialize(() => this.closeSession("Storage unavailable; recording stopped."));
-		});
+		}, 32, () => this.dependencies.progress?.changed());
 		if (config.captureMessages !== false) {
 			this.messages = new TranscriptionMessages(client, config.guildId,
 				(record) => this.queue.write(record), () => this.queue.healthy,
@@ -160,6 +162,7 @@ export class TranscriptionRuntime {
 		this.messages?.start();
 		await this.dependencies.messageAccess?.start();
 		await this.dependencies.assets?.start();
+		await this.dependencies.progress?.start();
 		this.client.on(Events.ShardDisconnect, this.gatewayLost);
 		this.timer = setInterval(() => {
 			for (const speaker of this.session?.speakers.values() ?? []) speaker.buffer.idle(this.dependencies.now());
@@ -327,6 +330,8 @@ export class TranscriptionRuntime {
 		this.log("info", "Voice transcription recording stopped.", { channel: session.channel.id, reason });
 	}
 
+	pendingTranscriptions() { return this.queue.activity(); }
+
 	healthSnapshot() {
 		const channels = this.client.guilds.cache.get(this.config.guildId)?.channels.cache.values() ?? [];
 		const expected = !this.paused && [...channels].some((channel) => channel.type === ChannelType.GuildVoice && this.allowed(channel) && this.humans(channel).length > 0);
@@ -442,6 +447,7 @@ export class TranscriptionRuntime {
 		await this.serialize(() => this.closeSession("Caitlyn is shutting down."));
 		await messagesStopped;
 		await this.queue.stop();
+		await this.dependencies.progress?.stop();
 		await this.dependencies.store.drain();
 		await this.retaining;
 		await this.dependencies.archive?.stop();
@@ -461,6 +467,8 @@ export function configuredTranscriptionRuntime(client: Client): TranscriptionRun
 	const health = new TranscriptionHealth(settings.config.directory, settings.config.guildId, settings.config.endpoint, () => runtime.healthSnapshot(), settings.config.backupMonitor);
 	const messageAccess = archive ? new TranscriptionMessageAccess(client, pool, settings.config.guildId, logger) : undefined;
 	const assets = archive ? new TranscriptionAssets(client, pool, settings.config.directory, settings.config.guildId, logger) : undefined;
-	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess, assets });
+	const progress = archive ? new TranscriptionProgress(settings.config.directory, settings.config.guildId,
+		() => runtime.pendingTranscriptions(), () => logger.warn("Website transcription progress could not be refreshed.")) : undefined;
+	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess, assets, progress });
 	return runtime;
 }
