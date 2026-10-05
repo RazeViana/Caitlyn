@@ -8,10 +8,16 @@ import type { AudioChunk, RecognitionResult } from "./transcriptionAudio.js";
 import type { TranscriptRecord } from "./transcriptionStore.js";
 
 interface Job { chunk: AudioChunk; record: TranscriptRecord }
+export interface PendingTranscription {
+	eventId: string; guildId: string; channelId: string; channelName: string; sessionId: string;
+	userId: string; speaker: string; at: string; end: string;
+	audienceVersion: 1; audienceUserIds: string[]; phase: "queued" | "transcribing";
+}
 
 export class TranscriptionQueue {
 	private jobs: Job[] = [];
 	private running?: Promise<void>;
+	private active?: Job;
 	private abort = new AbortController();
 	private closed = false;
 	private failed = false;
@@ -22,15 +28,39 @@ export class TranscriptionQueue {
 		private readonly append: (record: TranscriptRecord) => Promise<void>,
 		private readonly storageFailure: () => void,
 		private readonly limit = 32,
+		private readonly changed: () => void = () => undefined,
 	) {}
 
 	get pending(): number { return this.jobs.length + (this.running ? 1 : 0); }
 	get healthy(): boolean { return !this.failed; }
+	private notify(): void {
+		try { this.changed(); }
+		catch {
+			// Progress listeners are optional and cannot interrupt recording.
+		}
+	}
+
+	// Export only capture-time identity and audience, never PCM, recognized words
+	// or the mutable current channel membership. The website checks this audience.
+	activity(): PendingTranscription[] {
+		if (this.failed) return [];
+		return [...(this.active ? [this.active] : []), ...this.jobs].flatMap((job) => {
+			const record = job.record;
+			if (record.type !== "transcript" || !record.eventId || !record.userId || !record.end
+				|| record.audienceVersion !== 1 || !record.audienceUserIds?.length) return [];
+			return [{ eventId: record.eventId, guildId: record.guildId, channelId: record.channelId,
+				channelName: record.channelName, sessionId: record.sessionId, userId: record.userId,
+				speaker: record.speaker ?? "Discord member", at: record.at, end: record.end,
+				audienceVersion: 1 as const, audienceUserIds: [...record.audienceUserIds],
+				phase: job === this.active ? "transcribing" as const : "queued" as const }];
+		});
+	}
 
 	write(record: TranscriptRecord): Promise<void> {
 		return this.append(record).catch(() => {
 			if (this.failed) return;
 			this.failed = true;
+			this.notify();
 			this.storageFailure();
 		});
 	}
@@ -50,6 +80,7 @@ export class TranscriptionQueue {
 		}
 		this.jobs.push({ chunk, record });
 		this.kick();
+		this.notify();
 	}
 
 	private kick(): void {
@@ -74,6 +105,8 @@ export class TranscriptionQueue {
 				continue;
 			}
 			try {
+				this.active = job;
+				this.notify();
 				const result = await this.transcribe(job.chunk.pcm, this.abort.signal);
 				const text = typeof result === "string" ? result : result.text;
 				if (text) await this.write({ ...job.record, text, ...(typeof result === "string" ? {} : { recognition: result.recognition }) });
@@ -84,6 +117,7 @@ export class TranscriptionQueue {
 					? "Shutdown interrupted local transcription; this audio was discarded."
 					: "Local speech recognition failed; this audio was discarded." });
 			}
+			finally { this.active = undefined; this.notify(); }
 		}
 		this.jobs = [];
 		this.dropped.clear();
