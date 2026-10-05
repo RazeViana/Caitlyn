@@ -147,7 +147,7 @@ test("the arrival that opens a recording keeps its event timestamp while existin
 	assert.ok(f.records.some((entry) => entry.type === "present"));
 });
 
-test("participant posts keep message text and channel links locally and exclude outsiders, duplicate events and paused activity", async () => {
+test("guild chat posts include members outside voice, bots, webhooks and paused voice while excluding other guilds and duplicates", async () => {
 	const f = fixture();
 	try {
 		await f.runtime.start();
@@ -180,15 +180,38 @@ test("participant posts keep message text and channel links locally and exclude 
 		await f.runtime.stop();
 		f.client.emit(Events.MessageCreate, f.post("913", alice));
 		const posts = f.records.filter((entry) => entry.type === "message_posted");
-		assert.equal(posts.length, 2);
-		assert.deepEqual([posts[0].speaker, posts[0].userId, posts[0].channelId, posts[0].activityChannelId, posts[0].activityChannelName], ["Alice", "111", "456", "900", "general"]);
+		assert.deepEqual(posts.map((post) => post.messageId), ["901", "902", "906", "907", "914", "915", "908", "911", "912"]);
+		assert.deepEqual([posts[0].speaker, posts[0].userId, posts[0].channelId, posts[0].activityChannelId, posts[0].activityChannelName], ["Alice", "111", "900", "900", "general"]);
 		assert.equal(posts[0].text, content);
 		assert.equal(posts[0].at, new Date(message.createdTimestamp).toISOString());
 		assert.equal(posts[0].messageUrl, message.url);
 		assert.deepEqual(posts[0].attachmentNames, ["photo.png"]);
-		assert.deepEqual([posts[1].activityChannelId, posts[1].activityParentChannelId, posts[1].activityParentChannelName], ["910", "909", "forum"]);
+		assert.deepEqual([posts[6].activityChannelId, posts[6].activityParentChannelId, posts[6].activityParentChannelName], ["910", "909", "forum"]);
 		assert.equal(f.records.filter((entry) => entry.type === "transcript").length, 0);
 		assert.equal(f.client.listenerCount(Events.MessageCreate), 0);
+	}
+	finally { await f.runtime.stop(); }
+});
+
+test("chat continues without an occupied voice channel and capturing the bot's own operational messages cannot form a log loop", async () => {
+	const f = fixture();
+	f.first.members.clear();
+	f.second.members.clear();
+	let forwarded = 0;
+	f.dependencies.log.debug = () => {
+		forwarded++;
+		assert.ok(forwarded < 3, "own chat logs must not create another log");
+		f.client.emit(Events.MessageCreate, f.post("802", f.member("999", "caitlyn", true), { content: "Operational log" }));
+	};
+	try {
+		await f.runtime.start();
+		await f.runtime.pause();
+		f.client.emit(Events.MessageCreate, f.post("801", f.member("111", "account_name")));
+		await setImmediate();
+		await f.runtime.stop();
+		assert.equal(f.captures.length, 0);
+		assert.equal(forwarded, 1);
+		assert.deepEqual(f.records.filter((record) => record.type === "message_posted").map((record) => record.messageId), ["801", "802"]);
 	}
 	finally { await f.runtime.stop(); }
 });
@@ -311,7 +334,7 @@ test("transcript audiences follow join, leave and rejoin boundaries even when in
 	finally { release(); await f.runtime.stop(); }
 });
 
-test("post audiences require both presence at creation and source-channel permissions, including private threads", async (context) => {
+test("chat records carry source-channel identity independently of voice attendance; permissions are enforced by the database", async (context) => {
 	const f = fixture();
 	context.after(() => f.runtime.stop());
 	await f.runtime.start();
@@ -338,7 +361,7 @@ test("post audiences require both presence at creation and source-channel permis
 	f.client.emit(Events.MessageCreate, f.post("705", alice, { channel: { ...privateChannel, permissionsFor: () => null } }));
 	await f.runtime.stop();
 	assert.deepEqual(f.records.filter((entry) => entry.type === "message_posted").map((entry) => [entry.messageId, entry.audienceUserIds]), [
-		["701", ["111", "333"]], ["702", ["111"]], ["703", ["111"]], ["704", ["111"]], ["705", []],
+		["701", []], ["702", []], ["703", []], ["704", []], ["705", []],
 	]);
 });
 
@@ -389,7 +412,7 @@ test("transcription command checks administrator and guild access before mutatio
 	assert.ok(!JSON.stringify(replies).includes("speech-"));
 });
 
-test("recorded message edits and bulk deletions preserve originals and exclude departed members from new text", async () => {
+test("recorded message edits and bulk deletions preserve originals across voice departures and rejoining", async () => {
 	const f = fixture();
 	try {
 		await f.runtime.start();
@@ -420,11 +443,12 @@ test("recorded message edits and bulk deletions preserve originals and exclude d
 		await f.runtime.stop();
 		const records = f.records.filter((record) => record.messageId === "801");
 		assert.deepEqual(records.map((r) => [r.type, r.text, r.audienceUserIds]), [
-			["message_posted", "Original text", ["111", "333"]],
-			["message_edited", "Private edited text", ["111"]], ["message_deleted", undefined, ["111"]],
+			["message_posted", "Original text", []],
+			["message_edited", "Private edited text", []], ["message_edited", "Edited while outside voice", []], ["message_deleted", undefined, []],
 		]);
 		assert.equal(records[1].targetEventId, records[0].eventId);
 		assert.equal(records[2].targetEventId, records[0].eventId);
+		assert.equal(records[3].targetEventId, records[0].eventId);
 		assert.equal(f.client.listenerCount(Events.MessageUpdate), 0);
 	}
 	finally { await f.runtime.stop(); }

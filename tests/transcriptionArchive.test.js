@@ -70,6 +70,10 @@ test("PostgreSQL transcript archive enforces participation across queries, recov
 		const operations = await readFile(new URL("../migrations/018_transcript_operations.sql", import.meta.url), "utf8");
 		await writer.query(operations);
 		await writer.query(operations);
+		const messageAccess = await readFile(new URL("../migrations/019_transcript_message_access.sql", import.meta.url), "utf8");
+		await writer.query(messageAccess);
+		await writer.query(messageAccess);
+		await writer.query("INSERT INTO discord.transcript_channel_access VALUES ('123','901',ARRAY['111'],NOW()+interval '5 minutes')");
 		await administrator.query("CREATE ROLE \"" + role + "\" LOGIN NOSUPERUSER NOBYPASSRLS");
 		roleCreated = true;
 		await writer.query("GRANT USAGE ON SCHEMA discord TO \"" + role + "\"");
@@ -211,6 +215,46 @@ test("PostgreSQL transcript archive enforces participation across queries, recov
 			await archive.sync();
 			assert.equal((await writer.query("SELECT count(*)::int AS n FROM discord.transcript_events WHERE event_id='expired'")).rows[0].n, 0);
 		});
+		await context.test("text visibility follows current channel access while voice keeps its attendance boundary", async () => {
+			const visitor = { guildId: "123", userId: "444" };
+			for (const [eventId, type, text] of [["public-post", "message_posted", "Public original"],
+				["public-edit", "message_edited", "Public edited"], ["public-delete", "message_deleted", undefined]]) {
+				await store.append(event(eventId, 20, ["111"], { type, end: undefined, text,
+					channelName: "Confidential voice room", activityChannelId: "900", activityChannelName: "general",
+					messageId: "9001", targetEventId: type === "message_posted" ? undefined : "public-post" }));
+			}
+			await archive.sync();
+			await writer.query("INSERT INTO discord.transcript_channel_access VALUES ('123','900',ARRAY['111','333','444'],NOW()+interval '5 minutes')");
+			const page = await reader.events(visitor);
+			assert.deepEqual(page.events.map((row) => row.event_id).sort(), ["public-delete", "public-edit", "public-post"]);
+			assert.ok(page.events.every((row) => row.channel_id === "900" && row.channel_name === "general" && row.session_id === "messages-900"));
+			assert.deepEqual((await reader.events(visitor, { type: "transcript" })).events, []);
+			assert.deepEqual((await reader.events(visitor, { activityChannelId: "901" })).events, []);
+			assert.deepEqual((await reader.events(outsider)).events, []);
+			assert.deepEqual((await reader.filters(visitor)).channels, [{ channel_id: "900", channel_name: "general" }]);
+			await assert.rejects(readerPool.query("SELECT * FROM discord.transcript_channel_access"), /permission denied/);
+			await writer.query("GRANT SELECT ON discord.transcript_channel_access TO \"" + role + "\"");
+			assert.deepEqual((await readerPool.query("SELECT * FROM discord.transcript_channel_access")).rows, []);
+			assert.equal((await reader.events(visitor)).events.length, 3);
+			await writer.query("REVOKE SELECT ON discord.transcript_channel_access FROM \"" + role + "\"");
+			await writer.query("UPDATE discord.transcript_channel_access SET user_ids=ARRAY['111','333'] WHERE channel_id='900'");
+			assert.deepEqual((await reader.events(visitor)).events, []);
+			assert.deepEqual((await reader.events(carol, { query: "Public" })).events.map((row) => row.event_id).sort(), ["public-edit", "public-post"]);
+			await writer.query("UPDATE discord.transcript_channel_access SET valid_until=NOW()-interval '1 second' WHERE channel_id='900'");
+			assert.deepEqual((await reader.events(carol, { query: "Public" })).events, []);
+			assert.ok((await reader.events(carol, { type: "transcript" })).events.some((row) => row.event_id === "shared"));
+			assert.ok(!(await reader.events(carol, { type: "transcript" })).events.some((row) => ["before", "absent"].includes(row.event_id)));
+			await writer.query("DELETE FROM discord.transcript_channel_access WHERE channel_id='900'");
+			assert.deepEqual((await reader.events(carol, { query: "Public" })).events, []);
+			const reference = await archive.messageReference("9001");
+			assert.equal(reference.eventId, "public-post");
+			assert.equal(reference.channelId, "900");
+			await writer.query("UPDATE discord.transcript_events SET channel_id='456',channel_name='Private voice name',session_id='voice-secret' WHERE event_id='public-post'");
+			await writer.query(messageAccess);
+			const normalized = (await writer.query("SELECT channel_id,channel_name,session_id FROM discord.transcript_events WHERE event_id='public-post'")).rows[0];
+			assert.deepEqual(normalized, { channel_id: "900", channel_name: "general", session_id: "messages-900" });
+		});
+
 	}
 	finally {
 		await archive.stop();

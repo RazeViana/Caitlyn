@@ -46,6 +46,8 @@ export function archivedEvent(value: unknown, source: string, offset: number, gu
 	if (record.version !== 1 || record.guildId !== guildId || record.channelId !== channelId) throw new Error("Archive source mismatch");
 	const type = requiredText(record.type, 32);
 	if (!eventTypes.has(type)) throw new Error("Unknown archive event");
+	const messageChannel = ["message_posted", "message_edited", "message_deleted"].includes(type)
+		&& record.activityChannelId !== undefined ? discordId(record.activityChannelId) : undefined;
 	const occurredAt = date(record.at);
 	const endedAt = record.end === undefined ? null : date(record.end);
 	if (endedAt && endedAt < occurredAt) throw new Error("Invalid archive interval");
@@ -66,8 +68,9 @@ export function archivedEvent(value: unknown, source: string, offset: number, gu
 		return metric;
 	};
 	return {
-		event_id: eventId, guild_id: discordId(guildId), channel_id: discordId(channelId),
-		channel_name: requiredText(record.channelName, 200), session_id: requiredText(record.sessionId, 128),
+		event_id: eventId, guild_id: discordId(guildId), channel_id: messageChannel ?? discordId(channelId),
+		channel_name: messageChannel ? optionalText(record.activityChannelName, 200) ?? "Unknown channel" : requiredText(record.channelName, 200),
+		session_id: messageChannel ? `messages-${messageChannel}` : requiredText(record.sessionId, 128),
 		event_type: type, occurred_at: occurredAt, ended_at: endedAt,
 		user_id: record.userId === undefined ? null : discordId(record.userId),
 		username: optionalText(record.speaker, 200), content: optionalText(record.text),
@@ -134,7 +137,7 @@ export class TranscriptionArchive {
 	}
 
 	private reportFailure(): void {
-		if (this.state !== "retrying") logData("Transcript database archive will retry; private local logs are preserved. Check migration 018 and storage.", { server: this.guildId }, (...args) => this.log.warn(args.join(" ")));
+		if (this.state !== "retrying") logData("Transcript database archive will retry; private local logs are preserved. Check migrations 017–019 and storage.", { server: this.guildId }, (...args) => this.log.warn(args.join(" ")));
 		this.state = "retrying";
 	}
 
@@ -275,6 +278,19 @@ export class TranscriptionArchive {
 	private remember(source: string, fingerprint: string): void {
 		if (this.unchanged.size >= 10000) this.unchanged.delete(this.unchanged.keys().next().value!);
 		this.unchanged.set(source, fingerprint);
+	}
+
+	async messageReference(messageId: string): Promise<TranscriptRecord | undefined> {
+		const result = await this.database.query(`SELECT event_id, occurred_at, user_id, username,
+			activity_channel_id, activity_channel_name FROM discord.transcript_events
+			WHERE guild_id=$1 AND message_id=$2 AND event_type='message_posted'
+			ORDER BY occurred_at, event_id LIMIT 1`, [this.guildId, discordId(messageId)]);
+		const row = result.rows[0];
+		if (!row?.activity_channel_id) return undefined;
+		return { eventId: row.event_id, type: "message_posted", at: row.occurred_at.toISOString(), guildId: this.guildId,
+			channelId: row.activity_channel_id, channelName: row.activity_channel_name ?? "Unknown channel",
+			sessionId: `messages-${row.activity_channel_id}`, userId: row.user_id ?? undefined, speaker: row.username ?? undefined,
+			messageId, activityChannelId: row.activity_channel_id, activityChannelName: row.activity_channel_name ?? undefined };
 	}
 
 	async correction(eventId: string, actorId: string, actorUsername: string, text: string): Promise<TranscriptRecord> {

@@ -1,6 +1,6 @@
 /**
  * @file transcriptionReader.ts
- * @description Queries participant-visible transcript events using transaction-local identity and enforced PostgreSQL row security.
+ * @description Reads attendance-scoped voice and channel-visible chat using transaction-local identity and enforced PostgreSQL row security.
  * @module transcriptionReader
  */
 

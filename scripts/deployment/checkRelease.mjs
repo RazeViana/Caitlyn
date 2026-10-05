@@ -31,6 +31,7 @@ try {
 		await pool.query("SELECT event_id, audience_version, audience_user_ids FROM discord.transcript_events LIMIT 0");
 		await pool.query("SELECT byte_offset, discarding_line FROM discord.transcript_import_offsets LIMIT 0");
 		await pool.query("SELECT deleted_before FROM discord.transcript_retention LIMIT 0");
+		await pool.query("SELECT channel_id, user_ids, valid_until FROM discord.transcript_channel_access LIMIT 0");
 	}
 	await pool.query("COMMIT");
 	console.log("Release database check passed; AI is off; no Discord login or data changes");
