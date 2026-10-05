@@ -12,7 +12,8 @@ COPY --chmod=644 server.py ./
 ENV TRANSCRIPTION_MODEL_ID=${WHISPER_MODEL}
 ENV HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 TRANSCRIPTION_CPU_THREADS=2
 USER 65534:65534
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8095/health", timeout=3)'
+# Run the probe directly so Docker can stop it without leaving a child behind.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8095/health', timeout=3)"]
 CMD ["python", "server.py"]
 
 # CPU is available explicitly with --target cpu. The default final stage uses the GPU.

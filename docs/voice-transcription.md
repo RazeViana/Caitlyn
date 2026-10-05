@@ -88,6 +88,8 @@ docker compose -f scripts/transcription/compose.cpu.yaml up -d --build
 
 This selects the Dockerfile's `cpu` target and `cpu`/`int8` settings with no GPU device request. Keep the same Compose project name when switching an existing stack, so it replaces that worker. A plain `docker build scripts/transcription` now selects the final `cuda` stage; CPU builds require `--target cpu`.
 
+Keep `init: true` on both worker configurations. The init process reaps orphaned children, and the image's health probe runs directly without an intermediate shell. This prevents timed-out probes from accumulating as zombies and exhausting the 64-process limit. A custom TrueNAS app must preserve this init setting when copying the worker service.
+
 The GPU image adds cuBLAS 12.8.4.1 and cuDNN 9.10.2.21 **inside the container**. The existing TrueNAS NVIDIA driver/runtime is reused. These library versions retain Pascal compatibility; do not blindly replace them with a current cuDNN package that has dropped support for this GPU. See [NVIDIA's cuDNN 9.10 support matrix](https://docs.nvidia.com/deeplearning/cudnn/backend/v9.10.2/reference/support-matrix.html) and [CTranslate2 compute types](https://opennmt.net/CTranslate2/quantization.html). GPU access is shared with other host workloads rather than reserved exclusively; recheck usage before activation.
 
 Configuration in the bot environment:
