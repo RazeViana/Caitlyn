@@ -13,6 +13,7 @@ import { quarantineTranscript } from "./transcriptionFiles.js";
 import { logData } from "./dataLog.js";
 import type { TranscriptRecord } from "./transcriptionStore.js";
 import { expireTranscripts } from "./transcriptionRetention.js";
+import { attachmentUrl } from "./transcriptionAssets.js";
 
 const idPattern = /^[1-9]\d{0,19}$/;
 const eventTypes = new Set(["session_started", "session_stopped", "present", "joined", "left", "transcript", "message_posted", "message_edited", "message_deleted", "transcript_corrected", "voice_activity", "gap"]);
@@ -62,6 +63,8 @@ export function archivedEvent(value: unknown, source: string, offset: number, gu
 	const attachments = record.attachmentNames;
 	if (attachments !== undefined && (!Array.isArray(attachments) || attachments.length > 100)) throw new Error("Invalid attachments");
 	const recognition = record.recognition as TranscriptRecord["recognition"];
+	const media = record.attachments as TranscriptRecord["attachments"];
+	if (media !== undefined && (!Array.isArray(media) || media.length > 100)) throw new Error("Invalid attachment metadata");
 	if (recognition !== undefined && (!recognition || typeof recognition !== "object" || !Array.isArray(recognition.segments) || recognition.segments.length > 128)) throw new Error("Invalid recognition metadata");
 	const finite = (metric: unknown): number => {
 		if (typeof metric !== "number" || !Number.isFinite(metric)) throw new Error("Invalid recognition metric");
@@ -83,6 +86,13 @@ export function archivedEvent(value: unknown, source: string, offset: number, gu
 			activityParentChannelId: record.activityParentChannelId === undefined ? null : discordId(record.activityParentChannelId),
 			activityParentChannelName: optionalText(record.activityParentChannelName, 200),
 			attachmentNames: (attachments as unknown[] | undefined)?.map((name) => requiredText(name, 1000)) ?? [],
+			avatarHash: typeof record.avatarHash === "string" && /^(a_)?[a-f0-9]{32}$/.test(record.avatarHash) ? record.avatarHash : null,
+			attachments: media?.map((item) => {
+				if (!item || !Number.isSafeInteger(item.size) || item.size < 0
+					|| !attachmentUrl(item.url, messageChannel ?? "", item.id)) throw new Error("Invalid archived attachment");
+				return { id: discordId(item.id), name: requiredText(item.name, 1000), size: item.size,
+					contentType: requiredText(item.contentType, 100), url: requiredText(item.url, 4000) };
+			}) ?? [],
 			targetEventId: optionalText(record.targetEventId, 128),
 			actorId: record.actorId === undefined ? null : discordId(record.actorId),
 			actorUsername: optionalText(record.actorUsername, 200),

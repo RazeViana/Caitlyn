@@ -6,6 +6,7 @@
 
 import { Events, type Client, type ClientEvents, type Message, type PartialMessage } from "discord.js";
 import type { TranscriptRecord } from "./transcriptionStore.js";
+import { captureAttachments } from "./transcriptionAssets.js";
 
 interface TrackedMessage { original?: TranscriptRecord; latest: TranscriptRecord }
 type MessageEvent = "message_posted" | "message_edited" | "message_deleted";
@@ -50,11 +51,13 @@ export class TranscriptionMessages {
 			channelId: message.channelId, channelName: message.channel.name,
 			sessionId: `messages-${message.channelId}`, audienceVersion: 1, audienceUserIds: [],
 			userId: message.author?.id, speaker: message.author?.username,
+			avatarHash: message.author?.avatar,
 			activityChannelId: message.channelId, activityChannelName: message.channel.name,
 			activityParentChannelId: parent?.id, activityParentChannelName: parent?.name,
 			messageId: message.id, messageUrl: message.url,
 			text: type === "message_deleted" ? undefined : message.content ?? undefined,
 			attachmentNames: type === "message_deleted" ? [] : [...message.attachments.values()].map((item) => item.name),
+			attachments: type === "message_deleted" ? [] : captureAttachments(message.attachments.values(), message.channelId),
 		};
 		this.pending++;
 		this.tail = this.tail.then(() => this.save(record)).finally(() => { this.pending--; });
@@ -66,7 +69,8 @@ export class TranscriptionMessages {
 		if (tracked && (record.type === "message_posted" || tracked.latest.type === "message_deleted"
 			|| Date.parse(record.at) <= Date.parse(tracked.latest.at) && record.type === "message_edited")) return;
 		if (record.type === "message_edited" && tracked && record.text === tracked.latest.text
-			&& JSON.stringify(record.attachmentNames) === JSON.stringify(tracked.latest.attachmentNames)) return;
+			&& JSON.stringify(record.attachmentNames) === JSON.stringify(tracked.latest.attachmentNames)
+			&& JSON.stringify(record.attachments?.map((item) => item.id)) === JSON.stringify(tracked.latest.attachments?.map((item) => item.id))) return;
 		const original = record.type === "message_posted" ? record : tracked?.original
 			?? await this.reference?.(record.messageId!).catch(() => undefined);
 		if (record.type !== "message_posted") {

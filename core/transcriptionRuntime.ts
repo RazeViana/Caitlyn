@@ -18,6 +18,7 @@ import { logData, type DataLogDetails } from "./dataLog.js";
 import { TranscriptionHealth } from "./transcriptionHealth.js";
 import { TranscriptionMessages } from "./transcriptionMessages.js";
 import { TranscriptionMessageAccess } from "./transcriptionMessageAccess.js";
+import { TranscriptionAssets } from "./transcriptionAssets.js";
 
 interface Session {
 	id: string;
@@ -32,6 +33,7 @@ interface Session {
 export interface TranscriptionDependencies {
 	archive?: TranscriptionArchive;
 	messageAccess?: TranscriptionMessageAccess;
+	assets?: TranscriptionAssets;
 	health?: TranscriptionHealth;
 	store: TranscriptionStore;
 	connect: typeof connectTranscriptionVoice;
@@ -64,6 +66,7 @@ export class TranscriptionRuntime {
 		this.dependencies = { store: new TranscriptionStore(config.directory, config.timezone), connect: connectTranscriptionVoice,
 			transcribe: localTranscriber(config), now: Date.now, log: logger, ...dependencies };
 		this.queue = new TranscriptionQueue(this.dependencies.transcribe, async (record) => {
+			if (record.userId) record.avatarHash ??= this.client.users?.cache.get(record.userId)?.avatar;
 			await this.dependencies.store.append(record);
 			this.lastSavedAt = this.dependencies.now();
 			// Saving the bot's own log-channel message must not produce another forwarded log.
@@ -156,6 +159,7 @@ export class TranscriptionRuntime {
 		this.client.on(Events.VoiceStateUpdate, this.voiceChanged);
 		this.messages?.start();
 		await this.dependencies.messageAccess?.start();
+		await this.dependencies.assets?.start();
 		this.client.on(Events.ShardDisconnect, this.gatewayLost);
 		this.timer = setInterval(() => {
 			for (const speaker of this.session?.speakers.values() ?? []) speaker.buffer.idle(this.dependencies.now());
@@ -441,6 +445,7 @@ export class TranscriptionRuntime {
 		await this.dependencies.store.drain();
 		await this.retaining;
 		await this.dependencies.archive?.stop();
+		await this.dependencies.assets?.stop();
 		await accessStopped;
 		await this.dependencies.health?.stop();
 	}
@@ -455,6 +460,7 @@ export function configuredTranscriptionRuntime(client: Client): TranscriptionRun
 		? new TranscriptionArchive(pool, settings.config.directory, settings.config.guildId, logger) : undefined;
 	const health = new TranscriptionHealth(settings.config.directory, settings.config.guildId, settings.config.endpoint, () => runtime.healthSnapshot(), settings.config.backupMonitor);
 	const messageAccess = archive ? new TranscriptionMessageAccess(client, pool, settings.config.guildId, logger) : undefined;
-	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess });
+	const assets = archive ? new TranscriptionAssets(client, pool, settings.config.directory, settings.config.guildId, logger) : undefined;
+	const runtime = new TranscriptionRuntime(client, settings.config, { archive, health, messageAccess, assets });
 	return runtime;
 }
