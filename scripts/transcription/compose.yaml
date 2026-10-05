@@ -7,11 +7,12 @@ services:
       context: .
       target: cuda
       args:
-        WHISPER_MODEL: base.en
-    image: caitlyn-transcription:base-en-cuda
+        WHISPER_MODEL: large-v3
+        WHISPER_MODEL_REVISION: edaa852ec7e145841d8ffdb056a99866b5f0a478
+    image: caitlyn-transcription:large-v3-cuda
     environment:
       TRANSCRIPTION_DEVICE: cuda
-      TRANSCRIPTION_COMPUTE_TYPE: int8_float32
+      TRANSCRIPTION_COMPUTE_TYPE: float32
     deploy:
       resources:
         reservations:
@@ -25,7 +26,8 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     cpus: 2
-    mem_limit: 1g
+    mem_limit: 8g
+    memswap_limit: 8g
     pids_limit: 64
     tmpfs:
       - /tmp:size=16m,mode=1777
