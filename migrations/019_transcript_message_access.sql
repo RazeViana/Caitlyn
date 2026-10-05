@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS discord.transcript_channel_access (
     PRIMARY KEY (guild_id, channel_id)
 );
 REVOKE ALL ON discord.transcript_channel_access FROM PUBLIC;
+-- Default privileges configured by another application must not expose lists.
+ALTER TABLE discord.transcript_channel_access ENABLE ROW LEVEL SECURITY;
 
 -- Only a yes/no answer about the transaction's authenticated viewer is exposed.
 -- The bot owns and refreshes the private permission snapshots. Missing or stale

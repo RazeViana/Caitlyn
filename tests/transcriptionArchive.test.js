@@ -233,6 +233,10 @@ test("PostgreSQL transcript archive enforces participation across queries, recov
 			assert.deepEqual((await reader.events(outsider)).events, []);
 			assert.deepEqual((await reader.filters(visitor)).channels, [{ channel_id: "900", channel_name: "general" }]);
 			await assert.rejects(readerPool.query("SELECT * FROM discord.transcript_channel_access"), /permission denied/);
+			await writer.query("GRANT SELECT ON discord.transcript_channel_access TO \"" + role + "\"");
+			assert.deepEqual((await readerPool.query("SELECT * FROM discord.transcript_channel_access")).rows, []);
+			assert.equal((await reader.events(visitor)).events.length, 3);
+			await writer.query("REVOKE SELECT ON discord.transcript_channel_access FROM \"" + role + "\"");
 			await writer.query("UPDATE discord.transcript_channel_access SET user_ids=ARRAY['111','333'] WHERE channel_id='900'");
 			assert.deepEqual((await reader.events(visitor)).events, []);
 			assert.deepEqual((await reader.events(carol, { query: "Public" })).events.map((row) => row.event_id).sort(), ["public-edit", "public-post"]);
