@@ -10,6 +10,7 @@ import { join } from "node:path";
 import type { Attachment, Client } from "discord.js";
 import type { Pool } from "pg";
 import { privateJson, syncDirectory } from "./transcriptionFiles.js";
+import { TranscriptionProfiles } from "./transcriptionProfiles.js";
 
 const id = /^[1-9]\d{0,19}$/;
 const eventId = /^[a-zA-Z0-9_-]{1,128}$/;
@@ -101,19 +102,18 @@ export async function downloadAttachment(directory: string, item: SavedAttachmen
 /** The archive is the durable queue. A bounded circular scan also retries after restarts or replay. */
 export class TranscriptionAssets {
 	private timer?: NodeJS.Timeout;
-	private profilesTimer?: NodeJS.Timeout;
+	private readonly profiles: TranscriptionProfiles;
 	private running?: Promise<void>;
 	private cursor: [string, string] = ["1970-01-01T00:00:00.000Z", ""];
 	private stopped = false;
 	private controller = new AbortController();
-	private profileWrite: Promise<void> = Promise.resolve();
-	private profileSnapshot = "";
 	private failed = false;
 	private readonly root: string;
 	constructor(private readonly client: Client, private readonly database: Pool, directory: string,
 		private readonly guildId: string, private readonly log: { warn: (message: string) => void }) {
 		if (!id.test(guildId)) throw new Error("Invalid asset guild");
 		this.root = join(directory, "assets", guildId);
+		this.profiles = new TranscriptionProfiles(client, this.root, guildId, () => this.warn());
 	}
 
 	async start(): Promise<void> {
@@ -122,26 +122,10 @@ export class TranscriptionAssets {
 		for (const file of await readdir(join(this.root, "files"))) {
 			if (/^[a-f0-9]{64}\.[a-f0-9-]{36}\.part$/.test(file)) await rm(join(this.root, "files", file));
 		}
-		await this.profiles();
-		this.profilesTimer = setInterval(() => { void this.profiles(); }, 30_000);
-		this.profilesTimer.unref();
+		await this.profiles.start();
 		this.timer = setInterval(() => { void this.sync(); }, 5_000);
 		this.timer.unref();
 		void this.sync();
-	}
-
-	private profiles(): Promise<void> {
-		this.profileWrite = this.profileWrite.then(async () => {
-			const users: Record<string, { avatarHash: string | null; guildAvatarHash: string | null }> = {};
-			for (const member of this.client.guilds.cache.get(this.guildId)?.members.cache.values() ?? []) {
-				users[member.id] = { avatarHash: member.user.avatar, guildAvatarHash: member.avatar };
-			}
-			const snapshot = JSON.stringify(users);
-			if (snapshot === this.profileSnapshot) return;
-			await privateJson(join(this.root, "profiles.json"), { version: 1, guildId: this.guildId, users });
-			this.profileSnapshot = snapshot;
-		}).catch(() => this.warn());
-		return this.profileWrite;
 	}
 
 	private warn(): void {
@@ -222,9 +206,8 @@ export class TranscriptionAssets {
 	async stop(): Promise<void> {
 		this.stopped = true;
 		clearInterval(this.timer);
-		clearInterval(this.profilesTimer);
+		await this.profiles.stop();
 		this.controller.abort();
 		await this.running;
-		await this.profileWrite;
 	}
 }
