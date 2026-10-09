@@ -5,7 +5,7 @@ A Discord bot for activity stats, birthdays and social media posts. It can also 
 ## What it does
 
 - **Activity:** counts messages, tracks time in voice channels, and shows leaderboards and activity streaks.
-- **Local voice transcripts:** automatically joins occupied voice channels, identifies speakers by Discord ID, and saves daily text/JSON logs on the server. English speech recognition runs locally; enable this separately. One voice channel can be recorded at a time.
+- **Local voice transcripts:** automatically joins voice channels with at least two people, identifies speakers by Discord ID, and saves daily text/JSON logs on the server. It leaves when fewer than two people remain; bots do not count. English speech recognition runs locally; enable this separately. One voice channel can be recorded at a time.
 - **Birthdays:** saves birthdays and sends reminders at 9 AM in the configured timezone. If the bot was offline, it checks for missed reminders later that day.
 - **Social posts:** turns X, TikTok and public Instagram links into posts with captions, media and credit to the person who shared them. Enable this separately in each channel.
 - **Private logs:** sends selected log types to one owner-controlled channel in the main server. Other servers cannot choose a destination or see those logs through the bot.
@@ -46,9 +46,9 @@ Square brackets mean an argument is optional.
 | `/toggleai` | Turn AI replies on or off until the next restart. Requires configured AI services. |
 | `/reload command` | Reload a command module without restarting the bot. |
 | `/transcribe status` | Show voice recording state and failed/dropped speech counts. |
-| `/transcribe start` | Start recording your current voice channel and enable automatic recording. |
+| `/transcribe start` | Enable automatic recording, prioritizing your current voice channel when at least two people are present. |
 | `/transcribe stop` | Stop recording and pause automatic recording, including after restarts. |
-| `/transcribe resume` | Resume automatic recording of occupied voice channels. |
+| `/transcribe resume` | Resume automatic recording of voice channels with at least two people. |
 
 These logging commands also require the bot application owner:
 
