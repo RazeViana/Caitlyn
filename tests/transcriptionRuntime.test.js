@@ -39,7 +39,9 @@ function fixture() {
 	const first = channel("456");
 	const second = channel("457", 1);
 	first.members.set("111", member("111", "Alice"));
+	first.members.set("555", member("555", "Eve"));
 	second.members.set("222", member("222", "Bob"));
+	second.members.set("666", member("666", "Dan"));
 	const config = { guildId: guild.id, directory: "/unused", endpoint: "http://worker:8095/transcribe", channels: ["*"], timezone: "Europe/Amsterdam", language: "en" };
 	const dependencies = {
 		store: { initialize: async () => undefined, paused: async () => paused, settings: async () => savedSettings,
@@ -61,21 +63,151 @@ function fixture() {
 	return { runtime, records, captures, notices, first, second, client, guild, config, dependencies, channel, member, voiceState, post, advance: (ms) => { now += ms; }, now: () => now };
 }
 
+test("solo channels and bots stay unrecorded and healthy, including manual start, while text is archived", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.first.members.delete("555");
+	f.second.members.delete("666");
+	f.first.members.set("999", f.member("999", "Caitlyn", true));
+	await f.runtime.start();
+	await f.runtime.resume("456");
+	assert.equal(f.captures.length, 0);
+	assert.equal(f.notices.length, 0);
+	assert.equal(f.runtime.healthSnapshot().captureHealthy, true);
+	assert.equal(f.runtime.healthSnapshot().recording, false);
+	assert.equal(f.runtime.voicePresence(), null);
+	assert.match(f.runtime.status(), /waiting for at least two people/);
+	const robot = f.member("444", "Robot", true);
+	f.first.members.set(robot.id, robot);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(robot, null), f.voiceState(robot, f.first));
+	f.client.emit(Events.MessageCreate, f.post("801", f.first.members.get("111")));
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.captures.length, 0);
+	assert.ok(f.records.some((record) => record.type === "message_posted" && record.messageId === "801"));
+	const carol = f.member("333", "Carol");
+	f.first.members.set(carol.id, carol);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.captures.length, 1);
+	assert.deepEqual(f.captures[0].ids, ["111", "333"]);
+	assert.equal(f.runtime.healthSnapshot().recording, true);
+});
+
+test("dropping below two stops reception immediately, preserves earlier group speech and resumes without backoff", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.second.members.clear();
+	await f.runtime.start();
+	await setImmediate();
+	const capture = f.captures[0];
+	const eve = f.first.members.get("555");
+	capture.packet("111", Buffer.alloc(640, 1), f.now());
+	f.advance(100);
+	f.first.members.delete(eve.id);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(eve, f.first), f.voiceState(eve, null));
+	assert.equal(capture.closed, true);
+	assert.equal(f.runtime.voicePresence(), null);
+	assert.equal(f.runtime.healthSnapshot().recording, false);
+	assert.equal(f.runtime.healthSnapshot().captureHealthy, true);
+	capture.packet("111", Buffer.alloc(640, 2), f.now());
+	await f.runtime.reconcile();
+	assert.match(f.runtime.status(), /waiting for at least two people/);
+	assert.equal(f.captures.length, 1);
+	f.advance(100);
+	f.first.members.set(eve.id, eve);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(eve, null), f.voiceState(eve, f.first));
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.captures.length, 2);
+	capture.packet("111", Buffer.alloc(640, 3), f.now());
+	f.captures[1].packet("111", Buffer.alloc(640, 4), f.now());
+	await f.runtime.stop();
+	const speech = f.records.filter((record) => record.type === "transcript");
+	assert.deepEqual(speech.map((record) => [record.text, record.audienceUserIds]), [["speech-1", ["111", "555"]], ["speech-4", ["111", "555"]]]);
+	assert.notEqual(speech[0].sessionId, speech[1].sessionId);
+	assert.equal(f.records.filter((record) => record.type === "gap").length, 0);
+	assert.deepEqual(f.records.filter((record) => record.type === "left").map((record) => record.userId), ["555"]);
+	assert.ok(f.records.some((record) => record.type === "session_stopped" && /Fewer than two/.test(record.text)));
+});
+
+test("a rapid leave and rejoin cannot revive a capture that ended with a solo participant", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.second.members.clear();
+	await f.runtime.start();
+	const capture = f.captures[0];
+	const eve = f.first.members.get("555");
+	f.first.members.delete(eve.id);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(eve, f.first), f.voiceState(eve, null));
+	f.first.members.set(eve.id, eve);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(eve, null), f.voiceState(eve, f.first));
+	capture.packet("111", Buffer.alloc(640, 2), f.now());
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(capture.closed, true);
+	assert.equal(f.captures.length, 2);
+	await f.runtime.stop();
+	assert.equal(f.records.filter((record) => record.type === "transcript" || record.type === "gap").length, 0);
+});
+
+test("a delayed voice handshake cannot announce or record after the second person leaves", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.second.members.clear();
+	let ready;
+	const handshake = new Promise((resolve) => { ready = resolve; });
+	f.runtime = new TranscriptionRuntime(f.client, f.config, { ...f.dependencies, connect: (...args) => {
+		const capture = f.dependencies.connect(...args);
+		capture.ready = handshake;
+		return capture;
+	} });
+	await f.runtime.start();
+	const eve = f.first.members.get("555");
+	f.first.members.delete(eve.id);
+	f.client.emit(Events.VoiceStateUpdate, f.voiceState(eve, f.first), f.voiceState(eve, null));
+	ready();
+	f.captures[0].packet("111", Buffer.alloc(640, 1), f.now());
+	await f.runtime.reconcile();
+	await setImmediate();
+	assert.equal(f.captures[0].closed, true);
+	assert.equal(f.notices.length, 0);
+	await f.runtime.stop();
+	assert.equal(f.records.filter((record) => ["transcript", "gap", "session_started"].includes(record.type)).length, 0);
+});
+
+test("a cache-only departure fences packets and keeps the uncertain buffered audience private", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.second.members.clear();
+	await f.runtime.start();
+	await setImmediate();
+	f.captures[0].packet("111", Buffer.alloc(640, 1), f.now());
+	f.first.members.delete("555");
+	assert.equal(f.runtime.voicePresence(), null);
+	f.captures[0].packet("111", Buffer.alloc(640, 2), f.now());
+	assert.equal(f.captures[0].closed, true);
+	await f.runtime.reconcile();
+	await f.runtime.stop();
+	assert.deepEqual(f.records.filter((record) => record.type === "transcript").map((record) => [record.text, record.audienceUserIds]), [["speech-1", []]]);
+});
+
 test("live presence follows current human membership and disappears when capture is not trustworthy", async (context) => {
 	const f = fixture();
 	context.after(() => f.runtime.stop());
 	assert.equal(f.runtime.voicePresence(), null);
 	await f.runtime.start();
 	await setImmediate();
-	assert.deepEqual(f.runtime.voicePresence(), { channelId: "456", channelName: "Room 456", members: [{ userId: "111", displayName: "Server nickname Alice" }] });
+	assert.deepEqual(f.runtime.voicePresence(), { channelId: "456", channelName: "Room 456", members: [{ userId: "111", displayName: "Server nickname Alice" }, { userId: "555", displayName: "Server nickname Eve" }] });
 	const carol = f.member("333", "Carol");
 	f.first.members.set(carol.id, carol);
 	f.first.members.set("444", f.member("444", "Robot", true));
 	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, null), f.voiceState(carol, f.first));
-	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111", "333"]);
+	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111", "555", "333"]);
 	f.first.members.delete(carol.id);
 	// Presence must not wait for reconciliation or infer attendance from buffered speech.
-	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111"]);
+	assert.deepEqual(f.runtime.voicePresence().members.map((member) => member.userId), ["111", "555"]);
 	f.first.members.get("111").displayName = "New nickname";
 	assert.equal(f.runtime.voicePresence().members[0].displayName, "New nickname");
 	f.client.isReady = () => false;
@@ -90,7 +222,7 @@ test("live presence follows current human membership and disappears when capture
 	f.advance(16_000);
 	await f.runtime.reconcile();
 	await setImmediate();
-	assert.equal(f.runtime.voicePresence().members.length, 1);
+	assert.equal(f.runtime.voicePresence().members.length, 2);
 	await f.runtime.pause();
 	assert.equal(f.runtime.voicePresence(), null);
 	await f.runtime.stop();
@@ -103,12 +235,12 @@ test("automatic recording sticks with a conversation, captures joiners separatel
 	await f.runtime.start();
 	await setImmediate();
 	assert.equal(f.captures[0].room.id, "456");
-	assert.deepEqual(f.captures[0].ids, ["111"]);
+	assert.deepEqual(f.captures[0].ids, ["111", "555"]);
 	assert.match(f.notices[0].content, /transcribing.*Mainframe/);
 	f.first.members.set("333", f.member("333", "Carol"));
 	f.first.members.set("444", f.member("444", "Robot", true));
 	await f.runtime.reconcile();
-	assert.deepEqual(f.captures[0].ids, ["111", "333"]);
+	assert.deepEqual(f.captures[0].ids, ["111", "555", "333"]);
 	f.captures[0].packet("111", Buffer.alloc(640, 1), f.now());
 	f.captures[0].packet("333", Buffer.alloc(640, 2), f.now());
 	f.first.members.delete("111");
@@ -121,7 +253,7 @@ test("automatic recording sticks with a conversation, captures joiners separatel
 	assert.equal(f.captures[1].room.id, "457");
 	await f.runtime.stop();
 	assert.deepEqual(f.records.filter((entry) => entry.type === "transcript").map((entry) => [entry.userId, entry.speaker, entry.text]), [["111", "Alice", "speech-1"], ["333", "Carol", "speech-2"]]);
-	const usernames = { "111": "Alice", "222": "Bob", "333": "Carol" };
+	const usernames = { "111": "Alice", "222": "Bob", "333": "Carol", "555": "Eve", "666": "Dan" };
 	for (const entry of f.records.filter((record) => record.userId)) assert.equal(entry.speaker, usernames[entry.userId]);
 	assert.equal(f.client.listenerCount(Events.VoiceStateUpdate), 0);
 	assert.equal(f.client.listenerCount(Events.MessageCreate), 0);
@@ -132,20 +264,20 @@ test("voice arrivals and departures are captured even within one reconciliation 
 	context.after(() => f.runtime.stop());
 	await f.runtime.start();
 	await setImmediate();
-	assert.deepEqual(f.records.filter((entry) => entry.type === "present").map((entry) => entry.userId), ["111"]);
+	assert.deepEqual(f.records.filter((entry) => entry.type === "present").map((entry) => entry.userId), ["111", "555"]);
 	assert.equal(f.records.filter((entry) => entry.type === "joined").length, 0);
 	const carol = f.member("333", "carol_account");
 	f.advance(10);
 	f.first.members.set(carol.id, carol);
 	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.second), f.voiceState(carol, f.first));
 	const arrival = f.now();
-	assert.deepEqual(f.captures[0].ids, ["111", "333"]);
+	assert.deepEqual(f.captures[0].ids, ["111", "555", "333"]);
 	f.captures[0].packet(carol.id, Buffer.alloc(640, 3), f.now());
 	f.advance(10);
 	f.first.members.delete(carol.id);
 	f.client.emit(Events.VoiceStateUpdate, f.voiceState(carol, f.first), f.voiceState(carol, f.second));
 	const departure = f.now();
-	assert.deepEqual(f.captures[0].ids, ["111"]);
+	assert.deepEqual(f.captures[0].ids, ["111", "555"]);
 	await f.runtime.pause();
 	await f.runtime.stop();
 	const joined = f.records.filter((entry) => entry.type === "joined");
@@ -162,7 +294,7 @@ test("the arrival that opens a recording keeps its event timestamp while existin
 	const f = fixture();
 	context.after(() => f.runtime.stop());
 	const alice = f.first.members.get("111");
-	f.first.members.clear();
+	f.first.members.delete(alice.id);
 	f.second.members.clear();
 	await f.runtime.start();
 	f.advance(20);
@@ -173,7 +305,7 @@ test("the arrival that opens a recording keeps its event timestamp while existin
 	await f.runtime.reconcile();
 	await setImmediate();
 	assert.equal(f.records.find((entry) => entry.type === "joined").at, new Date(arrivedAt).toISOString());
-	assert.equal(f.records.filter((entry) => entry.type === "present").length, 0);
+	assert.equal(f.records.filter((entry) => entry.type === "present").length, 1);
 	f.captures[0].failure();
 	await f.runtime.reconcile();
 	f.advance(16_000);
@@ -358,7 +490,7 @@ test("transcript audiences follow join, leave and rejoin boundaries even when in
 		await f.runtime.stop();
 		const speech = f.records.filter((entry) => entry.type === "transcript");
 		assert.deepEqual(speech.map((entry) => [entry.text, entry.audienceUserIds]), [
-			["speech-1", ["111"]], ["speech-2", ["111", "333"]], ["speech-3", ["111"]], ["speech-4", ["111", "333"]],
+			["speech-1", ["111", "555"]], ["speech-2", ["111", "555", "333"]], ["speech-3", ["111", "555"]], ["speech-4", ["111", "555", "333"]],
 		]);
 		for (const record of f.records) {
 			assert.equal(record.audienceVersion, 1);
@@ -572,7 +704,7 @@ test("a simulated six-hour conversation preserves audiences through repeated mem
 		const speech = f.records.filter((record) => record.type === "transcript");
 		assert.equal(speech.length, 1080);
 		assert.equal(f.records.filter((record) => record.type === "gap").length, 0);
-		assert.ok(speech.every((record) => JSON.stringify(record.audienceUserIds) === JSON.stringify(record.text === "speech-1" ? ["111"] : ["111", "333"])));
+		assert.ok(speech.every((record) => JSON.stringify(record.audienceUserIds) === JSON.stringify(record.text === "speech-1" ? ["111", "555"] : ["111", "555", "333"])));
 		assert.ok(speech.some((record) => record.at.startsWith("2026-10-02")));
 	}
 	finally { await f.runtime.stop(); }

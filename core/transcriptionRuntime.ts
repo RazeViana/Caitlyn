@@ -21,12 +21,16 @@ import { TranscriptionMessageAccess } from "./transcriptionMessageAccess.js";
 import { TranscriptionAssets } from "./transcriptionAssets.js";
 import { TranscriptionProgress, type LiveVoicePresence } from "./transcriptionProgress.js";
 
+const MIN_VOICE_PARTICIPANTS = 2;
+const TOO_FEW_PARTICIPANTS = "Fewer than two people remain in the voice channel.";
+
 interface Session {
 	id: string;
 	channel: VoiceChannel;
 	capture: VoiceCapture;
 	speakers: Map<string, { name: string; joinedAt: number; buffer: SpeakerBuffer }>;
 	ready: boolean;
+	closing: boolean;
 	sharingSafe: boolean;
 	startedAt: number;
 }
@@ -101,7 +105,7 @@ export class TranscriptionRuntime {
 
 	private readonly voiceChanged = (before: VoiceState, after: VoiceState): void => {
 		if (after.guild.id !== this.config.guildId) return;
-		const session = this.session;
+		const session = this.session?.closing ? undefined : this.session;
 		const member = after.member ?? before.member;
 		if (!this.paused && !this.stopping && member && !member.user.bot) {
 			const at = this.dependencies.now();
@@ -140,6 +144,7 @@ export class TranscriptionRuntime {
 				}
 			}
 		}
+		if (session) this.stopIfAlone(session);
 		if (after.id === this.client.user?.id && this.session && (after.channelId !== this.session.channel.id || after.serverDeaf)) {
 			this.connectionFailed(this.session);
 		}
@@ -177,7 +182,22 @@ export class TranscriptionRuntime {
 	}
 
 	private humans(channel: VoiceChannel) { return [...channel.members.values()].filter((member) => !member.user.bot); }
+	private hasConversation(channel: VoiceChannel): boolean { return this.humans(channel).length >= MIN_VOICE_PARTICIPANTS; }
 	private allowed(channel: VoiceChannel): boolean { return !this.excludedChannels.has(channel.id) && (this.config.channels.includes("*") || this.config.channels.includes(channel.id)); }
+
+	private stopIfAlone(session: Session): boolean {
+		if (!session.closing && !this.hasConversation(session.channel)) {
+			// If only the cache revealed the departure, keep its uncertain boundary private.
+			this.syncSpeakers(session);
+			// Fence late packets and handshake completion immediately; reconciliation drains the session.
+			session.closing = true;
+			session.capture.close();
+			this.dependencies.progress?.changed();
+			// A normal departure does not need the connection-failure backoff.
+			this.retryAt = 0;
+		}
+		return session.closing;
+	}
 
 	private record(session: Session, type: TranscriptRecord["type"], fields: Partial<TranscriptRecord> = {}): TranscriptRecord {
 		const at = fields.at ?? new Date(this.dependencies.now()).toISOString();
@@ -243,7 +263,7 @@ export class TranscriptionRuntime {
 	}
 
 	private connectionFailed(session: Session): void {
-		if (this.session !== session) return;
+		if (this.session !== session || session.closing) return;
 		if (!session.sharingSafe) return;
 		session.sharingSafe = false;
 		this.dependencies.progress?.changed();
@@ -268,15 +288,15 @@ export class TranscriptionRuntime {
 				return;
 			}
 			if (this.session) {
-				this.syncSpeakers(this.session);
-				if (this.humans(this.session.channel).length) {
+				if (!this.session.closing) this.syncSpeakers(this.session);
+				if (!this.stopIfAlone(this.session)) {
 					return;
 				}
-				await this.closeSession("Voice channel is empty.");
+				await this.closeSession(TOO_FEW_PARTICIPANTS);
 				this.preferred = undefined;
 			}
 			if (this.dependencies.now() < this.retryAt) return;
-			const channels = [...guild.channels.cache.values()].filter((channel): channel is VoiceChannel => channel.type === ChannelType.GuildVoice && this.allowed(channel) && this.humans(channel).length > 0);
+			const channels = [...guild.channels.cache.values()].filter((channel): channel is VoiceChannel => channel.type === ChannelType.GuildVoice && this.allowed(channel) && this.hasConversation(channel));
 			channels.sort((a, b) => Number(b.id === this.preferred) - Number(a.id === this.preferred) || a.rawPosition - b.rawPosition || a.id.localeCompare(b.id));
 			for (const channel of channels) {
 				const permissions = channel.permissionsFor(this.client.user!);
@@ -286,6 +306,7 @@ export class TranscriptionRuntime {
 				try {
 					const capture = this.dependencies.connect(channel, (userId, pcm, at) => {
 						if (!session || this.session !== session || this.paused || this.stopping) return;
+						if (this.stopIfAlone(session)) return;
 						if (!this.client.isReady()) {
 							this.connectionFailed(session);
 							return;
@@ -295,18 +316,22 @@ export class TranscriptionRuntime {
 					}, () => { if (session) this.connectionFailed(session); });
 					// Attach a rejection handler before filesystem work can delay the handshake handler.
 					void capture.ready.catch(() => undefined);
-					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, sharingSafe: true, startedAt: this.dependencies.now() };
+					session = { id: randomUUID(), channel, capture, speakers: new Map(), ready: false, closing: false, sharingSafe: true, startedAt: this.dependencies.now() };
 					this.session = session;
 					await this.dependencies.store.markSession?.(this.record(session, "session_started"));
+					if (this.stopIfAlone(session)) {
+						await this.closeSession(TOO_FEW_PARTICIPANTS);
+						return;
+					}
 					// Install listeners before awaiting the voice handshake so the first speech is captured.
 					this.syncSpeakers(session);
 					this.pendingJoins.clear();
 					void capture.ready.then(async () => {
-						if (this.session !== session || this.stopping) return;
+						if (this.session !== session || this.stopping || this.stopIfAlone(session!)) return;
 						session!.ready = true;
 						this.dependencies.progress?.changed();
 						await this.queue.write(this.record(session!, "session_started", { text: "Local voice transcription started. Raw audio is not saved." }));
-						if (this.session !== session || this.stopping || this.paused) return;
+						if (this.session !== session || this.stopping || this.paused || this.stopIfAlone(session!)) return;
 						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe identify speakers by Discord username. Raw audio is not saved. "
 							+ (this.messages ? "Chat messages are archived separately according to their text channel's permissions, even when nobody is in voice. " : "")
 							+ "An administrator can use `/transcribe stop` to pause voice recording.", allowedMentions: { parse: [] } });
@@ -326,6 +351,7 @@ export class TranscriptionRuntime {
 	private async closeSession(reason: string): Promise<void> {
 		const session = this.session;
 		if (!session) return;
+		session.closing = true;
 		this.session = undefined;
 		this.dependencies.progress?.changed();
 		session.capture.close();
@@ -339,7 +365,7 @@ export class TranscriptionRuntime {
 
 	voicePresence(): LiveVoicePresence | null {
 		const session = this.session;
-		if (!session?.ready || !session.sharingSafe || this.paused || this.stopping || !this.client.isReady()
+		if (!session?.ready || session.closing || !session.sharingSafe || !this.hasConversation(session.channel) || this.paused || this.stopping || !this.client.isReady()
 			|| session.channel.guild.available === false) return null;
 		// Read current gateway membership, never the audience of an older audio chunk.
 		const members = this.humans(session.channel).filter((member) => session.speakers.has(member.id))
@@ -349,19 +375,22 @@ export class TranscriptionRuntime {
 
 	healthSnapshot() {
 		const channels = this.client.guilds.cache.get(this.config.guildId)?.channels.cache.values() ?? [];
-		const expected = !this.paused && [...channels].some((channel) => channel.type === ChannelType.GuildVoice && this.allowed(channel) && this.humans(channel).length > 0);
-		return { discordReady: this.client.isReady(), paused: this.paused, recording: this.session?.ready === true,
-			captureHealthy: !expected || Boolean(this.session && (this.session.ready || this.dependencies.now() - this.session.startedAt < 30_000)),
+		const expected = !this.paused && [...channels].some((channel) => channel.type === ChannelType.GuildVoice && this.allowed(channel) && this.hasConversation(channel));
+		const session = this.session && !this.session.closing && this.hasConversation(this.session.channel) ? this.session : undefined;
+		return { discordReady: this.client.isReady(), paused: this.paused, recording: session?.ready === true,
+			captureHealthy: !expected || Boolean(session && (session.ready || this.dependencies.now() - session.startedAt < 30_000)),
 			storageHealthy: this.queue.healthy, pending: this.queue.pending, lost: this.queue.lost,
 			chatPending: this.messages?.queued ?? 0, messageAccessHealthy: this.dependencies.messageAccess?.healthy,
 			lastPacketAt: this.lastPacketAt, lastSavedAt: this.lastSavedAt, archive: this.dependencies.archive?.health() };
 	}
 
 	status(): string {
-		const state = this.paused ? "paused" : this.session ? `${this.session.ready ? "recording" : "connecting to"} <#${this.session.channel.id}>` : "waiting for an occupied voice channel";
+		const session = this.session && !this.session.closing && this.hasConversation(this.session.channel) ? this.session : undefined;
+		const state = this.paused ? "paused" : session ? `${session.ready ? "recording" : "connecting to"} <#${session.channel.id}>` : "waiting for at least two people in a voice channel";
 		return [
 			`**Status:** ${state}`,
 			`**Automatic recording:** ${this.paused ? "paused until resumed" : "enabled"}`,
+			"**Minimum participants:** two people (bots do not count)",
 			`**Health:** ${this.dependencies.health?.summary ?? "see recording and archive status"}`,
 			`**Excluded channels:** ${this.excludedChannels.size ? [...this.excludedChannels].slice(0, 12).map((id) => `<#${id}>`).join(", ") + (this.excludedChannels.size > 12 ? ` and ${this.excludedChannels.size - 12} more` : "") : "none"}`,
 			`**Retention:** ${this.retentionDays ? `${this.retentionDays} days` : "indefinite"}`,

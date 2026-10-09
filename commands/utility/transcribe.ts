@@ -13,9 +13,9 @@ export const cooldown = 3;
 export const data = new SlashCommandBuilder().setName("transcribe").setDescription("Control local voice transcripts and daily logs")
 	.setContexts(InteractionContextType.Guild).setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 	.addSubcommand((command) => command.setName("status").setDescription("Show the recording state without revealing conversations"))
-	.addSubcommand((command) => command.setName("start").setDescription("Record your current voice channel and enable automatic recording"))
+	.addSubcommand((command) => command.setName("start").setDescription("Enable recording in your current voice channel when at least two people are present"))
 	.addSubcommand((command) => command.setName("stop").setDescription("Stop recording and pause automatic recording, including after a restart"))
-	.addSubcommand((command) => command.setName("resume").setDescription("Resume automatic recording of occupied voice channels"))
+	.addSubcommand((command) => command.setName("resume").setDescription("Resume automatic recording of voice channels with at least two people"))
 	.addSubcommand((command) => command.setName("exclude").setDescription("Exclude a voice channel from automatic recording")
 		.addChannelOption((option) => option.setName("channel").setDescription("Voice channel to exclude").addChannelTypes(ChannelType.GuildVoice).setRequired(true)))
 	.addSubcommand((command) => command.setName("include").setDescription("Remove a voice channel exclusion")
@@ -73,7 +73,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 			.setColor(0x5865f2)
 			.setTitle(title)
 			.setDescription(runtime.status())
-			.setFooter({ text: "One voice channel at a time · Raw audio is not saved" })
+			.setFooter({ text: "At least two people · One voice channel at a time · Raw audio is not saved" })
 			.setTimestamp();
 		await interaction.editReply({ content: "", embeds: [embed], allowedMentions: { parse: [] } });
 	}
