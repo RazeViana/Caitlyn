@@ -229,14 +229,15 @@ test("live presence follows current human membership and disappears when capture
 	assert.equal(f.runtime.voicePresence(), null);
 });
 
-test("automatic recording sticks with a conversation, captures joiners separately and follows occupied channels", async (context) => {
+test("automatic recording follows conversations without posting announcements or requiring Send Messages", async (context) => {
 	const f = fixture();
 	context.after(() => f.runtime.stop());
+	f.first.permissionsFor = () => ({ has: (bits) => bits.every((bit) => [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect].includes(bit)) });
 	await f.runtime.start();
 	await setImmediate();
 	assert.equal(f.captures[0].room.id, "456");
 	assert.deepEqual(f.captures[0].ids, ["111", "555"]);
-	assert.match(f.notices[0].content, /transcribing.*Mainframe/);
+	assert.equal(f.notices.length, 0);
 	f.first.members.set("333", f.member("333", "Carol"));
 	f.first.members.set("444", f.member("444", "Robot", true));
 	await f.runtime.reconcile();
@@ -252,6 +253,7 @@ test("automatic recording sticks with a conversation, captures joiners separatel
 	assert.equal(f.captures[0].closed, true);
 	assert.equal(f.captures[1].room.id, "457");
 	await f.runtime.stop();
+	assert.equal(f.notices.length, 0);
 	assert.deepEqual(f.records.filter((entry) => entry.type === "transcript").map((entry) => [entry.userId, entry.speaker, entry.text]), [["111", "Alice", "speech-1"], ["333", "Carol", "speech-2"]]);
 	const usernames = { "111": "Alice", "222": "Bob", "333": "Carol", "555": "Eve", "666": "Dan" };
 	for (const entry of f.records.filter((record) => record.userId)) assert.equal(entry.speaker, usernames[entry.userId]);
@@ -444,19 +446,14 @@ test("disconnects record gaps and reconnect with backoff, ignoring bot-only, sta
 	assert.equal(f.captures.length, 2);
 });
 
-test("failed notice or storage closes recording instead of silently continuing", async () => {
-	for (const fail of ["notice", "storage"]) {
-		const f = fixture();
-		if (fail === "notice") f.first.send = async () => { throw new Error("permission"); };
-		else f.dependencies.store.append = async () => { throw new Error("disk full"); };
-		try {
-			await f.runtime.start();
-			await setImmediate();
-			await f.runtime.reconcile();
-			assert.equal(f.captures[0].closed, true);
-		}
-		finally { await f.runtime.stop(); }
-	}
+test("failed storage closes recording instead of continuing without saved logs", async (context) => {
+	const f = fixture();
+	context.after(() => f.runtime.stop());
+	f.dependencies.store.append = async () => { throw new Error("disk full"); };
+	await f.runtime.start();
+	await setImmediate();
+	await f.runtime.reconcile();
+	assert.equal(f.captures[0].closed, true);
 });
 
 test("transcript audiences follow join, leave and rejoin boundaries even when inference finishes afterwards", async () => {

@@ -300,7 +300,7 @@ export class TranscriptionRuntime {
 			channels.sort((a, b) => Number(b.id === this.preferred) - Number(a.id === this.preferred) || a.rawPosition - b.rawPosition || a.id.localeCompare(b.id));
 			for (const channel of channels) {
 				const permissions = channel.permissionsFor(this.client.user!);
-				if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.SendMessages])) continue;
+				if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect])) continue;
 				this.retryAt = this.dependencies.now() + 15_000;
 				let session: Session | undefined;
 				try {
@@ -332,9 +332,6 @@ export class TranscriptionRuntime {
 						this.dependencies.progress?.changed();
 						await this.queue.write(this.record(session!, "session_started", { text: "Local voice transcription started. Raw audio is not saved." }));
 						if (this.session !== session || this.stopping || this.paused || this.stopIfAlone(session!)) return;
-						await channel.send({ content: "🎙️ Caitlyn is transcribing this voice channel. Private daily logs on Mainframe identify speakers by Discord username. Raw audio is not saved. "
-							+ (this.messages ? "Chat messages are archived separately according to their text channel's permissions, even when nobody is in voice. " : "")
-							+ "An administrator can use `/transcribe stop` to pause voice recording.", allowedMentions: { parse: [] } });
 						this.log("success", "Voice transcription recording started.", { channel: channel.id, count: session!.speakers.size });
 					}).catch(() => { if (session) this.connectionFailed(session); });
 					break;
