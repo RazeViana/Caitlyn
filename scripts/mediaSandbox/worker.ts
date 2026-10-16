@@ -48,22 +48,30 @@ async function gatewayDenies(authority: string): Promise<boolean> {
 	});
 }
 
-async function isolationCheck(selfHosted = false): Promise<void> {
+export async function isolationChecks(selfHosted = false): Promise<Record<string, boolean>> {
+	const [noDirectPublic, noDirectPrivate, noDirectHost, gatewayRejectsPrivate, gatewayRejectsLoopback,
+		gatewayRejectsUnapproved, gatewayRejectsPort, hostedVx, hostedFx] = await Promise.all([
+		deniedConnection("1.1.1.1", 443), deniedConnection("100.64.0.1", 5432), deniedConnection("192.168.5.2", 5432),
+		gatewayDenies("100.64.0.1:443"), gatewayDenies("127.0.0.1:443"), gatewayDenies("www.reddit.com:443"), gatewayDenies("x.com:5432"),
+		selfHosted ? gatewayDenies("api.vxtwitter.com:443") : true, selfHosted ? gatewayDenies("api.fxtwitter.com:443") : true,
+	]);
 	const checks = {
 		unprivileged: process.getuid?.() === 1000,
 		noCredentials: !["TOKEN", "PGPASSWORD", "WEBUI_API_KEY", "SSH_AUTH_SOCK", "AWS_SECRET_ACCESS_KEY"].some((key) => process.env[key]),
 		noHostMounts: !["/Users", "/host", "/app/.env", "/var/run/docker.sock"].some((path) => existsSync(path)),
-		noDirectPublic: await deniedConnection("1.1.1.1", 443),
-		noDirectPrivate: await deniedConnection("100.64.0.1", 5432),
-		noDirectHost: await deniedConnection("192.168.5.2", 5432),
-		gatewayRejectsPrivate: await gatewayDenies("100.64.0.1:443"),
-		gatewayRejectsLoopback: await gatewayDenies("127.0.0.1:443"),
-		gatewayRejectsUnapproved: await gatewayDenies("www.reddit.com:443"),
-		gatewayRejectsPort: await gatewayDenies("x.com:5432"),
-		...(selfHosted ? { gatewayRejectsHostedMetadata: await gatewayDenies("api.vxtwitter.com:443") && await gatewayDenies("api.fxtwitter.com:443") } : {}),
+		noDirectPublic, noDirectPrivate, noDirectHost, gatewayRejectsPrivate, gatewayRejectsLoopback, gatewayRejectsUnapproved, gatewayRejectsPort,
+		...(selfHosted ? { gatewayRejectsHostedMetadata: hostedVx && hostedFx } : {}),
 	};
-	process.stdout.write(`${JSON.stringify({ isolation: checks, passed: Object.values(checks).every(Boolean) })}\n`);
-	if (!Object.values(checks).every(Boolean)) process.exitCode = 1;
+	return checks;
+}
+
+export async function checkedDelivery(deliver: () => Promise<void>, check = isolationChecks): Promise<boolean> {
+	const checks = await check(true);
+	const required = ["unprivileged", "noCredentials", "noHostMounts", "noDirectPublic", "noDirectPrivate", "noDirectHost",
+		"gatewayRejectsPrivate", "gatewayRejectsLoopback", "gatewayRejectsUnapproved", "gatewayRejectsPort", "gatewayRejectsHostedMetadata"];
+	if (required.some((key) => checks[key] !== true) || !Object.values(checks).every((value) => value === true)) return false;
+	await deliver();
+	return true;
 }
 
 export function failureCategory(text: string): string {
@@ -184,18 +192,29 @@ async function probe(url: string, wholeXPost = false, deliveryLimits?: [number, 
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 	if (process.argv[2] === "--isolation-check") {
-		await isolationCheck(process.argv[3] === "--self-hosted");
+		const checks = await isolationChecks(process.argv[3] === "--self-hosted");
+		const passed = Object.values(checks).every(Boolean);
+		process.stdout.write(`${JSON.stringify({ isolation: checks, passed })}\n`);
+		if (!passed) process.exitCode = 1;
 	}
 	else {
+		const checked = process.argv[2] === "--checked-delivery";
+		if (checked) process.argv.splice(2, 1);
 		const wholeXPost = process.argv[2] === "--x-post";
 		const tikTok = process.argv[2] === "--deliver-tiktok";
 		const instagram = process.argv[2] === "--deliver-instagram";
 		const delivery = process.argv[2] === "--deliver-x" || tikTok || instagram;
 		const metadataOnly = process.argv[2] === "--metadata-x";
-		await probe(process.argv[wholeXPost || delivery || metadataOnly ? 3 : 2] ?? "", wholeXPost,
+		const deliver = () => probe(process.argv[wholeXPost || delivery || metadataOnly ? 3 : 2] ?? "", wholeXPost,
 			delivery ? [Number(process.argv[4]), Number(process.argv[5])] : undefined,
 			metadataOnly ? process.argv[4] === "sensitive" : delivery && process.argv[6] === "sensitive",
-			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly, tikTok, instagram).catch(() => {
+			delivery ? process.argv[7] ?? "fxembed" : "fxembed", metadataOnly, tikTok, instagram);
+		await (checked ? checkedDelivery(deliver).then((passed) => {
+			if (!passed) {
+				process.stdout.write("{\"outcome\":\"worker_unavailable\"}\n");
+				process.exitCode = 1;
+			}
+		}) : deliver()).catch(() => {
 			process.stdout.write(`${JSON.stringify({ outcome: "invalid_probe_input" })}\n`);
 			process.exitCode = 1;
 		});

@@ -27,10 +27,10 @@ function metadata() {
 			{ id: "789", kind: "video", variants: [{ url: "https://video.twimg.com/ext_tw_video/789/clip.mp4?tag=1", bitrate: 256000, width: 640, height: 360 }], durationSeconds: 10 }] } };
 }
 
-async function server(context, run) {
+async function server(context, run, options) {
 	const directory = await mkdtemp("/tmp/caitlyn-metadata-");
 	const socket = `${directory}/worker.sock`;
-	const service = await startSocialWorkerServer(socket, run);
+	const service = await startSocialWorkerServer(socket, run, options);
 	context.after(async () => {
 		await service.stop();
 		await rm(directory, { recursive: true, force: true });
@@ -178,4 +178,16 @@ test("metadata transport bounds response bytes, timeouts, and cancellation", asy
 	const controller = new AbortController();
 	controller.abort();
 	assert.equal((await requestSocialMetadata(controlled, input, controller.signal)).outcome, "timeout");
+});
+
+test("health exposes pending cleanup and recovery without doing Docker or provider work", async (context) => {
+	let healthy = false;
+	const socket = await server(context, async () => { throw new Error("Health must not invoke work"); }, { healthy: () => healthy });
+	const blocked = await raw(socket, "GET", "/v1/health");
+	assert.equal(blocked.status, 503);
+	assert.equal(blocked.body.status, "cleanup_pending");
+	healthy = true;
+	const recovered = await raw(socket, "GET", "/v1/health");
+	assert.equal(recovered.status, 200);
+	assert.equal(recovered.body.status, "idle");
 });

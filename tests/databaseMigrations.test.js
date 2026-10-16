@@ -108,6 +108,29 @@ test("database migrations bootstrap a fresh local database safely", {
 			assert.equal(await store.claim(), undefined);
 		});
 
+		await context.test("temporary worker failures retry quickly with backoff while uncertain sends remain fenced", async () => {
+			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
+			const store = createSocialDeliveryStore(applicationPool);
+			await store.configure("1901", "1902", true);
+			await store.enqueue({ guild_id: "1901", channel_id: "1902", source_id: "1903", author_id: "1904",
+				source_hash: "a".repeat(64), post_id: "1905", url: "https://x.com/alice/status/1905" });
+			for (const expected of [5, 10]) {
+				const job = await store.claim();
+				assert.equal(job.source_id, "1903");
+				await store.finish(job, "queued", "worker_unavailable");
+				const row = (await client.query("SELECT status, EXTRACT(EPOCH FROM (next_attempt_at - updated_at))::int AS delay FROM discord.social_jobs WHERE id = $1", [job.id])).rows[0];
+				assert.equal(row.status, "queued");
+				assert.equal(row.delay, expected);
+				assert.equal(await store.claim(), undefined);
+				await client.query("UPDATE discord.social_jobs SET next_attempt_at = NOW() - INTERVAL '1 second' WHERE id = $1", [job.id]);
+			}
+			const sending = await store.claim();
+			assert.equal(await store.beginSend(sending), true);
+			await store.finish(sending, "queued", "worker_unavailable");
+			assert.equal((await client.query("SELECT status FROM discord.social_jobs WHERE id = $1", [sending.id])).rows[0].status, "sending");
+			await client.query("DELETE FROM discord.social_jobs WHERE id = $1", [sending.id]);
+		});
+
 		await context.test("social disable and deletion cancel unsent jobs without altering another server", async () => {
 			const { createSocialDeliveryStore } = await import("../core/socialDeliveryStore.ts");
 			const store = createSocialDeliveryStore(applicationPool);

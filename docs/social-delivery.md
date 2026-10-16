@@ -1,5 +1,15 @@
 # Opt-in X preview delivery
 
+## Worker recovery and posting latency
+
+The broker labels temporary media containers and IPC volumes with a job ID and an instance ID derived from its private socket directory. Before media work and at startup, it recovers only resources matching that instance, the expected job names, isolated container configuration and exclusive volume attachments. This also handles Docker completing a timed-out create after the previous cleanup. Legacy, foreign and ambiguous resources still require operator review. Cleanup has a bounded deadline, retries on subsequent media work, and reports pending cleanup through the private health endpoint. Raw Docker errors, credentials and post content are excluded from diagnostics; logs include the failed stage and elapsed time.
+
+Text-only X posts, including text-only quotes, return directly from normalized local FxEmbed metadata. Posts with media start a gateway and one isolated worker. That same worker checks its isolation before reading metadata or downloading files; independent network-denial checks run together. There is no separate verifier container. Media verification, upload limits, original-message retention and duplicate-send fencing still apply.
+
+Temporary `worker_unavailable` failures retry after five seconds on the first attempt and ten seconds on the second, instead of waiting a minute each time. The existing three-attempt limit remains. Exhausted worker failures use the bot's shared guild-scoped ERROR logger, so they remain visible when the owner enables only error logs. Provider restrictions/rate limits are not bypassed, and uncertain Discord sends are reconciled instead of retried as new sends. Large downloads, compression, upstream response time and host storage contention still affect posting time.
+
+## Earlier rollout checkpoint
+
 Status: the X checkpoint was sanitized, signed and pushed on `codex/social-media-replacement` through `58aacdd`. [TikTok video/share-link support](tiktok.md) is the subsequent feature; see [handoff](handoff.md) for current testing/activation status. The owner authorized local Discord testing while the homeserver is inactive; channels require administrator opt-in. Instagram/Reddit and TikTok slideshows remain unsupported. No integration merge or homeserver deployment has occurred.
 
 ## Behavior and configuration
