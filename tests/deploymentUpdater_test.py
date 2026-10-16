@@ -81,7 +81,7 @@ class FakeOperations:
 
 
 class ReadinessTests(unittest.TestCase):
-    def verify(self, statuses, configured=True):
+    def verify(self, statuses, configured=True, times=None, startup=True):
         operations = updater.Operations(CONFIG, Path('/unused'))
         compose = copy.deepcopy(COMPOSE)
         if configured:
@@ -90,7 +90,7 @@ class ReadinessTests(unittest.TestCase):
 
         def command(arguments, **_kwargs):
             if arguments[1] == 'logs':
-                return 'Bot started successfully'
+                return 'Bot started successfully' if startup else 'private application log content'
             status = next(inspections) if arguments[-1].endswith('-caitlyn-1') else 'healthy'
             state = {'Running': True, 'OOMKilled': False, 'StartedAt': '2026-10-05T00:00:00Z'}
             if status is not None:
@@ -98,12 +98,24 @@ class ReadinessTests(unittest.TestCase):
             return json.dumps([{'State': state, 'RestartCount': 0, 'Image': 'sha256:' + 'f' * 64}])
 
         operations.command = command
-        with patch.object(updater.time, 'monotonic', side_effect=[0, *range(len(statuses)), 121]), \
+        with patch.object(updater.time, 'monotonic', side_effect=times or [0, *range(len(statuses)), 301]), \
                 patch.object(updater.time, 'sleep'):
             operations.verify(compose)
 
     def test_startup_waits_for_recorder_health_to_recover(self):
         self.verify(['starting', 'unhealthy', 'healthy'])
+
+    def test_cold_start_can_recover_after_two_minutes_without_relaxing_health(self):
+        self.verify(['starting', 'unhealthy', 'healthy'], times=[0, 0, 121, 299])
+
+    def test_slow_start_is_bounded_and_reports_only_closed_readiness_reasons(self):
+        with self.assertLogs(level='INFO') as logs, self.assertRaisesRegex(updater.UpdateError, 'new_services_not_ready'):
+            self.verify(['healthy', 'healthy'], times=[0, 121, 299, 301], startup=False)
+        messages = '\n'.join(logs.output)
+        self.assertIn('caitlyn:startup_incomplete', messages)
+        self.assertIn('Release readiness timed out', messages)
+        self.assertNotIn('private application log content', messages)
+        self.assertEqual(messages.count('Waiting for release readiness'), 1)
 
     def test_successful_login_does_not_hide_failed_or_missing_recorder_health(self):
         for status in ['starting', 'unhealthy', None]:

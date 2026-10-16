@@ -296,26 +296,40 @@ class Operations:
         self.job("app.start", self.app)
 
     def verify(self, compose):
-        deadline = time.monotonic() + 120
+        # Cold imports, storage and Discord permission hydration can exceed two
+        # minutes on a busy NAS. Keep the same readiness requirements throughout
+        # this bounded window, and report which checks still prevent release.
+        deadline = time.monotonic() + 300
+        previous_pending = None
         while time.monotonic() < deadline:
-            ready = True
+            pending = []
             for name in ("fxembed", "broker", "caitlyn"):
                 container = "ix-" + self.app + "-" + name + "-1"
                 details = json.loads(self.command(["docker", "inspect", container]))[0]
                 state = details["State"]
                 require(not state.get("OOMKilled") and details.get("RestartCount") == 0, "new_service_restarted")
                 require(details.get("Image") == compose["services"][name]["image"], "running_image_mismatch")
-                ready = ready and state.get("Running")
+                if not state.get("Running"):
+                    pending.append(name + ":not_running")
                 # Transcription adds a bot dependency healthcheck. A successful
                 # Discord login alone must not release an unhealthy recorder.
                 if name != "caitlyn" or "healthcheck" in compose["services"][name] or "Health" in state:
-                    ready = ready and state.get("Health", {}).get("Status") == "healthy"
+                    health = state.get("Health", {}).get("Status")
+                    if health != "healthy":
+                        # Never include arbitrary inspect output or log content.
+                        reason = health if health in ("starting", "unhealthy") else "missing"
+                        pending.append(name + ":health_" + reason)
                 if name == "caitlyn":
                     logs = self.command(["docker", "logs", "--since", state["StartedAt"], "--tail=200", container])
-                    ready = ready and "Bot started successfully" in logs
-            if ready:
+                    if "Bot started successfully" not in logs:
+                        pending.append(name + ":startup_incomplete")
+            if not pending:
                 return
+            if pending != previous_pending:
+                logging.info("Waiting for release readiness: %s", ", ".join(pending))
+                previous_pending = pending
             time.sleep(2)
+        logging.error("Release readiness timed out: %s", ", ".join(previous_pending or ["checks_incomplete"]))
         raise UpdateError("new_services_not_ready")
 
     def commands(self):
