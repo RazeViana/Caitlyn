@@ -17,7 +17,7 @@ import { createDockerSocialRunner, parseXMetadataProvider, workerFailureReason }
 import logger from "../../core/logger.js";
 import { parseSocialLink } from "../../core/socialLinks.js";
 
-export async function startSocialWorkerServer(socketPath: string, run: (input: SocialWorkerRequest, signal: AbortSignal, operation?: SocialWorkerOperation) => Promise<unknown>, options: { provider?: XMetadataProvider; healthy?: () => boolean } = {}) {
+export async function startSocialWorkerServer(socketPath: string, run: (input: SocialWorkerRequest, signal: AbortSignal, operation?: SocialWorkerOperation) => Promise<unknown>, options: { provider?: XMetadataProvider; healthy?: () => boolean; recover?: () => Promise<void> } = {}) {
 	const provider = parseXMetadataProvider(options.provider);
 	if (!socketPath.startsWith("/") || Buffer.byteLength(socketPath) > 100 || /[\p{Cc}]/u.test(socketPath)) throw new Error("invalid_worker_socket");
 	const parent = await lstat(dirname(socketPath));
@@ -102,9 +102,21 @@ export async function startSocialWorkerServer(socketPath: string, run: (input: S
 	});
 	await chmod(socketPath, 0o600);
 	const identity = await lstat(socketPath);
+	// Docker teardown can outlast the foreground deadline on a busy NAS. Retry
+	// while idle rather than leaving health failed until another media post arrives.
+	// Reserve the same busy slot as delivery so cleanup cannot remove active work.
+	const recoveryTimer = options.recover ? setInterval(() => {
+		if (stopping || busy || options.healthy?.() !== false) return;
+		busy = true;
+		activeWork = Promise.resolve().then(options.recover).catch(() => {
+			// Health stays failed; the job already logged the pending cleanup.
+		}).finally(() => { busy = false; });
+	}, 30_000) : undefined;
+	recoveryTimer?.unref();
 	return {
 		async stop(): Promise<void> {
 			stopping = true;
+			clearInterval(recoveryTimer);
 			active?.abort();
 			server.closeAllConnections();
 			await new Promise<void>((resolve) => {
@@ -121,7 +133,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	try {
 		const provider = parseXMetadataProvider(process.env.SOCIAL_X_PROVIDER);
 		const run = await createDockerSocialRunner(process.env.SOCIAL_WORKER_DOCKER_CONTEXT ?? "default", process.env.SOCIAL_WORKER_IMAGE ?? "caitlyn-media-api:local", provider, process.env.SOCIAL_FXEMBED_URL, process.env.SOCIAL_FXEMBED_KEY_FILE);
-		const service = await startSocialWorkerServer(process.env.SOCIAL_WORKER_SOCKET ?? "", run, { provider, healthy: run.healthy });
+		const service = await startSocialWorkerServer(process.env.SOCIAL_WORKER_SOCKET ?? "", run, { provider, healthy: run.healthy, recover: run.recover });
 		logger.info("Local social worker ready; socket access is owner-only", `mode=${provider}`, "platforms=x,tiktok,instagram", `localApiAuth=${Boolean(process.env.SOCIAL_FXEMBED_KEY_FILE)}`);
 		for (const signal of ["SIGINT", "SIGTERM"] as const) {
 			process.once(signal, () => {

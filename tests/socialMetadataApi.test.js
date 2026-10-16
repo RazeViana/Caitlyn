@@ -191,3 +191,75 @@ test("health exposes pending cleanup and recovery without doing Docker or provid
 	assert.equal(recovered.status, 200);
 	assert.equal(recovered.body.status, "idle");
 });
+
+test("idle cleanup reserves the delivery slot and stops with the server", async (context) => {
+	context.mock.timers.enable({ apis: ["setInterval"] });
+	const directory = await mkdtemp("/tmp/caitlyn-idle-");
+	const socket = `${directory}/worker.sock`;
+	let healthy = false;
+	let calls = 0;
+	let finish;
+	const service = await startSocialWorkerServer(socket, async () => metadata(), {
+		healthy: () => healthy,
+		recover: async () => {
+			calls++;
+			await new Promise((resolve) => { finish = resolve; });
+			healthy = true;
+		},
+	});
+	try {
+		context.mock.timers.tick(30_000);
+		await setImmediate();
+		assert.equal(calls, 1);
+		assert.equal((await requestSocialMetadata(socket, input)).outcome, "worker_unavailable");
+		context.mock.timers.tick(30_000);
+		await setImmediate();
+		assert.equal(calls, 1);
+		finish();
+		await setImmediate();
+		assert.equal((await raw(socket, "GET", "/v1/health")).status, 200);
+		assert.equal((await requestSocialMetadata(socket, input)).outcome, "ready");
+	}
+	finally {
+		finish?.();
+		await service.stop();
+		await rm(directory, { recursive: true, force: true });
+	}
+	healthy = false;
+	context.mock.timers.tick(60_000);
+	await setImmediate();
+	assert.equal(calls, 1);
+});
+
+test("idle recovery waits for active delivery and retries a transient cleanup failure", async (context) => {
+	context.mock.timers.enable({ apis: ["setInterval"] });
+	let healthy = false;
+	let calls = 0;
+	let started;
+	let finish;
+	const active = new Promise((resolve) => { started = resolve; });
+	const socket = await server(context, async () => {
+		started();
+		await new Promise((resolve) => { finish = resolve; });
+		return metadata();
+	}, { healthy: () => healthy, recover: async () => {
+		calls++;
+		if (calls === 1) throw new Error("worker_docker_timeout");
+		healthy = true;
+	} });
+	const job = requestSocialMetadata(socket, input);
+	await active;
+	context.mock.timers.tick(30_000);
+	await setImmediate();
+	assert.equal(calls, 0);
+	finish();
+	await job;
+	context.mock.timers.tick(30_000);
+	await setImmediate();
+	assert.equal(calls, 1);
+	assert.equal((await raw(socket, "GET", "/v1/health")).status, 503);
+	context.mock.timers.tick(30_000);
+	await setImmediate();
+	assert.equal(calls, 2);
+	assert.equal((await raw(socket, "GET", "/v1/health")).status, 200);
+});
