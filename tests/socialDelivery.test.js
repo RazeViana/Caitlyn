@@ -38,7 +38,7 @@ test("native previews copy commentary, attribute the username in metadata, and r
 	const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
 	await delivery.send(f.job, { content: "ignored", embeds: [{ title: "ignored" }] }, { previewUrl: url });
 	const payload = f.calls.find(([method]) => method === "send")[1];
-	assert.equal(payload.content, "commentary @everyone\n" + url + "?shared_by=real.user&v=2");
+	assert.equal(payload.content, "commentary @everyone\n" + url + "?shared_by=real.user&v=3");
 	assert.equal(payload.embeds, undefined);
 	assert.equal(payload.files, undefined);
 	assert.deepEqual(payload.allowedMentions, { parse: [], repliedUser: false });
@@ -52,7 +52,9 @@ test("native previews copy commentary, attribute the username in metadata, and r
 	assert.equal(await delivery.find({ ...f.job, message_id: null }), "555");
 	f.source.author.username = "new.username";
 	assert.equal(await delivery.find(f.job), "555", "a username change must not break persisted delivery identity");
-	f.preview.content = payload.content.replace("&v=2", "");
+	f.preview.content = payload.content.replace("&v=3", "&v=2");
+	assert.equal(await delivery.find(f.job), "555", "v2 attribution URLs still identify already-sent previews");
+	f.preview.content = payload.content.replace("&v=3", "");
 	assert.equal(await delivery.find(f.job), "555", "v1 attribution URLs still identify already-sent previews");
 	f.preview.content += " changed";
 	assert.equal(await delivery.find(f.job), undefined);

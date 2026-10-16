@@ -265,6 +265,40 @@ test("database failures and unacknowledged or lost send claims never authorize a
 	assert.ok(!f.calls.some(([name]) => name === "send"));
 });
 
+test("queue failures report safe diagnostics at bounded intervals and confirm recovery before processing again", async () => {
+	const f = fixture();
+	const claim = f.dependencies.store.claim;
+	let now = 0;
+	f.dependencies.now = () => now;
+	f.dependencies.store.claim = async () => {
+		now += 5_000;
+		throw Object.assign(new Error("PRIVATE_SQL_AND_VALUES"), { code: "57014" });
+	};
+	for (const time of [0, 10_000, 65_000]) {
+		now = time;
+		assert.equal(await f.runtime.tick(), false);
+	}
+	const errors = f.logs.filter(([level]) => level === "error");
+	assert.equal(errors.length, 2);
+	assert.ok(errors.every((entry) => entry[1] === undefined && entry[3].includes("57014") && entry[3].includes("seconds counted: 5")));
+	assert.match(errors[1][3], /count: 3/);
+	assert.ok(!JSON.stringify(f.logs).includes("PRIVATE_"));
+	assert.ok(!f.calls.some(([name]) => name === "send" || name === "finish"));
+	f.dependencies.store.claim = async () => undefined;
+	await f.runtime.tick();
+	await f.runtime.tick();
+	const recovered = f.logs.filter((entry) => entry[2].includes("polling recovered"));
+	assert.equal(recovered.length, 1);
+	assert.equal(recovered[0][0], "success");
+	assert.match(recovered[0][3], /count: 3/);
+	f.dependencies.store.claim = async () => { throw new Error("Query read timeout"); };
+	await f.runtime.tick();
+	assert.equal(f.logs.filter(([level]) => level === "error").length, 3, "a new incident must be logged immediately");
+	f.dependencies.store.claim = claim;
+	await f.runtime.tick();
+	assert.equal(f.calls.filter(([name]) => name === "send").length, 1);
+});
+
 test("worker outages retry at most three times while restricted, invalid, and rate-limited posts stop", async () => {
 	for (const outcome of ["worker_unavailable", "timeout", "restricted", "rate_limited", "unavailable", "invalid_response"]) {
 		for (const attempts of [1, 3]) {

@@ -50,6 +50,20 @@ test("data-service errors expose only known reasons, never request bodies or pro
 	assert.match(dataErrorReason(new Error("Open WebUI API returned 429 PRIVATE_BODY")), /hidden/);
 });
 
+test("database diagnostics distinguish deadlines, contention and configuration without logging SQL or values", () => {
+	for (const [code, reason] of [["57014", "cancelled or exceeded"], ["40P01", "deadlocked"], ["53300", "connection limit"], ["42P01", "table is missing"], ["08006", "connection failed"]]) {
+		const detail = dataErrorReason({ code, message: "PRIVATE_QUERY_VALUES", detail: "PRIVATE_BODY", where: "PRIVATE_SQL" });
+		assert.ok(detail.includes(code) && detail.includes(reason));
+		assert.ok(!detail.includes("PRIVATE_"));
+	}
+	assert.equal(dataErrorReason(new Error("timeout exceeded when trying to connect")), "timed out waiting for a database connection");
+	assert.equal(dataErrorReason(new Error("Connection terminated due to connection timeout")), "timed out waiting for a database connection");
+	assert.equal(dataErrorReason(new Error("Query read timeout")), "timed out waiting for a database query response");
+	for (const error of [{ code: "__proto__" }, { code: "constructor" }, { code: "57014\nPRIVATE_SQL" }, new Error("Query read timeout PRIVATE_SQL")]) {
+		assert.match(dataErrorReason(error), /hidden/);
+	}
+});
+
 test("collection logs retain separate server context and default to DEBUG", async (context) => {
 	const records = capture(context);
 	await Promise.all(["111", "222"].map((server) => withLogGuild(server, async () => {

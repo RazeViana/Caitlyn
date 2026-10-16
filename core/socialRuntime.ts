@@ -19,7 +19,7 @@ import { sanitizeInstagramReason } from "./socialInstagramPost.js";
 import { renderInstagramAccessNotice } from "./socialAccessNotice.js";
 import { getFeatureConfiguration } from "./environment.js";
 import { startSocialProgress } from "./socialProgress.js";
-import { logData } from "./dataLog.js";
+import { dataErrorReason, logData } from "./dataLog.js";
 import { socialEmbedUrl } from "./socialEmbed.js";
 import { createSocialDiscordDelivery, SOCIAL_PREVIEW_FOOTER, socialSourceHash, type SocialDiscordDelivery } from "../messages/socialDelivery.js";
 import type { SocialJob, SocialWorkerRequest, SocialWorkerResult } from "../types/socialDelivery.js";
@@ -42,6 +42,8 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let controller: AbortController | undefined;
 	let lastIdleLog = -Infinity;
+	let failedPolls = 0;
+	let lastPollErrorLog = -Infinity;
 	let started = false;
 	let wakeRequested = false;
 	const log = dependencies.logger;
@@ -225,8 +227,14 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 
 	async function run(): Promise<boolean> {
 		if (stopping || !dependencies.ready()) return false;
+		const pollStarted = dependencies.now();
 		try {
 			const job = await store.claim();
+			if (failedPolls) {
+				logData("Social post database polling recovered; normal processing resumed", { count: failedPolls }, log.success);
+				failedPolls = 0;
+				lastPollErrorLog = -Infinity;
+			}
 			if (job) {
 				await withLogGuild(job.guild_id, () => processJob(job));
 				return true;
@@ -236,7 +244,15 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 				log.debug("No social posts waiting to be processed");
 			}
 		}
-		catch { log.error("Could not load waiting social posts from the database; will try again"); }
+		catch (error) {
+			failedPolls++;
+			if (dependencies.now() - lastPollErrorLog >= 60_000) {
+				lastPollErrorLog = dependencies.now();
+				logData("Could not load waiting social posts from the database; will try again", {
+					reason: dataErrorReason(error), count: failedPolls, seconds: Math.max(0, dependencies.now() - pollStarted) / 1_000,
+				}, log.error);
+			}
+		}
 		return false;
 	}
 

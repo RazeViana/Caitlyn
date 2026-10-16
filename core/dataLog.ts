@@ -29,6 +29,18 @@ export function dataErrorReason(error: unknown): string {
 	if (typeof failure.code === "string" && ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENETUNREACH", "EHOSTUNREACH", "EAI_AGAIN", "ENOTFOUND"].includes(failure.code)) {
 		return `network connection failed (${failure.code})`;
 	}
+	const databaseCodes: Record<string, string> = {
+		"08000": "database connection failed", "08001": "database connection could not be established",
+		"08003": "database connection is closed", "08006": "database connection failed",
+		"40001": "database transaction conflicted", "40P01": "database transaction deadlocked",
+		"42P01": "required database table is missing", "42703": "required database column is missing",
+		"42501": "database permission denied", "53300": "database connection limit reached",
+		"55P03": "database lock was unavailable", "57014": "database query was cancelled or exceeded its deadline",
+		"57P01": "database is shutting down", "57P02": "database stopped unexpectedly", "57P03": "database is not ready",
+	};
+	if (typeof failure.code === "string" && Object.hasOwn(databaseCodes, failure.code)) return `${databaseCodes[failure.code]} (${failure.code})`;
+	if (typeof failure.message === "string" && ["timeout exceeded when trying to connect", "Connection terminated due to connection timeout"].includes(failure.message)) return "timed out waiting for a database connection";
+	if (failure.message === "Query read timeout") return "timed out waiting for a database query response";
 	if (failure.name === "TimeoutError") return "the service took too long to answer";
 	if (failure.name === "AbortError") return "the request was stopped";
 	// These complete messages are created locally; never copy a provider's free-form error text.
