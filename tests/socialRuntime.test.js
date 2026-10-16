@@ -37,6 +37,36 @@ function fixture(overrides = {}) {
 	return { runtime, dependencies, job, calls, logs, result, finished: () => calls.filter(([name]) => name === "finish").map((call) => call.slice(2)) };
 }
 
+test("embed mode sends an attributed link without extraction and never treats it as a confirmed replacement", async () => {
+	const f = fixture();
+	f.dependencies.embedOrigin = "https://embed.example.com";
+	await f.runtime.tick();
+	assert.ok(!f.calls.some(([method]) => method === "worker" || method === "typing"));
+	assert.deepEqual(f.calls.find(([method]) => method === "beginSend").slice(2), [false, false]);
+	const send = f.calls.find(([method]) => method === "send");
+	assert.deepEqual(send.slice(2), [{ content: "https://embed.example.com/alice/status/123" }, { previewUrl: "https://embed.example.com/alice/status/123" }]);
+	assert.ok(f.calls.some(([method]) => method === "sent"));
+	assert.ok(f.logs.some((entry) => entry[0] === "success" && entry[1] === "111" && entry[2].includes("FxEmbed")));
+});
+
+test("uncertain embed sends retain the durable claim and do not retry sending blindly", async () => {
+	const f = fixture();
+	f.dependencies.embedOrigin = "https://embed.example.com";
+	f.dependencies.delivery.send = async () => { throw new Error("acknowledgement lost"); };
+	await f.runtime.tick();
+	assert.deepEqual(f.finished().at(-1), ["uncertain", "send_uncertain"]);
+	assert.ok(!f.calls.some(([method]) => method === "worker"));
+});
+
+test("retaining the source of a native preview is logged as normal operation", async () => {
+	const f = fixture({ status: "sent", source_cleanup: "pending", replacement_ready: false, message_id: "555" });
+	f.dependencies.embedOrigin = "https://embed.example.com";
+	await f.runtime.tick();
+	assert.ok(f.calls.some(([method]) => method === "finishSourceDelete"));
+	assert.ok(f.logs.some((entry) => entry[0] === "info" && entry[2] === "Original message kept alongside its FxEmbed preview"));
+	assert.ok(!f.logs.some((entry) => entry[0] === "warn" || entry[0] === "error"));
+});
+
 test("idle queue polling logs at most once every five minutes", async () => {
 	const f = fixture();
 	let now = 0;

@@ -28,6 +28,33 @@ function fixture() {
 	return { job, source, calls, preview, history, channel, client, delivery: createSocialDiscordDelivery(client) };
 }
 
+test("native previews preserve the source, avoid upload permissions, and reconcile only the exact job", async () => {
+	const f = fixture();
+	const url = "https://embed.example.com/alice/status/123";
+	f.job.url = "https://x.com/alice/status/123";
+	f.source.content = "commentary @everyone " + f.job.url;
+	f.job.source_hash = socialSourceHash(f.source.content);
+	f.channel.permissionsFor = () => ({ has: (permissions) => !permissions.includes(PermissionFlagsBits.AttachFiles) });
+	const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
+	await delivery.send(f.job, { content: "ignored", embeds: [{ title: "ignored" }] }, { previewUrl: url });
+	const payload = f.calls.find(([method]) => method === "send")[1];
+	assert.equal(payload.content, "Shared by <@444>\n" + url);
+	assert.equal(payload.embeds, undefined);
+	assert.equal(payload.files, undefined);
+	assert.deepEqual(payload.allowedMentions, { parse: [], repliedUser: false });
+	assert.deepEqual(payload.reply, { messageReference: "333", failIfNotExists: true });
+	f.preview.embeds = [];
+	f.preview.content = payload.content;
+	assert.equal(await delivery.find(f.job), "555");
+	assert.equal(await delivery.find({ ...f.job, message_id: null }), undefined);
+	f.preview.nonce = socialNonce(f.job);
+	assert.equal(await delivery.find({ ...f.job, message_id: null }), "555");
+	f.preview.content += " changed";
+	assert.equal(await delivery.find(f.job), undefined);
+	await assert.rejects(delivery.send(f.job, {}, { previewUrl: "https://evil.example.com" }), /invalid_preview_url/);
+	assert.ok(!f.calls.some(([method]) => method === "delete"));
+});
+
 test("Discord social replies preserve originals, suppress mentions, and use a stable nonce", async () => {
 	const f = fixture();
 	assert.equal(await f.delivery.sourceValid(f.job), true);

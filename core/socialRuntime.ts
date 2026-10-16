@@ -20,6 +20,7 @@ import { renderInstagramAccessNotice } from "./socialAccessNotice.js";
 import { getFeatureConfiguration } from "./environment.js";
 import { startSocialProgress } from "./socialProgress.js";
 import { logData } from "./dataLog.js";
+import { socialEmbedUrl } from "./socialEmbed.js";
 import { createSocialDiscordDelivery, SOCIAL_PREVIEW_FOOTER, socialSourceHash, type SocialDiscordDelivery } from "../messages/socialDelivery.js";
 import type { SocialJob, SocialWorkerRequest, SocialWorkerResult } from "../types/socialDelivery.js";
 
@@ -31,6 +32,7 @@ export interface SocialRuntimeDependencies {
 	now: () => number;
 	logger: Pick<typeof logger, "debug" | "info" | "success" | "warn" | "error">;
 	sendTimeoutMs?: number;
+	embedOrigin?: string;
 }
 
 export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
@@ -79,7 +81,8 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 					const postIds = job.replacement_ready ? await delivery.replacementPlan(job) : undefined;
 					if (!postIds?.length) {
 						await store.finishSourceDelete(job, "retained");
-						log.warn("Original message kept; the preview is incomplete, there is extra content, or the bot needs Manage Messages permission", job.source_id);
+						if (dependencies.embedOrigin && !job.replacement_ready) log.info("Original message kept alongside its FxEmbed preview", job.source_id);
+						else log.warn("Original message kept; the preview is incomplete, there is extra content, or the bot needs Manage Messages permission", job.source_id);
 					}
 					else if (await store.beginSourceDelete(job, postIds)) {
 						await cleanupSource(job);
@@ -109,6 +112,19 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			}
 			if (stopping || !await store.enabled(job.guild_id, job.channel_id) || !await delivery.sourceValid(job)) {
 				await store.finish(job, "cancelled", "source_or_settings_changed");
+				return;
+			}
+			if (dependencies.embedOrigin) {
+				const previewUrl = socialEmbedUrl(job.url, dependencies.embedOrigin);
+				// Discord renders the remote preview asynchronously. A sent URL cannot prove that
+				// the card loaded, so keep the member's original message and its context.
+				sendStarted = true;
+				if (!await store.beginSend(job, false, false)) return;
+				const operation = delivery.send(job, { content: previewUrl }, { previewUrl }).then(async (messageId) => {
+					await store.sent(job, messageId);
+					log.success("FxEmbed preview link sent; Discord will load the post", job.id);
+				});
+				await withTimeout(operation, dependencies.sendTimeoutMs ?? 15_000, "social_embed_send");
 				return;
 			}
 			controller = new AbortController();
@@ -291,7 +307,9 @@ export const socialRuntimes = new WeakMap<Client, SocialRuntime>();
 
 export function configuredSocialRuntime(client: Client): SocialRuntime | undefined {
 	if (!getFeatureConfiguration().socialMedia.enabled) return;
-	return createSocialRuntime({ store: socialDeliveryStore, delivery: createSocialDiscordDelivery(client),
+	const origin = process.env.SOCIAL_EMBED_ORIGIN;
+	return createSocialRuntime({ store: socialDeliveryStore, delivery: createSocialDiscordDelivery(client, origin),
+		embedOrigin: process.env.SOCIAL_DELIVERY_MODE === "embed" ? origin : undefined,
 		worker: (input, signal) => requestSocialWorker(process.env.SOCIAL_WORKER_SOCKET ?? "", input, signal),
 		ready: () => client.isReady(), now: Date.now, logger });
 }

@@ -11,6 +11,7 @@ import { ChannelType, MessageFlags, PermissionFlagsBits, type Client, type Messa
 import type { SocialJob } from "../types/socialDelivery.js";
 import { withTimeout } from "../core/asyncTools.js";
 import { extractSocialLinks, socialJobPostId, socialPostCaption, supportedSocialLink } from "../core/socialLinks.js";
+import { socialEmbedUrl } from "../core/socialEmbed.js";
 
 export function socialSourceHash(content: string): string {
 	return createHash("sha256").update(content).digest("hex");
@@ -27,13 +28,14 @@ export function socialNonce(job: SocialJob): string {
 	return job.id.replaceAll("-", "").slice(0, 25);
 }
 
-export function createSocialDiscordDelivery(client: Client) {
-	async function channel(job: SocialJob, sending = false): Promise<TextChannel> {
+export function createSocialDiscordDelivery(client: Client, embedOrigin?: string) {
+	async function channel(job: SocialJob, sending = false, files = true): Promise<TextChannel> {
 		const destination = await client.channels.fetch(job.channel_id, { force: true });
 		if (!destination || destination.type !== ChannelType.GuildText || destination.guildId !== job.guild_id) throw new Error("channel_unavailable");
 		const member = destination.guild.members.me ?? await destination.guild.members.fetchMe();
 		const required = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory];
-		if (sending) required.push(PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.AttachFiles);
+		if (sending) required.push(PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks);
+		if (sending && files) required.push(PermissionFlagsBits.AttachFiles);
 		if (!destination.permissionsFor(member)?.has(required)) throw new Error("missing_permissions");
 		return destination;
 	}
@@ -42,6 +44,16 @@ export function createSocialDiscordDelivery(client: Client) {
 		if (message.author.id !== client.user?.id || message.webhookId
 			|| (message.reference && message.reference.messageId !== job.source_id)
 			|| (job.message_id && message.id !== job.message_id)) return false;
+		if (embedOrigin && message.reference?.messageId === job.source_id) {
+			try {
+				if (message.content === `Shared by <@${job.author_id}>\n${socialEmbedUrl(job.url, embedOrigin)}`) {
+					return job.message_id === message.id || (typeof message.nonce === "string" && message.nonce === socialNonce(job));
+				}
+			}
+			catch {
+				// Legacy attachment deliveries still use their original identity marker.
+			}
+		}
 		if (message.embeds.some((embed) => embed.footer?.text === legacySocialMarker(job))) return true;
 		if (!message.embeds.some((embed) => embed.footer?.text === SOCIAL_PREVIEW_FOOTER)) return false;
 		// A shared footer alone cannot identify a job. REST may omit nonce, so stay uncertain then.
@@ -85,10 +97,20 @@ export function createSocialDiscordDelivery(client: Client) {
 				return unchanged(source, job);
 			})(), 10_000, "social_source_check");
 		},
-		async send(job: SocialJob, payload: MessageCreateOptions, options: { notice?: boolean } = {}): Promise<string> {
-			const destination = await channel(job, true);
+		async send(job: SocialJob, payload: MessageCreateOptions, options: { notice?: boolean; previewUrl?: string } = {}): Promise<string> {
+			if (options.previewUrl && (!embedOrigin || options.previewUrl !== socialEmbedUrl(job.url, embedOrigin))) throw new Error("invalid_preview_url");
+			const destination = await channel(job, true, !options.previewUrl);
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			if (!unchanged(source, job)) throw new Error("source_changed");
+			if (options.previewUrl) {
+				const message = await destination.send({
+					content: `Shared by <@${job.author_id}>\n${options.previewUrl}`,
+					allowedMentions: { parse: [], repliedUser: false },
+					reply: { messageReference: job.source_id, failIfNotExists: true },
+					nonce: socialNonce(job), enforceNonce: true,
+				});
+				return message.id;
+			}
 			const caption = socialPostCaption(source.content);
 			const message = await destination.send({ ...payload,
 				// The renderer owns the in-card attribution; link-only messages need no standalone content.
