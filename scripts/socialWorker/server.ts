@@ -13,11 +13,11 @@ import { pathToFileURL } from "node:url";
 import { decodeSocialMetadataResult, SOCIAL_FILE_LIMIT, SOCIAL_METADATA_LIMIT, SOCIAL_TOTAL_LIMIT, SOCIAL_WIRE_LIMIT, validateSocialMetadataRequest, validateSocialWorkerRequest } from "../../core/socialWorkerClient.js";
 import type { SocialWorkerOperation, SocialWorkerRequest } from "../../types/socialDelivery.js";
 import type { XMetadataProvider } from "../../types/socialMedia.js";
-import { createDockerSocialRunner, parseXMetadataProvider } from "./runner.js";
+import { createDockerSocialRunner, parseXMetadataProvider, workerFailureReason } from "./runner.js";
 import logger from "../../core/logger.js";
 import { parseSocialLink } from "../../core/socialLinks.js";
 
-export async function startSocialWorkerServer(socketPath: string, run: (input: SocialWorkerRequest, signal: AbortSignal, operation?: SocialWorkerOperation) => Promise<unknown>, options: { provider?: XMetadataProvider } = {}) {
+export async function startSocialWorkerServer(socketPath: string, run: (input: SocialWorkerRequest, signal: AbortSignal, operation?: SocialWorkerOperation) => Promise<unknown>, options: { provider?: XMetadataProvider; healthy?: () => boolean } = {}) {
 	const provider = parseXMetadataProvider(options.provider);
 	if (!socketPath.startsWith("/") || Buffer.byteLength(socketPath) > 100 || /[\p{Cc}]/u.test(socketPath)) throw new Error("invalid_worker_socket");
 	const parent = await lstat(dirname(socketPath));
@@ -41,7 +41,8 @@ export async function startSocialWorkerServer(socketPath: string, run: (input: S
 		if (request.method === "GET" && request.url === "/v1/health") {
 			// Liveness only: never probe X, Docker, the database, or Discord on a health request.
 			request.resume();
-			reply(stopping ? 503 : 200, { version: 1, service: "caitlyn-media", status: stopping ? "stopping" : busy ? "busy" : "idle",
+			const healthy = options.healthy?.() !== false;
+			reply(stopping || !healthy ? 503 : 200, { version: 1, service: "caitlyn-media", status: stopping ? "stopping" : busy ? "busy" : healthy ? "idle" : "cleanup_pending",
 				provider, platforms: ["x", "tiktok", "instagram"], hostedMetadataEnabled: false, metadataApi: true });
 			return;
 		}
@@ -120,7 +121,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 	try {
 		const provider = parseXMetadataProvider(process.env.SOCIAL_X_PROVIDER);
 		const run = await createDockerSocialRunner(process.env.SOCIAL_WORKER_DOCKER_CONTEXT ?? "default", process.env.SOCIAL_WORKER_IMAGE ?? "caitlyn-media-api:local", provider, process.env.SOCIAL_FXEMBED_URL, process.env.SOCIAL_FXEMBED_KEY_FILE);
-		const service = await startSocialWorkerServer(process.env.SOCIAL_WORKER_SOCKET ?? "", run, { provider });
+		const service = await startSocialWorkerServer(process.env.SOCIAL_WORKER_SOCKET ?? "", run, { provider, healthy: run.healthy });
 		logger.info("Local social worker ready; socket access is owner-only", `mode=${provider}`, "platforms=x,tiktok,instagram", `localApiAuth=${Boolean(process.env.SOCIAL_FXEMBED_KEY_FILE)}`);
 		for (const signal of ["SIGINT", "SIGTERM"] as const) {
 			process.once(signal, () => {
@@ -131,8 +132,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 			});
 		}
 	}
-	catch {
-		logger.error("Social worker startup failed; check provider, socket ownership, local Docker context, and installed image");
+	catch (error) {
+		logger.error("Social worker startup failed; check provider, socket ownership, local Docker context, and installed image", `reason=${workerFailureReason(error)}`);
 		process.exitCode = 1;
 	}
 }

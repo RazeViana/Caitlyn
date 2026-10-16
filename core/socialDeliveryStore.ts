@@ -86,7 +86,9 @@ export function createSocialDeliveryStore(database = pool) {
 		},
 		async finish(job: SocialJob, status: "failed" | "cancelled" | "queued" | "uncertain" | "removing" | "sent", outcome: string): Promise<void> {
 			await database.query(`UPDATE discord.social_jobs SET status = $3, last_outcome = $4, updated_at = NOW(),
-				next_attempt_at = NOW() + CASE WHEN $3 IN ('uncertain', 'removing', 'sent') THEN INTERVAL '15 minutes' ELSE INTERVAL '1 minute' END
+				next_attempt_at = NOW() + CASE WHEN $3 IN ('uncertain', 'removing', 'sent') THEN INTERVAL '15 minutes'
+					WHEN $3 = 'queued' AND $4 = 'worker_unavailable' THEN INTERVAL '5 seconds' * GREATEST(1, attempts)
+					ELSE INTERVAL '1 minute' END
 				WHERE id = $1 AND lease_token = $2 AND (
 					($3 IN ('queued', 'failed') AND status = 'processing') OR
 					($3 = 'cancelled' AND status IN ('processing', 'removing')) OR

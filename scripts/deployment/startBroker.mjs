@@ -1,7 +1,7 @@
 /**
  * @file startBroker.mjs
  * @description Starts the compiled broker after checking for a stale owner-only socket from a stopped process.
- * Refuses live or ambiguous sockets and leaves orphaned Docker resources for explicit operator review.
+ * Refuses live or ambiguous sockets; the worker recovers resources labelled for this private instance.
  * Restarts the broker after sustained local FxEmbed connection loss to rejoin its network namespace.
  *
  * @module startBroker
