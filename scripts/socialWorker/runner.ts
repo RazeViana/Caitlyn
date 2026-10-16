@@ -157,9 +157,17 @@ export async function createDockerSocialRunner(context: string, imageReference: 
 				}
 				catch { if (!attempt) await new Promise((resolve) => setTimeout(resolve, 250)); }
 			}
-			if (cleanupBlocked) logger.error("Social worker cleanup pending; this broker will retry its own temporary resources before the next media job");
+			if (cleanupBlocked) logger.error("Social worker cleanup pending; this broker will retry its own temporary resources while idle and before the next media job");
 			logger.info("Social media job finished", `platform=${platform}`, `elapsed_ms=${Date.now() - started}`, `cleanup=${cleanupBlocked ? "pending" : "complete"}`);
 		}
 	};
-	return Object.assign(run, { healthy: () => !cleanupBlocked });
+	return Object.assign(run, {
+		healthy: () => !cleanupBlocked,
+		async recover(): Promise<void> {
+			if (!cleanupBlocked) return;
+			const cleaned = await recoverDockerResources(docker, owner);
+			cleanupBlocked = false;
+			logger.info("Social worker cleanup recovered", `containers=${cleaned.containers}`, `volumes=${cleaned.volumes}`);
+		},
+	});
 }

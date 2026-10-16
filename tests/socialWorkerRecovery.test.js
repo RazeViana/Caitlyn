@@ -213,6 +213,25 @@ test("failed cleanup affects health and is retried successfully on the next job"
 	assert.equal(fixture.volumes.size, 0);
 });
 
+test("idle recovery clears failed cleanup without requiring another media delivery", async (context) => {
+	const fixture = dockerFixture();
+	let removalFails = true;
+	const run = await runner(context, fixture, payload([photo]), async (...parameters) => {
+		if (parameters[0][0] === "rm" && removalFails) throw new Error("worker_docker_timeout");
+		return fixture.docker(...parameters);
+	});
+	await run(input, new AbortController().signal);
+	await assert.rejects(run.recover(), /worker_docker_timeout/);
+	assert.equal(run.healthy(), false);
+	const deliveries = fixture.calls.filter((args) => args[0] === "run").length;
+	removalFails = false;
+	await run.recover();
+	assert.equal(run.healthy(), true);
+	assert.equal(fixture.containers.size, 0);
+	assert.equal(fixture.volumes.size, 0);
+	assert.equal(fixture.calls.filter((args) => args[0] === "run").length, deliveries);
+});
+
 test("delivery cannot read metadata or download media until its own isolation checks pass", async () => {
 	let deliveries = 0;
 	const deliver = async () => { deliveries++; };
