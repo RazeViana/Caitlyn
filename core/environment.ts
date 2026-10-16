@@ -9,6 +9,7 @@
 import "./loadEnvironment.js";
 import { birthdayTimezone } from "./birthdayClock.js";
 import { transcriptionSettings } from "./transcriptionConfig.js";
+import { socialEmbedOrigin } from "./socialEmbed.js";
 
 export type Environment = Record<string, string | undefined>;
 export interface FeatureConfiguration {
@@ -51,9 +52,18 @@ export function getFeatureConfiguration(environment: Environment = process.env) 
 	}
 	try { birthdayTimezone(environment.BIRTHDAY_TIMEZONE ?? Intl.DateTimeFormat().resolvedOptions().timeZone); }
 	catch { birthdays.push("BIRTHDAY_TIMEZONE must be a supported timezone name"); }
-	const social = [...required("SOCIAL_WORKER_SOCKET"), ...databaseDependency];
+	const embedMode = environment.SOCIAL_DELIVERY_MODE === "embed";
+	const social = [...databaseDependency];
+	if (environment.SOCIAL_DELIVERY_MODE !== undefined && !["attachments", "embed"].includes(environment.SOCIAL_DELIVERY_MODE)) {
+		social.push("SOCIAL_DELIVERY_MODE must be attachments or embed");
+	}
+	if (embedMode) {
+		try { socialEmbedOrigin(environment.SOCIAL_EMBED_ORIGIN); }
+		catch { social.push("SOCIAL_EMBED_ORIGIN must be a public HTTPS origin without a path, port or credentials"); }
+	}
+	else {social.push(...required("SOCIAL_WORKER_SOCKET"));}
 	const socket = environment.SOCIAL_WORKER_SOCKET;
-	if (socket?.trim() && (!socket.startsWith("/") || Buffer.byteLength(socket) > 100 || /[\p{Cc}]/u.test(socket))) {
+	if (!embedMode && socket?.trim() && (!socket.startsWith("/") || Buffer.byteLength(socket) > 100 || /[\p{Cc}]/u.test(socket))) {
 		social.push("SOCIAL_WORKER_SOCKET must be an absolute local socket path of at most 100 UTF-8 bytes");
 	}
 	return {
