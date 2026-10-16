@@ -81,7 +81,8 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 					const postIds = job.replacement_ready ? await delivery.replacementPlan(job) : undefined;
 					if (!postIds?.length) {
 						await store.finishSourceDelete(job, "retained");
-						log.warn("Original message kept; the preview is incomplete, there is extra content, or the bot needs Manage Messages permission", job.source_id);
+						if (dependencies.embedOrigin && !job.replacement_ready) log.info("Original message kept alongside its FxEmbed preview", job.source_id);
+						else log.warn("Original message kept; the preview is incomplete, there is extra content, or the bot needs Manage Messages permission", job.source_id);
 					}
 					else if (await store.beginSourceDelete(job, postIds)) {
 						await cleanupSource(job);

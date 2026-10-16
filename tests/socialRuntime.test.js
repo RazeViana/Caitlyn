@@ -58,6 +58,15 @@ test("uncertain embed sends retain the durable claim and do not retry sending bl
 	assert.ok(!f.calls.some(([method]) => method === "worker"));
 });
 
+test("retaining the source of a native preview is logged as normal operation", async () => {
+	const f = fixture({ status: "sent", source_cleanup: "pending", replacement_ready: false, message_id: "555" });
+	f.dependencies.embedOrigin = "https://embed.example.com";
+	await f.runtime.tick();
+	assert.ok(f.calls.some(([method]) => method === "finishSourceDelete"));
+	assert.ok(f.logs.some((entry) => entry[0] === "info" && entry[2] === "Original message kept alongside its FxEmbed preview"));
+	assert.ok(!f.logs.some((entry) => entry[0] === "warn" || entry[0] === "error"));
+});
+
 test("idle queue polling logs at most once every five minutes", async () => {
 	const f = fixture();
 	let now = 0;
