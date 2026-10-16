@@ -44,6 +44,8 @@ function activityPlatform(code) {
 export function publicFxRoute(input) {
 	if (input.length > 12_000 || /[\\\p{Cc}]/u.test(input)) return;
 	const url = new URL(input);
+	const sharedBy = url.searchParams.get("shared_by");
+	if (sharedBy !== null && (!/^[a-z0-9_.]{2,32}$/i.test(sharedBy) || url.searchParams.getAll("shared_by").length !== 1)) return;
 	const path = url.pathname;
 	if (/%|\/\.\.?\//.test(path) || path.startsWith("/2/")) return;
 	if (path === "/healthz" && !url.search) return { kind: "health" };
@@ -52,7 +54,7 @@ export function publicFxRoute(input) {
 	if (/^\/[a-z0-9_]{1,15}\/status\/[1-9]\d{0,19}\/?$/i.test(path)) platform = "twitter";
 	else if (/^\/(?:p|reel)\/[A-Za-z0-9_-]{1,28}\/?$/.test(path)) platform = "instagram";
 	else if (/^\/@[a-z0-9_.]{1,32}\/(?:video|photo)\/[1-9]\d{0,19}\/?$/i.test(path) || /^\/t\/[a-z0-9]{1,64}\/?$/i.test(path)) platform = "tiktok";
-	if (platform) return { kind: "post", platform, path: path.replace(/\/$/, ""), search: "" };
+	if (platform) return { kind: "post", platform, path: path.replace(/\/$/, ""), search: "", sharedBy };
 	const activity = path.match(/^\/api\/v1\/statuses\/(\d+)$/) ?? path.match(/^\/users\/[a-zA-Z0-9_.-]{1,64}\/statuses\/(\d+)$/);
 	if (activity && !url.search) {
 		platform = activityPlatform(activity[1]);
@@ -62,10 +64,11 @@ export function publicFxRoute(input) {
 		platform = url.searchParams.get("platform") ?? "twitter";
 		const status = url.searchParams.get("status") ?? "";
 		if (!platforms.includes(platform) || !(platform === "instagram" ? instagramId : numericId).test(status)
-			|| [...url.searchParams.keys()].some((key) => !["platform", "status", "author", "text", "provider"].includes(key))
+			|| [...url.searchParams.keys()].some((key) => !["platform", "status", "author", "text", "provider", "shared_by"].includes(key))
 			|| url.searchParams.getAll("platform").length > 1) return;
 		url.searchParams.delete("platform");
-		return { kind: "oembed", platform, path: platform === "tiktok" ? "/oembed" : "/owoembed", search: url.search };
+		url.searchParams.delete("shared_by");
+		return { kind: "oembed", platform, path: platform === "tiktok" ? "/oembed" : "/owoembed", search: url.search, sharedBy };
 	}
 	if (path === "/proxy") {
 		const target = url.searchParams.get("url");

@@ -78,6 +78,37 @@ test("public front-end strips caller credentials, routes cards and publishes onl
 	assert.equal(robots.headers.get("x-robots-tag"), "noindex");
 });
 
+test("footer attribution follows each post's oEmbed link without leaking usernames to providers or other shares", async () => {
+	const upstreamMetadata = { provider_name: "Caitlyn · FxEmbed", provider_url: origin, author_name: "Post author", type: "rich", version: "1.0" };
+	const seen = [];
+	const app = { async fetch(request) {
+		const url = new URL(request.url);
+		seen.push(url);
+		assert.equal(url.searchParams.has("shared_by"), false);
+		if (url.pathname.endsWith("embed")) return Response.json(upstreamMetadata);
+		return new Response(`<link href="${origin}/owoembed?status=123&author=alice" type="application/json+oembed">`, { headers: { "content-type": "text/html" } });
+	} };
+	const service = createPublicFxService(app, origin);
+	for (const [path, platform] of [["/alice/status/123", "twitter"], ["/@alice/video/123", "tiktok"], ["/p/abc", "instagram"]]) {
+		const card = await service.fetch(new Request(origin + path + "?shared_by=real.user"), {}, {});
+		assert.match(await card.text(), new RegExp(`platform=${platform}&amp;shared_by=real.user&amp;status=123`));
+	}
+	const names = ["real.user", "another_user", undefined];
+	const responses = await Promise.all(names.map(async (username) => {
+		const response = await service.fetch(new Request(origin + "/owoembed?platform=tiktok&status=123" + (username ? `&shared_by=${username}` : "")), {}, {});
+		assert.equal(response.headers.get("cache-control"), "no-store");
+		return response.json();
+	}));
+	assert.deepEqual(responses.map((value) => value.provider_name), ["Shared by @real.user", "Shared by @another_user", "Caitlyn · FxEmbed"]);
+	assert.ok(responses.every((value) => value.author_name === "Post author" && value.type === "rich"));
+	assert.equal(upstreamMetadata.provider_name, "Caitlyn · FxEmbed");
+	assert.equal(seen.length, 6);
+	for (const query of ["shared_by=Bad%20Nickname", "shared_by=%3Cscript%3E", "shared_by=aa&shared_by=bb", "shared_by=aa%0Abb", "shared_by=" + "a".repeat(33)]) {
+		assert.equal(publicFxRoute(origin + "/alice/status/123?" + query), undefined);
+		assert.equal(publicFxRoute(origin + "/owoembed?status=123&" + query), undefined);
+	}
+});
+
 test("anonymous request budgets protect the service while health remains available", async () => {
 	let now = 0;
 	const service = createPublicFxService({ fetch: async () => new Response("ok") }, origin, () => now);

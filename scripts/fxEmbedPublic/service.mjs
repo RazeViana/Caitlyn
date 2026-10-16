@@ -90,8 +90,15 @@ export function createPublicFxService(app, origin, now = Date.now) {
 				return new Response(body, { status: upstream.status, headers: responseHeaders });
 			}
 			const html = responseHeaders.get("content-type")?.includes("text/html");
-			const body = html ? (await upstream.text()).replaceAll(`${origin}/owoembed?`, `${origin}/owoembed?platform=${route.platform}&amp;`) : upstream.body;
-			if (html) responseHeaders.delete("content-length");
+			const attribution = route.sharedBy ? `&amp;shared_by=${encodeURIComponent(route.sharedBy)}` : "";
+			let body = html ? (await upstream.text()).replaceAll(`${origin}/owoembed?`, `${origin}/owoembed?platform=${route.platform}${attribution}&amp;`) : upstream.body;
+			if (route.kind === "oembed" && route.sharedBy && upstream.ok) {
+				const metadata = await upstream.json();
+				// FxEmbed's native activity cards use the oEmbed provider name as the footer.
+				// Keep this response-local: changing shared branding would leak between senders.
+				body = JSON.stringify({ ...metadata, provider_name: `Shared by @${route.sharedBy}`, provider_url: origin });
+			}
+			if (html || attribution) responseHeaders.delete("content-length");
 			return new Response(request.method === "HEAD" ? null : body, { status: upstream.status, headers: responseHeaders });
 		}
 		catch { return reply(503, "Preview temporarily unavailable"); }
