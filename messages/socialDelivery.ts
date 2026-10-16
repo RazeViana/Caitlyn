@@ -11,7 +11,7 @@ import { ChannelType, MessageFlags, PermissionFlagsBits, type Client, type Messa
 import type { SocialJob } from "../types/socialDelivery.js";
 import { withTimeout } from "../core/asyncTools.js";
 import { extractSocialLinks, socialJobPostId, socialPostCaption, supportedSocialLink } from "../core/socialLinks.js";
-import { socialEmbedUrl } from "../core/socialEmbed.js";
+import { socialEmbedShareMatches, socialEmbedUrl } from "../core/socialEmbed.js";
 
 export function socialSourceHash(content: string): string {
 	return createHash("sha256").update(content).digest("hex");
@@ -44,6 +44,9 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 		if (message.author.id !== client.user?.id || message.webhookId
 			|| (message.reference && message.reference.messageId !== job.source_id)
 			|| (job.message_id && message.id !== job.message_id)) return false;
+		if (embedOrigin && socialEmbedShareMatches(message.content?.split("\n").at(-1) ?? "", job.url, embedOrigin)) {
+			return job.message_id === message.id || (typeof message.nonce === "string" && message.nonce === socialNonce(job));
+		}
 		if (embedOrigin && message.reference?.messageId === job.source_id) {
 			try {
 				if (message.content === `Shared by <@${job.author_id}>\n${socialEmbedUrl(job.url, embedOrigin)}`) {
@@ -76,6 +79,11 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 			&& !source.attachments?.size && !source.stickers?.size && !source.poll && !source.reference && !source.hasThread;
 	}
 
+	function nativeContent(source: Message, url: string): string {
+		const caption = socialPostCaption(source.content);
+		return `${caption ? caption + "\n" : ""}${url}`;
+	}
+
 	return {
 		async typing(job: SocialJob, signal?: AbortSignal): Promise<void> {
 			if (signal?.aborted) return;
@@ -103,10 +111,11 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			if (!unchanged(source, job)) throw new Error("source_changed");
 			if (options.previewUrl) {
+				const url = socialEmbedUrl(job.url, embedOrigin!, source.author.username ?? "");
+				const content = nativeContent(source, url);
 				const message = await destination.send({
-					content: `Shared by <@${job.author_id}>\n${options.previewUrl}`,
+					content: content.length <= 2_000 ? content : url,
 					allowedMentions: { parse: [], repliedUser: false },
-					reply: { messageReference: job.source_id, failIfNotExists: true },
 					nonce: socialNonce(job), enforceNonce: true,
 				});
 				return message.id;
@@ -125,6 +134,7 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 			const source = await destination.messages.fetch({ message: job.source_id, force: true });
 			const member = destination.guild.members.me ?? await destination.guild.members.fetchMe();
 			if (!replaceable(source, job) || !destination.permissionsFor(member)?.has(PermissionFlagsBits.ManageMessages)) return;
+			if (embedOrigin && nativeContent(source, socialEmbedUrl(job.url, embedOrigin, source.author.username)).length > 2_000) return;
 			return extractSocialLinks(source.content).filter(supportedSocialLink).map(socialJobPostId);
 		},
 		async deleteSource(job: SocialJob, replacements: SocialJob[]): Promise<"deleted" | "retained"> {
@@ -140,6 +150,7 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 					if ((error as { code?: number }).code === 10008) return "deleted";
 					throw error;
 				}
+				const confirmed: { item: SocialJob; preview: Message }[] = [];
 				for (const item of replacements) {
 					let preview: Message;
 					try { preview = await destination.messages.fetch({ message: item.message_id!, force: true }); }
@@ -148,6 +159,7 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 						throw error;
 					}
 					if (!matches(preview, item)) return "retained";
+					confirmed.push({ item, preview });
 				}
 				let source: Message;
 				try { source = await destination.messages.fetch({ message: job.source_id, force: true }); }
@@ -157,6 +169,15 @@ export function createSocialDiscordDelivery(client: Client, embedOrigin?: string
 				}
 				const member = destination.guild.members.me ?? await destination.guild.members.fetchMe();
 				if (!replaceable(source, job) || !destination.permissionsFor(member)?.has(PermissionFlagsBits.ManageMessages)) return "retained";
+				// Re-check the copied commentary against the final source read. A sent link with
+				// an omitted/edited caption never authorizes deleting the member's message.
+				if (embedOrigin) {
+					for (const { item, preview } of confirmed) {
+						const url = preview.content?.split("\n").at(-1) ?? "";
+						if (socialEmbedShareMatches(url, item.url, embedOrigin)
+							&& preview.content !== nativeContent(source, url)) return "retained";
+					}
+				}
 				try { await source.delete(); }
 				catch (error) {
 					const code = (error as { code?: number }).code;

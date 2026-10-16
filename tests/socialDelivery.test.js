@@ -14,7 +14,7 @@ import { createSocialDiscordDelivery, legacySocialMarker, SOCIAL_PREVIEW_FOOTER,
 function fixture() {
 	const job = { id: "12345678-1234-1234-1234-123456789abc", guild_id: "111", channel_id: "222", source_id: "333", author_id: "444",
 		source_hash: socialSourceHash("original"), message_id: "555" };
-	const source = { author: { id: "444", bot: false }, content: "original", flags: { has: () => false } };
+	const source = { author: { id: "444", bot: false, username: "real.user", globalName: "Display name" }, member: { nickname: "Server nickname" }, content: "original", flags: { has: () => false } };
 	const calls = [];
 	const preview = { id: "555", author: { id: "999" }, reference: { messageId: "333" }, embeds: [{ footer: { text: legacySocialMarker(job) } }],
 		delete: async () => { calls.push(["delete", "555"]); } };
@@ -28,7 +28,7 @@ function fixture() {
 	return { job, source, calls, preview, history, channel, client, delivery: createSocialDiscordDelivery(client) };
 }
 
-test("native previews preserve the source, avoid upload permissions, and reconcile only the exact job", async () => {
+test("native previews copy commentary, attribute the username in metadata, and reconcile only the exact job", async () => {
 	const f = fixture();
 	const url = "https://embed.example.com/alice/status/123";
 	f.job.url = "https://x.com/alice/status/123";
@@ -38,21 +38,35 @@ test("native previews preserve the source, avoid upload permissions, and reconci
 	const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
 	await delivery.send(f.job, { content: "ignored", embeds: [{ title: "ignored" }] }, { previewUrl: url });
 	const payload = f.calls.find(([method]) => method === "send")[1];
-	assert.equal(payload.content, "Shared by <@444>\n" + url);
+	assert.equal(payload.content, "commentary @everyone\n" + url + "?shared_by=real.user");
 	assert.equal(payload.embeds, undefined);
 	assert.equal(payload.files, undefined);
 	assert.deepEqual(payload.allowedMentions, { parse: [], repliedUser: false });
-	assert.deepEqual(payload.reply, { messageReference: "333", failIfNotExists: true });
+	assert.equal(payload.reply, undefined);
+	assert.ok(!payload.content.includes("Shared by") && !payload.content.includes("Server nickname") && !payload.content.includes("Display name"));
 	f.preview.embeds = [];
 	f.preview.content = payload.content;
 	assert.equal(await delivery.find(f.job), "555");
 	assert.equal(await delivery.find({ ...f.job, message_id: null }), undefined);
 	f.preview.nonce = socialNonce(f.job);
 	assert.equal(await delivery.find({ ...f.job, message_id: null }), "555");
+	f.source.author.username = "new.username";
+	assert.equal(await delivery.find(f.job), "555", "a username change must not break persisted delivery identity");
 	f.preview.content += " changed";
 	assert.equal(await delivery.find(f.job), undefined);
 	await assert.rejects(delivery.send(f.job, {}, { previewUrl: "https://evil.example.com" }), /invalid_preview_url/);
 	assert.ok(!f.calls.some(([method]) => method === "delete"));
+});
+
+test("previous uncaptioned native replies remain identifiable after the footer rollout", async () => {
+	const f = fixture();
+	f.job.url = "https://x.com/alice/status/123";
+	f.preview.embeds = [];
+	f.preview.content = "Shared by <@444>\nhttps://embed.example.com/alice/status/123";
+	const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
+	assert.equal(await delivery.find(f.job), "555");
+	await delivery.remove(f.job);
+	assert.deepEqual(f.calls.at(-1), ["delete", "555"]);
 });
 
 test("Discord social replies preserve originals, suppress mentions, and use a stable nonce", async () => {
@@ -179,6 +193,39 @@ function replacementFixture() {
 	f.preview.reference = undefined;
 	return f;
 }
+
+test("native source deletion waits for the stored replacement and checks its copied commentary", async () => {
+	for (const altered of [false, true]) {
+		const f = replacementFixture();
+		f.job.url = "https://x.com/alice/status/123";
+		const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
+		await delivery.send(f.job, {}, { previewUrl: "https://embed.example.com/alice/status/123" });
+		f.preview.content = f.calls.find(([method]) => method === "send")[1].content;
+		f.preview.embeds = [];
+		if (altered) f.preview.content = f.preview.content.replace("caption @everyone\n", "");
+		assert.deepEqual(await delivery.replacementPlan(f.job), ["123"]);
+		assert.equal(await delivery.deleteSource(f.job, [f.job]), altered ? "retained" : "deleted");
+		assert.equal(f.calls.some(([method, id]) => method === "delete" && id === "333"), !altered);
+	}
+});
+
+test("native source deletion retains uncopied attachments and commentary beyond Discord's message limit", async () => {
+	for (const extra of ["attachment", "long_caption"]) {
+		const f = replacementFixture();
+		f.job.url = "https://x.com/alice/status/123";
+		if (extra === "attachment") f.source.attachments = new Collection([["upload", {}]]);
+		else f.source.content = "a".repeat(1_960) + " " + f.job.url;
+		f.job.source_hash = socialSourceHash(f.source.content);
+		const delivery = createSocialDiscordDelivery(f.client, "https://embed.example.com");
+		await delivery.send(f.job, {}, { previewUrl: "https://embed.example.com/alice/status/123" });
+		f.preview.content = f.calls.find(([method]) => method === "send")[1].content;
+		f.preview.embeds = [];
+		assert.ok(f.preview.content.length <= 2_000);
+		assert.equal(await delivery.replacementPlan(f.job), undefined);
+		assert.equal(await delivery.deleteSource(f.job, [f.job]), "retained");
+		assert.ok(!f.calls.some(([method]) => method === "delete"));
+	}
+});
 
 test("source replacement preserves the caption and allows only the original sender mention", async () => {
 	const f = replacementFixture();

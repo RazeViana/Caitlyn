@@ -37,12 +37,12 @@ function fixture(overrides = {}) {
 	return { runtime, dependencies, job, calls, logs, result, finished: () => calls.filter(([name]) => name === "finish").map((call) => call.slice(2)) };
 }
 
-test("embed mode sends an attributed link without extraction and never treats it as a confirmed replacement", async () => {
+test("embed mode skips extraction and makes a durably sent link eligible for source replacement", async () => {
 	const f = fixture();
 	f.dependencies.embedOrigin = "https://embed.example.com";
 	await f.runtime.tick();
 	assert.ok(!f.calls.some(([method]) => method === "worker" || method === "typing"));
-	assert.deepEqual(f.calls.find(([method]) => method === "beginSend").slice(2), [false, false]);
+	assert.deepEqual(f.calls.find(([method]) => method === "beginSend").slice(2), [true, false]);
 	const send = f.calls.find(([method]) => method === "send");
 	assert.deepEqual(send.slice(2), [{ content: "https://embed.example.com/alice/status/123" }, { previewUrl: "https://embed.example.com/alice/status/123" }]);
 	assert.ok(f.calls.some(([method]) => method === "sent"));
@@ -58,7 +58,7 @@ test("uncertain embed sends retain the durable claim and do not retry sending bl
 	assert.ok(!f.calls.some(([method]) => method === "worker"));
 });
 
-test("retaining the source of a native preview is logged as normal operation", async () => {
+test("legacy native sends remain retained because their commentary was not copied", async () => {
 	const f = fixture({ status: "sent", source_cleanup: "pending", replacement_ready: false, message_id: "555" });
 	f.dependencies.embedOrigin = "https://embed.example.com";
 	await f.runtime.tick();

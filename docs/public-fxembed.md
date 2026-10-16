@@ -1,6 +1,6 @@
 # Self-hosted Discord previews
 
-Caitlyn can post an attributed link to a separate FxEmbed instance and let Discord render the post. It does not download, compress or upload media in this mode. `/social` channel settings, PostgreSQL jobs, cancellation, uncertain-send recovery and Caitlyn's normal guild logger still apply.
+Caitlyn posts a link to a separate FxEmbed instance and lets Discord render the post. The native card footer says `Shared by @username`, using the member's Discord username rather than a server nickname or global display name. It does not download, compress or upload media in this mode. `/social` channel settings, PostgreSQL jobs, cancellation, uncertain-send recovery and Caitlyn's normal guild logger still apply.
 
 Set these bot settings only after the public endpoint has passed its external HTTPS and provider checks:
 
@@ -11,7 +11,9 @@ SOCIAL_EMBED_ORIGIN=https://embed.razeviana.com
 
 The default remains `SOCIAL_DELIVERY_MODE=attachments` for existing installations. Embed mode does not require `SOCIAL_WORKER_SOCKET`. Retain `SOCIAL_EMBED_ORIGIN` if reverting to attachment mode so earlier link previews can still be identified for edit/delete cleanup.
 
-The preview is a reply containing the sender attribution and the rewritten link. The original remains, preserving commentary, attachments, replies and the source link. Discord generates the remote card asynchronously: confirmation that a message was sent does not prove the preview loaded. Consequently, native-preview sends never authorize source deletion. Edits/deletions to the source cancel pending work and remove its bot preview using the existing durable queue. An uncertain send is reconciled by its persisted message ID or Discord nonce, bot identity, source reference and exact preview content; it is never blindly repeated.
+The replacement contains the member's commentary and the rewritten link, with attribution in the card footer. It is a standalone message so deleting the original does not leave a broken reply. Once every supported link from the source has a durably confirmed replacement, Caitlyn checks the source and copied commentary again and deletes the original. A failed or uncertain send, missing Manage Messages permission, changed source, uncopied attachment/sticker/poll/reply/thread, or commentary exceeding Discord's message limit keeps the original. Earlier native previews that did not copy commentary remain retained; this update does not delete historical originals.
+
+Discord generates the remote card asynchronously. Deletion depends on the confirmed replacement message, not the remote card loading: that message retains the link and commentary if a provider is unavailable. Edits/deletions before replacement cancel pending work and remove its bot preview using the existing durable queue. Bot-initiated source deletion is marked before contacting Discord so its deletion event cannot remove the replacement. An uncertain send is reconciled by its persisted message ID or Discord nonce, bot identity and expected preview URL; it is never blindly repeated. Username changes do not invalidate already-sent previews.
 
 ## Separate Mainframe instance
 
@@ -36,6 +38,8 @@ The container runs as UID/GID 1000 with a read-only root, dropped capabilities, 
 X keeps `/handle/status/id`, Instagram keeps `/p/code` or `/reel/code`, and TikTok keeps `/@handle/video/id`. TikTok short links map to `/t/code`. The bot's existing supported-link list remains authoritative; unsupported links remain untouched.
 
 The public wrapper selects the provider from a validated route. Asserted build transforms add the provider to FxEmbed's encoded activity-card identifier so Discord's follow-up `/api/v1/statuses/...` request reaches the right renderer on the shared domain. oEmbed links also identify their platform. FxEmbed itself produces the card text, media, quotes and engagement formatting; Caitlyn does not reconstruct the post.
+
+An attributed preview URL carries a validated `shared_by` username. This distinguishes different sharers in Discord's preview cache. The public wrapper carries it into that card's oEmbed link and sets `provider_name` to `Shared by @username`, the branding footer used by FxEmbed's native activity card. The original social author and media remain unchanged. Attribution is applied to each response without mutating shared branding, and the username is removed before calling the provider renderer. It is display metadata, not an authentication claim or access-control mechanism. [Discord's preview documentation](https://docs.discord.com/developers/link-previews/overview) describes oEmbed provider metadata and URL-based caching; the native activity-card layout is controlled by Discord.
 
 Public requests are limited to previews, activity/oEmbed helpers, health and TikTok's video proxy. Account/profile/search APIs and the private metadata API are not exposed. Caller cookies, authorization and private headers are discarded. Every outbound request and followed redirect must use HTTPS on an allowed social-provider/CDN domain; credentials are removed on cross-origin redirects. There is an eight-request concurrency ceiling and a 180-request/minute process budget. TikTok media streams allow byte ranges, cap transfer at 256 MiB and close after two minutes. These are bounded service limits, not Discord attachment limits. No media archive is created by this service.
 

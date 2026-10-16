@@ -116,10 +116,11 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			}
 			if (dependencies.embedOrigin) {
 				const previewUrl = socialEmbedUrl(job.url, dependencies.embedOrigin);
-				// Discord renders the remote preview asynchronously. A sent URL cannot prove that
-				// the card loaded, so keep the member's original message and its context.
+				// The replacement keeps the source link and commentary even if Discord's remote
+				// card is unavailable. Delete only after all sends are durably confirmed and
+				// Discord delivery rechecks the copied content and the unchanged source.
 				sendStarted = true;
-				if (!await store.beginSend(job, false, false)) return;
+				if (!await store.beginSend(job, true, false)) return;
 				const operation = delivery.send(job, { content: previewUrl }, { previewUrl }).then(async (messageId) => {
 					await store.sent(job, messageId);
 					log.success("FxEmbed preview link sent; Discord will load the post", job.id);

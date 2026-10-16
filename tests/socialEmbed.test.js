@@ -1,17 +1,31 @@
 /**
  * @file socialEmbed.test.js
  * @description Checks native-preview URL routing, configuration, and Discord send recovery without live messages.
- * Ensures previews never require an attachment upload or authorize deleting the original.
+ * Ensures previews carry usernames and retain identity without an attachment upload.
  *
  * @module socialEmbed.test
  */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { socialEmbedOrigin, socialEmbedUrl } from "../core/socialEmbed.ts";
+import { socialEmbedOrigin, socialEmbedShareMatches, socialEmbedUrl } from "../core/socialEmbed.ts";
 import { getFeatureConfiguration } from "../core/environment.ts";
 
 const origin = "https://embed.example.com";
+
+test("share URLs carry validated usernames and isolate the Discord preview cache between sharers", () => {
+	const source = "https://x.com/alice/status/123";
+	const first = socialEmbedUrl(source, origin, "real.user");
+	assert.equal(first, origin + "/alice/status/123?shared_by=real.user");
+	assert.notEqual(first, socialEmbedUrl(source, origin, "another_user"));
+	assert.equal(socialEmbedShareMatches(first, source, origin), true);
+	for (const value of [first + "&shared_by=other", first + "&extra=1", first + "#fragment", first.replace("example.com", "evil.example.com"), first.replace("123?", "456?")]) {
+		assert.equal(socialEmbedShareMatches(value, source, origin), false);
+	}
+	for (const username of ["", "a", "a".repeat(33), "Nickname with spaces", "<@123>", "name\nother", "name\u202e"]) {
+		assert.throws(() => socialEmbedUrl(source, origin, username));
+	}
+});
 
 test("one-domain previews preserve platform paths and normalize share links without fetching", () => {
 	for (const [source, path] of [

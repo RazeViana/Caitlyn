@@ -18,9 +18,27 @@ export function socialEmbedOrigin(value: string | undefined): string {
 	return url.origin;
 }
 
-export function socialEmbedUrl(source: string, origin: string): string {
+/** Discord usernames, never server nicknames or global display names. */
+export function socialShareUsername(value: unknown): value is string {
+	return typeof value === "string" && /^[a-z0-9_.]{2,32}$/i.test(value);
+}
+
+export function socialEmbedUrl(source: string, origin: string, username?: string): string {
 	const link = parseSocialLink(source);
 	if (!link || !supportedSocialLink(link)) throw new Error("unsupported_social_embed_link");
 	const path = link.platform === "tiktok" && link.kind === "share" ? `/t/${link.id}` : new URL(link.url).pathname;
-	return socialEmbedOrigin(origin) + path;
+	const url = socialEmbedOrigin(origin) + path;
+	if (username === undefined) return url;
+	if (!socialShareUsername(username)) throw new Error("invalid_social_share_username");
+	return url + "?shared_by=" + encodeURIComponent(username);
+}
+
+/** Match the persisted delivery without relying on the member's current username. */
+export function socialEmbedShareMatches(value: string, source: string, origin: string): boolean {
+	try {
+		const url = new URL(value);
+		const username = url.searchParams.get("shared_by");
+		return socialShareUsername(username) && value === socialEmbedUrl(source, origin, username);
+	}
+	catch { return false; }
 }
