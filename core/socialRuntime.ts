@@ -149,6 +149,9 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 				}
 				const retry = ["worker_unavailable", "timeout"].includes(result.outcome) && job.attempts < 3;
 				await store.finish(job, retry ? "queued" : "failed", result.outcome);
+				if (!retry && ["worker_unavailable", "timeout"].includes(result.outcome)) {
+					log.error("Social preview failed after repeated worker errors; original message kept", job.id, result.outcome);
+				}
 				return;
 			}
 			job.sensitive = result.post.sensitive === true || (result.post.quote?.state === "available" && result.post.quote.post.sensitive === true);

@@ -242,6 +242,9 @@ test("worker outages retry at most three times while restricted, invalid, and ra
 			f.dependencies.worker = async () => ({ outcome });
 			await f.runtime.tick();
 			assert.deepEqual(f.finished(), [[attempts < 3 && ["worker_unavailable", "timeout"].includes(outcome) ? "queued" : "failed", outcome]]);
+			const errors = f.logs.filter(([level]) => level === "error");
+			assert.equal(errors.length, attempts >= 3 && ["worker_unavailable", "timeout"].includes(outcome) ? 1 : 0);
+			assert.ok(errors.every((entry) => entry[1] === "111" && !JSON.stringify(entry).includes("https://")));
 			assert.ok(!f.calls.some(([name]) => name === "send"));
 		}
 	}
