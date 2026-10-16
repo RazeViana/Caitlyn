@@ -92,10 +92,16 @@ export function createPublicFxService(app, origin, now = Date.now) {
 			const html = responseHeaders.get("content-type")?.includes("text/html");
 			const attribution = route.sharedBy ? `&amp;shared_by=${encodeURIComponent(route.sharedBy)}` : "";
 			let body = html ? (await upstream.text()).replaceAll(`${origin}/owoembed?`, `${origin}/owoembed?platform=${route.platform}${attribution}&amp;`) : upstream.body;
+			if (html && route.sharedBy) {
+				// Discord's native activity-card footer comes from og:site_name, not oEmbed.
+				// The route only accepts ASCII Discord usernames, so no HTML escaping is needed.
+				body = body.replace(/<meta property="og:site_name" content="[^"]*"\s*\/?\s*>/g,
+					`<meta property="og:site_name" content="Shared by @${route.sharedBy}"/>`);
+			}
 			if (route.kind === "oembed" && route.sharedBy && upstream.ok) {
 				const metadata = await upstream.json();
-				// FxEmbed's native activity cards use the oEmbed provider name as the footer.
-				// Keep this response-local: changing shared branding would leak between senders.
+				// Keep the standard oEmbed fallback consistent with the native activity card.
+				// Both changes are response-local; shared branding must never be mutated.
 				body = JSON.stringify({ ...metadata, provider_name: `Shared by @${route.sharedBy}`, provider_url: origin });
 			}
 			if (html || attribution) responseHeaders.delete("content-length");
