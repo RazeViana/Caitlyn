@@ -26,11 +26,23 @@ function replaceExact(source, before, after, count = 1) {
 
 await build({ entryPoints: ["public-entry.mjs"], outfile: "dist/public-worker.js", minify: true, bundle: true, format: "esm",
 	plugins: [{ name: "public-local-compatibility", setup(builder) {
-		builder.onLoad({ filter: /(?:src\/worker\.ts|src\/embed\/status\.ts|providers\/twitter\/fetch\.js)$/ }, (args) => {
+		builder.onLoad({ filter: /(?:src\/worker\.ts|src\/embed\/(?:status|activity)\.ts|providers\/twitter\/fetch\.js)$/ }, (args) => {
 			let source = readFileSync(args.path, "utf8");
-			if (args.path.endsWith("/src/worker.ts")) source = replaceExact(source, "    if (realm) {", "    realm = req.headers.get('x-caitlyn-platform') ?? realm;\n    if (realm) {");
-			else if (args.path.endsWith("/src/embed/status.ts")) source = replaceExact(source, "      i: statusId", "      i: statusId, f: status.provider");
-			else source = replaceExact(source, "cacheTtl: env.guestTokenMaxAge", "cacheControl: 'no-store'", 2);
+			if (args.path.endsWith("/src/worker.ts")) {
+				source = replaceExact(source, "    if (realm) {", "    realm = req.headers.get('x-caitlyn-platform') ?? realm;\n    if (realm) {");
+			}
+			else if (args.path.endsWith("/src/embed/status.ts")) {
+				source = replaceExact(source, "      i: statusId", "      i: statusId, f: status.provider");
+				source = replaceExact(source, "!!Constants.API_HOST_LIST", "Boolean(Constants.API_HOST_LIST[0])");
+			}
+			else if (args.path.endsWith("/src/embed/activity.ts")) {
+				// An unset API host becomes [""], which is truthy. Without this check,
+				// ordinary and article videos point to https:///2/go instead of the CDN.
+				source = replaceExact(source, "!!Constants.API_HOST_LIST", "Boolean(Constants.API_HOST_LIST[0])", 2);
+			}
+			else {
+				source = replaceExact(source, "cacheTtl: env.guestTokenMaxAge", "cacheControl: 'no-store'", 2);
+			}
 			return { contents: source, loader: args.path.endsWith(".ts") ? "ts" : "js" };
 		});
 	} }],
