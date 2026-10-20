@@ -18,6 +18,7 @@ const labels = {
 	attachments: "attachments", role: "message role", record: "saved record", days: "days kept",
 	enabled: "turned on", levels: "log types", reason: "reason", status: "status",
 	cards: "cards", images: "images", videos: "videos", files: "files", bytes: "media bytes", quote: "has quote",
+	dbConnections: "database connections", dbIdle: "idle connections", dbWaiting: "waiting requests",
 } as const;
 
 export type DataLogDetails = Partial<Record<keyof typeof labels, string | number | boolean | null>>;
@@ -39,7 +40,8 @@ export function dataErrorReason(error: unknown): string {
 		"57P01": "database is shutting down", "57P02": "database stopped unexpectedly", "57P03": "database is not ready",
 	};
 	if (typeof failure.code === "string" && Object.hasOwn(databaseCodes, failure.code)) return `${databaseCodes[failure.code]} (${failure.code})`;
-	if (typeof failure.message === "string" && ["timeout exceeded when trying to connect", "Connection terminated due to connection timeout"].includes(failure.message)) return "timed out waiting for a database connection";
+	if (failure.message === "timeout exceeded when trying to connect") return "timed out waiting for a free connection in the database pool";
+	if (failure.message === "Connection terminated due to connection timeout") return "timed out opening a new database connection";
 	if (failure.message === "Query read timeout") return "timed out waiting for a database query response";
 	if (failure.name === "TimeoutError") return "the service took too long to answer";
 	if (failure.name === "AbortError") return "the request was stopped";

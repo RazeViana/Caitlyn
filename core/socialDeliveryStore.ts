@@ -17,6 +17,9 @@ type NewSocialJob = Pick<SocialJob, "guild_id" | "channel_id" | "source_id" | "a
 
 export function createSocialDeliveryStore(database = pool) {
 	return {
+		diagnostics() {
+			return { dbConnections: database.totalCount, dbIdle: database.idleCount, dbWaiting: database.waitingCount };
+		},
 		async settings(guildId: string): Promise<SocialChannelSetting[]> {
 			return (await database.query<SocialChannelSetting>("SELECT channel_id, enabled FROM discord.social_channels WHERE guild_id = $1 ORDER BY channel_id LIMIT 100", [guildId])).rows;
 		},

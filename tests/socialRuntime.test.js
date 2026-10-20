@@ -269,6 +269,7 @@ test("queue failures report safe diagnostics at bounded intervals and confirm re
 	const f = fixture();
 	const claim = f.dependencies.store.claim;
 	let now = 0;
+	f.dependencies.store.diagnostics = () => ({ dbConnections: 10, dbIdle: 0, dbWaiting: 2, password: "PRIVATE_PASSWORD" });
 	f.dependencies.now = () => now;
 	f.dependencies.store.claim = async () => {
 		now += 5_000;
@@ -282,6 +283,7 @@ test("queue failures report safe diagnostics at bounded intervals and confirm re
 	assert.equal(errors.length, 2);
 	assert.ok(errors.every((entry) => entry[1] === undefined && entry[3].includes("57014") && entry[3].includes("seconds counted: 5")));
 	assert.match(errors[1][3], /count: 3/);
+	assert.match(errors[1][3], /database connections: 10.*idle connections: 0.*waiting requests: 2/);
 	assert.ok(!JSON.stringify(f.logs).includes("PRIVATE_"));
 	assert.ok(!f.calls.some(([name]) => name === "send" || name === "finish"));
 	f.dependencies.store.claim = async () => undefined;

@@ -129,6 +129,61 @@ test("anonymous request budgets protect the service while health remains availab
 	assert.equal((await service.fetch(new Request(origin + "/alice/status/123"), {}, {})).status, 200);
 });
 
+test("a failed X lookup retries once and returns the recovered native card with attribution", async () => {
+	for (const path of ["/alice/status/123?shared_by=real.user&v=4", "/api/v1/statuses/" + snowcode({ i: "123", f: "twitter" })]) {
+		let attempts = 0;
+		let cancelled = false;
+		const service = createPublicFxService({ async fetch(request) {
+			attempts++;
+			assert.equal(request.headers.get("cookie"), null);
+			if (attempts === 1) return new Response(new ReadableStream({ cancel() { cancelled = true; } }), { status: 503 });
+			if (path.startsWith("/api/")) return Response.json({ id: "123", media_attachments: [{ type: "image" }] });
+			return new Response("<meta property=\"og:title\" content=\"Post author\"/><meta property=\"og:site_name\" content=\"Caitlyn · FxEmbed\"/>", { headers: { "content-type": "text/html" } });
+		} }, origin);
+		const response = await service.fetch(new Request(origin + path, { headers: { cookie: "PRIVATE_COOKIE" } }), {}, {});
+		assert.equal(response.status, 200);
+		assert.equal(attempts, 2);
+		assert.equal(cancelled, true);
+		if (path.startsWith("/api/")) assert.equal((await response.json()).media_attachments[0].type, "image");
+		else assert.match(await response.text(), /Shared by @real.user/);
+	}
+});
+
+test("repeated X lookup failures remain retryable HTTP errors instead of successful error cards", async () => {
+	let attempts = 0;
+	const service = createPublicFxService({ async fetch() {
+		attempts++;
+		return new Response("<meta property=\"og:description\" content=\"PRIVATE_UPSTREAM_ERROR\"/>", { status: 503, headers: { "content-type": "text/html" } });
+	} }, origin);
+	const response = await service.fetch(new Request(origin + "/alice/status/123"), {}, {});
+	assert.equal(attempts, 2);
+	assert.equal(response.status, 503);
+	assert.equal(response.headers.get("cache-control"), "no-store");
+	assert.equal(response.headers.get("retry-after"), "5");
+	assert.match(response.headers.get("content-type"), /text\/plain/);
+	assert.doesNotMatch(await response.text(), /PRIVATE_|og:|doesn't exist/);
+});
+
+test("preview retries do not repeat restrictions, confirmed missing posts, successful cards or other platforms", async () => {
+	for (const [path, status] of [["/alice/status/123", 403], ["/alice/status/123", 404], ["/alice/status/123", 200], ["/@alice/video/123", 503], ["/p/abc", 503]]) {
+		let attempts = 0;
+		const service = createPublicFxService({ async fetch() {
+			attempts++;
+			return new Response("result", { status });
+		} }, origin);
+		assert.equal((await service.fetch(new Request(origin + path), {}, {})).status, status);
+		assert.equal(attempts, 1);
+	}
+	const controller = new AbortController();
+	let attempts = 0;
+	const service = createPublicFxService({ async fetch() {
+		attempts++; controller.abort();
+		return new Response("unavailable", { status: 503 });
+	} }, origin);
+	assert.equal((await service.fetch(new Request(origin + "/alice/status/123", { signal: controller.signal }), {}, {})).status, 503);
+	assert.equal(attempts, 1);
+});
+
 test("public deployment has one pinned service without credentials or host control access", () => {
 	const compose = publicFxCompose({ image: "sha256:" + "a".repeat(64), address: "192.168.2.43", port: 3081 });
 	const service = compose.services.fxembed;

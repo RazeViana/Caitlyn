@@ -17,7 +17,10 @@ const { Pool } = pg;
 
 // Create a new PostgreSQL connection pool
 const pool = new Pool({
-	connectionTimeoutMillis: 5_000,
+	// Allow brief storage/connection delays to clear within the query budget.
+	// The old five-second checkout deadline could expire before a ten-second statement.
+	connectionTimeoutMillis: 15_000,
+	application_name: "caitlyn-bot",
 	statement_timeout: 10_000,
 	query_timeout: 15_000,
 	idle_in_transaction_session_timeout: 15_000,
