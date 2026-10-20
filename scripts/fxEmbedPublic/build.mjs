@@ -34,11 +34,21 @@ await build({ entryPoints: ["public-entry.mjs"], outfile: "dist/public-worker.js
 			else if (args.path.endsWith("/src/embed/status.ts")) {
 				source = replaceExact(source, "      i: statusId", "      i: statusId, f: status.provider");
 				source = replaceExact(source, "!!Constants.API_HOST_LIST", "Boolean(Constants.API_HOST_LIST[0])");
+				// A missing result also represents failed anonymous X lookups. Do not
+				// publish a successful "post doesn't exist" card that Discord can cache.
+				source = replaceExact(source, "  if (status === null) {", `  if (status === null) {
+    if (provider === DataProvider.Twitter) {
+      return c.text('X preview unavailable', thread.code === 401 ? 403 : 503);
+    }`);
 			}
 			else if (args.path.endsWith("/src/embed/activity.ts")) {
 				// An unset API host becomes [""], which is truthy. Without this check,
 				// ordinary and article videos point to https:///2/go instead of the CDN.
 				source = replaceExact(source, "!!Constants.API_HOST_LIST", "Boolean(Constants.API_HOST_LIST[0])", 2);
+				source = replaceExact(source, "  if (!thread.status) {", `  if (!thread.status) {
+    if (provider === DataProvider.Twitter) {
+      return c.text('X preview unavailable', thread.code === 401 ? 403 : 503);
+    }`);
 			}
 			else {
 				source = replaceExact(source, "cacheTtl: env.guestTokenMaxAge", "cacheControl: 'no-store'", 2);

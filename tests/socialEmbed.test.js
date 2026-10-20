@@ -16,12 +16,13 @@ const origin = "https://embed.example.com";
 test("share URLs carry validated usernames and isolate the Discord preview cache between sharers", () => {
 	const source = "https://x.com/alice/status/123";
 	const first = socialEmbedUrl(source, origin, "real.user");
-	assert.equal(first, origin + "/alice/status/123?shared_by=real.user&v=3");
+	assert.equal(first, origin + "/alice/status/123?shared_by=real.user&v=4");
 	assert.notEqual(first, socialEmbedUrl(source, origin, "another_user"));
 	assert.equal(socialEmbedShareMatches(first, source, origin), true);
 	assert.equal(socialEmbedShareMatches(origin + "/alice/status/123?shared_by=real.user", source, origin), true);
 	assert.equal(socialEmbedShareMatches(origin + "/alice/status/123?shared_by=real.user&v=2", source, origin), true);
-	for (const value of [first + "&shared_by=other", first + "&extra=1", first + "#fragment", first.replace("v=3", "v=4"), first + "&v=3", first.replace("example.com", "evil.example.com"), first.replace("123?", "456?")]) {
+	assert.equal(socialEmbedShareMatches(origin + "/alice/status/123?shared_by=real.user&v=3", source, origin), true);
+	for (const value of [first + "&shared_by=other", first + "&extra=1", first + "#fragment", first.replace("v=4", "v=5"), first + "&v=4", first.replace("example.com", "evil.example.com"), first.replace("123?", "456?")]) {
 		assert.equal(socialEmbedShareMatches(value, source, origin), false);
 	}
 	for (const username of ["", "a", "a".repeat(33), "Nickname with spaces", "<@123>", "name\nother", "name\u202e"]) {

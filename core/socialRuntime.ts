@@ -249,6 +249,7 @@ export function createSocialRuntime(dependencies: SocialRuntimeDependencies) {
 			if (dependencies.now() - lastPollErrorLog >= 60_000) {
 				lastPollErrorLog = dependencies.now();
 				logData("Could not load waiting social posts from the database; will try again", {
+					...store.diagnostics?.(),
 					reason: dataErrorReason(error), count: failedPolls, seconds: Math.max(0, dependencies.now() - pollStarted) / 1_000,
 				}, log.error);
 			}

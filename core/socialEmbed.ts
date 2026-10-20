@@ -30,8 +30,8 @@ export function socialEmbedUrl(source: string, origin: string, username?: string
 	const url = socialEmbedOrigin(origin) + path;
 	if (username === undefined) return url;
 	if (!socialShareUsername(username)) throw new Error("invalid_social_share_username");
-	// Bypass Discord's cached text-only cards from the broken X video redirect.
-	return url + "?shared_by=" + encodeURIComponent(username) + "&v=3";
+	// Bypass Discord's cached error cards from unsuccessful X lookups.
+	return url + "?shared_by=" + encodeURIComponent(username) + "&v=4";
 }
 
 /** Match the persisted delivery without relying on the member's current username. */
@@ -42,7 +42,7 @@ export function socialEmbedShareMatches(value: string, source: string, origin: s
 		if (!socialShareUsername(username)) return false;
 		const base = socialEmbedUrl(source, origin) + "?shared_by=" + encodeURIComponent(username);
 		// Older attributed cards still need reconciliation and source cleanup.
-		return value === base || ["2", "3"].some((version) => value === `${base}&v=${version}`);
+		return value === base || ["2", "3", "4"].some((version) => value === `${base}&v=${version}`);
 	}
 	catch { return false; }
 }

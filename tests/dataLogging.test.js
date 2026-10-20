@@ -56,8 +56,8 @@ test("database diagnostics distinguish deadlines, contention and configuration w
 		assert.ok(detail.includes(code) && detail.includes(reason));
 		assert.ok(!detail.includes("PRIVATE_"));
 	}
-	assert.equal(dataErrorReason(new Error("timeout exceeded when trying to connect")), "timed out waiting for a database connection");
-	assert.equal(dataErrorReason(new Error("Connection terminated due to connection timeout")), "timed out waiting for a database connection");
+	assert.equal(dataErrorReason(new Error("timeout exceeded when trying to connect")), "timed out waiting for a free connection in the database pool");
+	assert.equal(dataErrorReason(new Error("Connection terminated due to connection timeout")), "timed out opening a new database connection");
 	assert.equal(dataErrorReason(new Error("Query read timeout")), "timed out waiting for a database query response");
 	for (const error of [{ code: "__proto__" }, { code: "constructor" }, { code: "57014\nPRIVATE_SQL" }, new Error("Query read timeout PRIVATE_SQL")]) {
 		assert.match(dataErrorReason(error), /hidden/);

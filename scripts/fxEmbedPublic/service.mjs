@@ -37,7 +37,20 @@ export function createPublicFxService(app, origin, now = Date.now) {
 				if (!/^bytes=\d{0,12}-\d{0,12}$/.test(range) || range === "bytes=-") return reply(416, "Invalid range");
 				headers.set("range", range);
 			}
-			const upstream = await app.fetch(new Request(clean, { headers, signal: request.signal }), {}, context);
+			let upstream = await app.fetch(new Request(clean, { headers, signal: request.signal }), {}, context);
+			// Retry one unsuccessful X lookup before Discord saves a card. Never
+			// replay media requests or retry a confirmed restriction/tombstone.
+			if (route.platform === "twitter" && ["post", "activity"].includes(route.kind) && upstream.status === 503) {
+				await upstream.body?.cancel();
+				if (request.signal.aborted) return reply(503, "Preview temporarily unavailable");
+				upstream = await app.fetch(new Request(clean, { headers, signal: request.signal }), {}, context);
+			}
+			if (upstream.status === 503) {
+				await upstream.body?.cancel();
+				const unavailable = reply(503, "Preview temporarily unavailable. Please try again shortly.");
+				unavailable.headers.set("retry-after", "5");
+				return unavailable;
+			}
 			const responseHeaders = new Headers(upstream.headers);
 			for (const name of ["set-cookie", "server-timing", "access-control-allow-headers"]) responseHeaders.delete(name);
 			responseHeaders.set("x-content-type-options", "nosniff");
