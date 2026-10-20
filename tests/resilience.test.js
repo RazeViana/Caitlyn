@@ -112,7 +112,9 @@ test("database startup retries transient errors but not invalid credentials", as
 	});
 	await assert.rejects(createPGPool(), /invalid credentials/);
 	assert.equal(attempts, 1);
-	assert.equal(pool.options.connectionTimeoutMillis, 5_000);
+	assert.equal(pool.options.connectionTimeoutMillis, 15_000);
+	assert.equal(pool.options.application_name, "caitlyn-bot");
+	assert.equal(pool.options.max, 10);
 	assert.equal(pool.options.statement_timeout, 10_000);
 	assert.equal(pool.options.query_timeout, 15_000);
 });
