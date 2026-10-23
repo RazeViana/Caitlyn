@@ -31,7 +31,7 @@ docker build --network none \
 
 The Dockerfile pins the existing production FxEmbed base by registry digest. No package installation or upstream source update occurs during this build. Record the resulting immutable image ID and revision, generate the Compose object with `publicFxCompose` from `scripts/fxEmbedPublic/compose.mjs`, and create/update the app through TrueNAS middleware. The public instance is managed independently of the four-image bot updater.
 
-The container runs as UID/GID 1000 with a read-only root, dropped capabilities, one CPU, 1 GiB RAM, a process limit, and temporary runtime/cache files. `/healthz` tests local runtime readiness; it does not prove upstream availability. Docker health and content-free startup/exit diagnostics use a rotating local log. Upstream console content logging is suppressed; bot delivery outcomes continue through Caitlyn's existing logger.
+The container runs as UID/GID 1000 with a read-only root, dropped capabilities, one CPU, 2 GiB RAM, a process limit, and temporary runtime/cache files. `/healthz` tests local runtime readiness; it does not prove upstream availability. After a 60-second startup grace period, the bootstrap checks that endpoint every 15 seconds with a four-second timeout. Three consecutive failures exit the main process so Docker's restart policy replaces the entire runtime, including stalled Wrangler children. A successful check resets the failure count; normal shutdown cancels the watchdog. Docker health and content-free startup/exit/recovery diagnostics use a rotating local log. Upstream console content logging is suppressed; bot delivery outcomes continue through Caitlyn's existing logger.
 
 ## One domain and native cards
 

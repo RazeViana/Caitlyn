@@ -8,6 +8,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { watchPublicRuntime } from "./watchdog.mjs";
 
 const directory = "/tmp/caitlyn-public-fxembed";
 await mkdir(directory, { mode: 0o700, recursive: true });
@@ -18,12 +19,25 @@ const child = spawn(process.execPath, ["/app/node_modules/wrangler/bin/wrangler.
 	"--persist-to", directory + "/state", "--log-level", "none"], {
 	cwd: directory, stdio: "ignore", env: { ...process.env, WRANGLER_LOG_PATH: "/dev/null", WRANGLER_SEND_METRICS: "false", XDG_CONFIG_HOME: directory + "/config", CI: "true" },
 });
-for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => child.kill(signal));
+const stopWatchdog = watchPublicRuntime({ onUnavailable: () => {
+	console.error("Public FxEmbed readiness failed three consecutive checks; restarting container");
+	// Exit the container's main process even if Wrangler or a child cannot shut down.
+	// The existing restart policy then replaces the entire runtime process tree.
+	process.exit(1);
+} });
+for (const signal of ["SIGTERM", "SIGINT"]) {
+	process.once(signal, () => {
+		stopWatchdog();
+		child.kill(signal);
+	});
+}
 child.once("error", () => {
+	stopWatchdog();
 	console.error("Public FxEmbed runtime failed to start");
 	process.exitCode = 1;
 });
 child.once("exit", (code) => {
+	stopWatchdog();
 	console.info("Public FxEmbed runtime stopped", code);
 	process.exitCode = code ?? 1;
 });

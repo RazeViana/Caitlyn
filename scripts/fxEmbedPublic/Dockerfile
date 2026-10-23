@@ -11,6 +11,7 @@ COPY --chmod=644 service.mjs /app/public-service.mjs
 COPY --chmod=644 routing.mjs /app/public-routing.mjs
 COPY --chmod=644 build.mjs /app/public-build.mjs
 COPY --chmod=644 bootstrap.mjs /app/public-bootstrap.mjs
+COPY --chmod=644 watchdog.mjs /app/watchdog.mjs
 RUN sed -i 's|"./routing.mjs"|"./public-routing.mjs"|' /app/public-service.mjs \
     && FXEMBED_PUBLIC_ORIGIN="$FXEMBED_PUBLIC_ORIGIN" node /app/public-build.mjs
 USER node
